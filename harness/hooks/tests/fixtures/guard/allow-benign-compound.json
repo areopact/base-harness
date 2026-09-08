@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "mkdir -p build && cd build && cmake .. && make -j4"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

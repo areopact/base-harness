@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push --force origin main --push-option=\"a -n b\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

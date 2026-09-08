@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "Remove-Item -LiteralPath:C:\\ -Recurse -Force"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

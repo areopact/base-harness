@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "psql -h localhost -U app -c \"drop table sessions\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

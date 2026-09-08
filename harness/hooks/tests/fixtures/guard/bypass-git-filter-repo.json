@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git filter-repo --path secrets.txt --invert-paths"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

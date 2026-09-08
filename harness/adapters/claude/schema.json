@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Generated Claude Code project settings",
+  "description": "Shape of the settings file that bootstrap copies from harness/adapters/claude/settings.base.json. Every object rejects property names starting with an underscore, the top level is closed, and the forbidden-key clause makes any permission-posture widening a schema failure.",
+  "type": "object",
+  "additionalProperties": false,
+  "propertyNames": { "pattern": "^[^_]" },
+  "required": ["permissions", "hooks"],
+  "not": {
+    "anyOf": [
+      { "required": ["defaultMode"] },
+      { "required": ["bypassPermissions"] },
+      { "required": ["skipDangerousModePermissionPrompt"] },
+      { "required": ["autoMode"] },
+      { "required": ["dangerouslySkipPermissions"] }
+    ]
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "propertyNames": { "pattern": "^[^_]" },
+      "required": ["allow", "deny"],
+      "not": {
+        "anyOf": [
+          { "required": ["defaultMode"] },
+          { "required": ["bypassPermissions"] },
+          { "required": ["skipDangerousModePermissionPrompt"] },
+          { "required": ["autoMode"] },
+          { "required": ["dangerouslySkipPermissions"] }
+        ]
+      },
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "not": { "pattern": "^(Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|Agent|Task|Workflow)(\\(\\*?\\))?$" }
+          }
+        },
+        "deny": { "type": "array", "items": { "type": "string" } },
+        "ask": { "type": "array", "items": { "type": "string" } },
+        "additionalDirectories": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "propertyNames": { "pattern": "^[^_]" },
+      "properties": {
+        "SessionStart": { "$ref": "#/definitions/matcherList" },
+        "UserPromptSubmit": { "$ref": "#/definitions/matcherList" },
+        "PreToolUse": { "$ref": "#/definitions/matcherList" },
+        "PostToolUse": { "$ref": "#/definitions/matcherList" },
+        "Stop": { "$ref": "#/definitions/matcherList" }
+      }
+    },
+    "enabledPlugins": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[^_]" },
+      "additionalProperties": { "type": "boolean" }
+    },
+    "env": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[^_]" },
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "matcherList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "propertyNames": { "pattern": "^[^_]" },
+        "required": ["hooks"],
+        "properties": {
+          "matcher": { "type": "string" },
+          "hooks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "propertyNames": { "pattern": "^[^_]" },
+              "required": ["type", "command"],
+              "properties": {
+                "type": { "const": "command" },
+                "command": { "type": "string", "pattern": "^bash \"\\$\\{CLAUDE_PROJECT_DIR\\}/harness/hooks/[a-z-]+/[a-z-]+\\.sh\"$" },
+                "timeout": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

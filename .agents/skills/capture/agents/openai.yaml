@@ -1,0 +1,5 @@
+interface:
+  display_name: "Capture"
+  short_description: "Park a half-thought, observation, or pointer in one frictionless queue for later routing... WHEN: /capture <text>, \"drop this in the inbox\"..."
+policy:
+  allow_implicit_invocation: false

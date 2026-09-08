@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "mkfs.ext4 /dev/sdb1"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

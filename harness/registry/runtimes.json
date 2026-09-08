@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "tier_definitions": {
+    "tier-1": "Maintained adapter, deterministic materialization, offline doctor, and explicit evidence gaps",
+    "experimental": "Shape is recorded but regular compatibility is not promised"
+  },
+  "runtimes": {
+    "claude": {
+      "display_name": "Claude Code",
+      "tier": "tier-1",
+      "status": "active",
+      "adapter": "harness/adapters/claude",
+      "doctor": "harness/bootstrap/doctor.{ps1,sh}",
+      "capabilities": {
+        "contract": "native-render",
+        "skills": "native-linked",
+        "subagents": "native-linked",
+        "hooks": "native",
+        "command_policy": "native-permissions"
+      },
+      "identity_context_limit": 9000,
+      "materializations": [
+        {
+          "source": "harness/adapters/claude/settings.base.json",
+          "destination": ".claude/settings.json",
+          "mode": "managed-copy"
+        },
+        {
+          "source": "harness/CONTRACT.md",
+          "destination": ".claude/CLAUDE.md",
+          "mode": "contract-render"
+        },
+        {
+          "source": "harness/skills",
+          "destination": ".claude/skills",
+          "mode": "link"
+        },
+        {
+          "source": "harness/adapters/claude/agents",
+          "destination": ".claude/agents",
+          "mode": "link"
+        },
+        {
+          "source": "harness/rules",
+          "destination": ".claude/rules",
+          "mode": "link"
+        },
+        {
+          "source": "harness/hooks",
+          "destination": ".claude/hooks",
+          "mode": "link"
+        }
+      ]
+    },
+    "codex": {
+      "display_name": "Codex",
+      "tier": "tier-1",
+      "status": "configured-beta",
+      "adapter": "harness/adapters/codex",
+      "doctor": "harness/bootstrap/doctor_codex.py --offline",
+      "capabilities": {
+        "contract": "native-root",
+        "skills": "generated-catalog",
+        "subagents": "native-linked",
+        "hooks": "configured-beta",
+        "command_policy": "native-linked"
+      },
+      "identity_context_limit": 3200,
+      "materializations": [
+        {
+          "source": "harness/CONTRACT.md",
+          "destination": "AGENTS.md",
+          "mode": "contract-render"
+        },
+        {
+          "source": "harness/adapters/codex/config.toml",
+          "destination": ".codex/config.toml",
+          "mode": "managed-copy"
+        },
+        {
+          "source": "harness/adapters/codex/hooks.json",
+          "destination": ".codex/hooks.json",
+          "mode": "managed-copy"
+        },
+        {
+          "source": "harness/adapters/codex/agents",
+          "destination": ".codex/agents",
+          "mode": "link"
+        },
+        {
+          "source": "harness/adapters/codex/rules",
+          "destination": ".codex/rules",
+          "mode": "link"
+        },
+        {
+          "source": "harness/hooks",
+          "destination": ".codex/hooks",
+          "mode": "link"
+        },
+        {
+          "source": "harness/skills",
+          "destination": ".agents/skills",
+          "mode": "generated"
+        }
+      ]
+    },
+    "opencode": {
+      "display_name": "OpenCode",
+      "tier": "tier-1",
+      "status": "configured-alpha",
+      "adapter": "harness/adapters/opencode",
+      "doctor": "harness/bootstrap/doctor_opencode.py --offline",
+      "capabilities": {
+        "contract": "native-root",
+        "skills": "native-linked",
+        "subagents": "native-linked",
+        "hooks": "partial-plugin",
+        "command_policy": "native-permissions"
+      },
+      "identity_context_limit": 3200,
+      "materializations": [
+        {
+          "source": "harness/CONTRACT.md",
+          "destination": "AGENTS.md",
+          "mode": "contract-render"
+        },
+        {
+          "source": "harness/adapters/opencode/opencode.json",
+          "destination": "opencode.json",
+          "mode": "managed-copy"
+        },
+        {
+          "source": "harness/.selected/skills",
+          "destination": ".opencode/skills",
+          "mode": "link"
+        },
+        {
+          "source": "harness/adapters/opencode/agents",
+          "destination": ".opencode/agents",
+          "mode": "link"
+        },
+        {
+          "source": "harness/adapters/opencode/plugins",
+          "destination": ".opencode/plugins",
+          "mode": "link"
+        },
+        {
+          "source": "harness/adapters/opencode/lib",
+          "destination": ".opencode/lib",
+          "mode": "link"
+        },
+        {
+          "source": "harness/skills",
+          "destination": ".opencode/commands",
+          "mode": "generated"
+        }
+      ]
+    },
+    "antigravity": {
+      "display_name": "Antigravity",
+      "tier": "experimental",
+      "status": "unconfigured",
+      "adapter": null,
+      "doctor": null,
+      "capabilities": {
+        "contract": "native-root-unverified",
+        "skills": "unverified",
+        "subagents": "unverified",
+        "hooks": "unverified",
+        "command_policy": "unverified"
+      },
+      "identity_context_limit": null,
+      "materializations": []
+    }
+  },
+  "retired_materializations": [
+    {
+      "runtime": "codex",
+      "destination": ".codex/skills",
+      "replacement": ".agents/skills"
+    }
+  ],
+  "hook_events": {
+    "SessionStart": {
+      "implementations": [
+        "session-start/load-identity",
+        "session-start/pre-bootstrap-detector"
+      ],
+      "runtimes": {
+        "claude": {
+          "support": "native",
+          "delivery": "individual-wrappers",
+          "context_limit": 9000,
+          "rung": "native-hook"
+        },
+        "codex": {
+          "support": "configured-beta",
+          "delivery": "dispatcher",
+          "context_limit": 3200,
+          "rung": "native-hook"
+        },
+        "opencode": {
+          "support": "experimental",
+          "delivery": "plugin-system-transform",
+          "context_limit": 3200,
+          "rung": "native-hook"
+        }
+      }
+    },
+    "UserPromptSubmit": {
+      "implementations": [],
+      "runtimes": {
+        "claude": {
+          "support": "unsupported",
+          "delivery": "contract-fallback",
+          "context_limit": null,
+          "rung": "contract-text"
+        },
+        "codex": {
+          "support": "unsupported",
+          "delivery": "contract-fallback",
+          "context_limit": null,
+          "rung": "contract-text"
+        },
+        "opencode": {
+          "support": "unsupported",
+          "delivery": "contract-fallback",
+          "context_limit": null,
+          "rung": "contract-text"
+        }
+      }
+    },
+    "PreToolUse": {
+      "implementations": [
+        "pre-tool-use/memory-first",
+        "pre-tool-use/dangerous-ops-guard",
+        "pre-tool-use/openpyxl-guard",
+        "pre-tool-use/delegation-guard",
+        "pre-tool-use/read-deny"
+      ],
+      "runtimes": {
+        "claude": {
+          "support": "native",
+          "delivery": "individual-wrappers",
+          "context_limit": null,
+          "rung": "native-hook",
+          "implementation_support": {
+            "pre-tool-use/memory-first": "native",
+            "pre-tool-use/dangerous-ops-guard": "native",
+            "pre-tool-use/openpyxl-guard": "native",
+            "pre-tool-use/delegation-guard": "native",
+            "pre-tool-use/read-deny": {
+              "support": "native",
+              "default_registered": false
+            }
+          }
+        },
+        "codex": {
+          "support": "configured-beta",
+          "delivery": "dispatcher",
+          "context_limit": 600,
+          "rung": "native-hook",
+          "implementation_support": {
+            "pre-tool-use/memory-first": "configured-beta",
+            "pre-tool-use/dangerous-ops-guard": "configured-beta",
+            "pre-tool-use/openpyxl-guard": "configured-beta",
+            "pre-tool-use/delegation-guard": "configured-beta",
+            "pre-tool-use/read-deny": {
+              "support": "unsupported",
+              "default_registered": false
+            }
+          }
+        },
+        "opencode": {
+          "support": "partial",
+          "delivery": "plugin-tool-before",
+          "context_limit": null,
+          "rung": "native-hook",
+          "implementation_support": {
+            "pre-tool-use/memory-first": "unsupported",
+            "pre-tool-use/dangerous-ops-guard": "configured-alpha",
+            "pre-tool-use/openpyxl-guard": "configured-alpha",
+            "pre-tool-use/delegation-guard": "unsupported",
+            "pre-tool-use/read-deny": {
+              "support": "unsupported",
+              "default_registered": false
+            }
+          }
+        }
+      }
+    },
+    "PostToolUse": {
+      "implementations": [
+        "post-tool-use/frontmatter-guard",
+        "post-tool-use/prose-lint",
+        "post-tool-use/delegation-guard"
+      ],
+      "runtimes": {
+        "claude": {
+          "support": "native",
+          "delivery": "individual-wrappers",
+          "context_limit": null,
+          "rung": "native-hook"
+        },
+        "codex": {
+          "support": "configured-beta",
+          "delivery": "dispatcher",
+          "context_limit": 1200,
+          "rung": "native-hook"
+        },
+        "opencode": {
+          "support": "unsupported",
+          "delivery": "contract-fallback",
+          "context_limit": null,
+          "rung": "contract-text"
+        }
+      }
+    },
+    "Stop": {
+      "implementations": [
+        "stop/close-the-loop"
+      ],
+      "runtimes": {
+        "claude": {
+          "support": "native",
+          "delivery": "individual-wrapper",
+          "context_limit": null,
+          "rung": "native-hook"
+        },
+        "codex": {
+          "support": "configured-beta",
+          "delivery": "dispatcher",
+          "context_limit": null,
+          "rung": "native-hook"
+        },
+        "opencode": {
+          "support": "unsupported",
+          "delivery": "contract-fallback",
+          "context_limit": null,
+          "rung": "contract-text"
+        }
+      }
+    }
+  }
+}

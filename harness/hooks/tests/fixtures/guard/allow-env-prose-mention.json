@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "echo \"copy .env.example to .env before the first run\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

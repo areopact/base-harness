@@ -1,0 +1,5 @@
+interface:
+  display_name: "Humanize"
+  short_description: "Strip AI-writing tells from authored prose and rebuild what a human would actually put there... WHEN: /humanize, \"does this sound AI\", \"de-slop this\"..."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Doctor"
+  short_description: "Harness diagnostic from inside a session: run the three offline doctors and report per runtime... WHEN: user invokes /doctor, says \"test the harness\"..."
+policy:
+  allow_implicit_invocation: false

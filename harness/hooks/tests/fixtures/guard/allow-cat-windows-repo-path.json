@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "cat C:\\work\\repo\\README.md"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

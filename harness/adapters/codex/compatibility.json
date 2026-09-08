@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "adapter_status": "configured-beta",
+  "minimum_cli": "0.146.0",
+  "tested_cli": null,
+  "observed_cli": null,
+  "observed_at": null,
+  "hook_schema": "hooks.json with SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, and Stop entries, each delivered through harness/hooks/codex-dispatch",
+  "evidence": {
+    "offline_repository": "unproven",
+    "local_cli_and_policy": "not-attempted",
+    "native_hook_trust_and_firing": "not-attempted",
+    "explicit_skill_loading": "not-attempted",
+    "connector_outcomes": "not-attempted"
+  }
+}

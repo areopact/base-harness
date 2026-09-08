@@ -1,0 +1,13 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "exec_command",
+  "tool_input": {
+    "cmd": [
+      "bash",
+      "-lc",
+      "cat .env"
+    ]
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

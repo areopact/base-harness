@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "values": "forbidden",
+    "presence_checks": "human-attested-only",
+    "default_sharing": "isolated",
+    "automatic_cross_identity_sync": "forbidden"
+  },
+  "principals": {},
+  "locations": {},
+  "bindings": {}
+}

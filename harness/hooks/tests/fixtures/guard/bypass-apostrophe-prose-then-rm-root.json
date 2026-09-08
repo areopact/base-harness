@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "echo \"it's fine\" ; rm -rf / ; echo \"don't\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

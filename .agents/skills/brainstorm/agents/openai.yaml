@@ -1,0 +1,5 @@
+interface:
+  display_name: "Brainstorm"
+  short_description: "Explore consequential ideas, designs, strategies, and trade-offs before commitment: credible... WHEN: /brainstorm, \"brainstorm\", \"explore options\"..."
+policy:
+  allow_implicit_invocation: false

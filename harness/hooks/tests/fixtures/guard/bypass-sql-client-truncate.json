@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "mysql -u app appdb -e 'truncate table audit_log'"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

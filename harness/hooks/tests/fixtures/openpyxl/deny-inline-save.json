@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "python -c \"import openpyxl; wb = openpyxl.load_workbook('harness/hooks/tests/fixtures/openpyxl/formatted-workbook.xlsx'); wb['Sheet1']['A1'] = 'x'; wb.save('harness/hooks/tests/fixtures/openpyxl/formatted-workbook.xlsx')\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

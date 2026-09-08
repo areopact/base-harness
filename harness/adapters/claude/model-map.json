@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "runtime": "claude",
+  "families": {
+    "fast": "haiku",
+    "balanced": "sonnet",
+    "strong": "opus",
+    "strong-main": "opus"
+  },
+  "permission_classes": {
+    "read-only": ["Read", "Glob", "Grep"],
+    "edit": ["Read", "Glob", "Grep", "Edit", "Write"],
+    "shell": ["Read", "Glob", "Grep", "Edit", "Write", "Bash"],
+    "shell-readonly": ["Read", "Glob", "Grep", "Bash"]
+  },
+  "notes": [
+    "Family keys are the tier labels from the routing policy; values are the public Claude Code model aliases.",
+    "The interactive main session keeps whatever model the operator configured; strong-main is what a generated orchestrator role requests.",
+    "A null value is legal and means unresolved; the doctor reports it as UNKNOWN and never substitutes a default."
+  ]
+}

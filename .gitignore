@@ -1,0 +1,82 @@
+# --- generated-output tracking policy ---
+# Bootstrap outputs fall in two classes. Links (junctions on Windows, symlinks
+# on POSIX, copies in --copy mode) are listed below and never tracked: git on
+# Windows would otherwise recurse into a junction and track the linked tree
+# twice. Managed copies, generated trees, and the rendered contract ARE
+# tracked and committed as generated files (.claude/settings.json,
+# .codex/config.toml, .codex/hooks.json, opencode.json, .agents/skills/,
+# .opencode/commands/, AGENTS.md): `bootstrap --check` byte-checks them
+# against their sources, a fresh clone must bootstrap to a clean tree, and
+# in branches mode they carry merge=ours in .gitattributes. Never hand-edit
+# either class; change the source under harness/ and rerun bootstrap.
+
+# --- bootstrap-created links (never tracked) ---
+/.claude/skills
+/.claude/agents
+/.claude/rules
+/.claude/hooks
+/.codex/agents
+/.codex/rules
+/.codex/hooks
+/.opencode/skills
+/.opencode/agents
+/.opencode/plugins
+/.opencode/lib
+/.opencode/node_modules
+/.opencode/package.json
+/.opencode/package-lock.json
+/.opencode/.gitignore
+/harness/.selected/
+
+# --- per-user memory lane (tracked only by explicit opt-in in structure.json) ---
+/brain/local/*
+!/brain/local/README.md
+
+# --- per-user runtime overlays ---
+/.claude/settings.local.json
+/.codex/config.local.toml
+/.opencode/opencode.local.json
+
+# --- secrets and local state ---
+# Mirrors the pre-commit filename block. Case-sensitive on Linux, so the
+# scanner (which lowercases) is the real guard; these are defense in depth.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.envrc
+.mcp.json
+.npmrc
+.netrc
+.pgpass
+.pypirc
+.git-credentials
+*.pem
+*.key
+*.pfx
+*.ppk
+*.p12
+*.keystore
+*.tfvars
+*.jks
+.aws/credentials
+.aws/credentials.*
+.ssh/id_rsa
+.ssh/id_dsa
+.ssh/id_ecdsa
+.ssh/id_ed25519
+.ssh/id_ecdsa_sk
+.ssh/id_ed25519_sk
+application_default_credentials.json
+
+# --- generated caches under harness/registry/ (rebuilt on demand, never tracked) ---
+/harness/registry/delegation-policy.json
+/harness/registry/native-routing-files.json
+/harness/registry/skill-index.json
+
+# --- machine state and caches ---
+/.tmp/
+__pycache__/
+*.pyc
+.pytest_cache/

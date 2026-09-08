@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push --dry-run --no-dry-run origin main --force"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

@@ -1,0 +1,10 @@
+{
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "tests/scratch-notes.md",
+    "content": "---\ntitle: Scratch\naccess: privte\n---\n\nBody.\n"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

@@ -1,0 +1,121 @@
+{
+  "hooks_json": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Generated Codex hooks file",
+    "description": "Shape of the hooks file that bootstrap copies from harness/adapters/codex/hooks.json. Codex parses this file strictly, so every object is closed and property names starting with an underscore are rejected at every level.",
+    "type": "object",
+    "additionalProperties": false,
+    "propertyNames": {
+      "pattern": "^[^_]"
+    },
+    "required": [
+      "hooks"
+    ],
+    "properties": {
+      "hooks": {
+        "type": "object",
+        "additionalProperties": false,
+        "propertyNames": {
+          "pattern": "^[^_]"
+        },
+        "properties": {
+          "SessionStart": {
+            "$ref": "#/definitions/matcherList"
+          },
+          "UserPromptSubmit": {
+            "$ref": "#/definitions/matcherList"
+          },
+          "PreToolUse": {
+            "$ref": "#/definitions/matcherList"
+          },
+          "PostToolUse": {
+            "$ref": "#/definitions/matcherList"
+          },
+          "Stop": {
+            "$ref": "#/definitions/matcherList"
+          }
+        }
+      }
+    },
+    "definitions": {
+      "matcherList": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "propertyNames": {
+            "pattern": "^[^_]"
+          },
+          "required": [
+            "hooks"
+          ],
+          "properties": {
+            "matcher": {
+              "type": "string"
+            },
+            "hooks": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "propertyNames": {
+                  "pattern": "^[^_]"
+                },
+                "required": [
+                  "type",
+                  "command"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "command"
+                  },
+                  "command": {
+                    "type": "string",
+                    "pattern": "^bash -c 'cd \\\"\\$\\(git rev-parse --show-toplevel\\)\\\" && bash harness/hooks/codex-dispatch\\.sh --runtime codex --event (SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)'$"
+                  },
+                  "commandWindows": {
+                    "type": "string",
+                    "pattern": "codex-dispatch\\.ps1'\\) -Runtime codex -Event (SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)$"
+                  },
+                  "timeout": {
+                    "type": "integer"
+                  },
+                  "additionalContextLimit": {
+                    "type": "integer"
+                  },
+                  "statusMessage": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "config_toml_allowed_keys": [
+    "allow_login_shell",
+    "developer_instructions",
+    "shell_environment_policy",
+    "shell_environment_policy.inherit",
+    "shell_environment_policy.ignore_default_excludes",
+    "features",
+    "features.hooks",
+    "agents",
+    "agents.enabled",
+    "agents.max_concurrent_threads_per_session",
+    "agents.default_subagent_model",
+    "agents.default_subagent_reasoning_effort"
+  ],
+  "config_toml_forbidden_keys": [
+    "approval_policy",
+    "approvals_reviewer",
+    "sandbox_mode",
+    "sandbox_workspace_write",
+    "default_permissions",
+    "permissions"
+  ]
+}

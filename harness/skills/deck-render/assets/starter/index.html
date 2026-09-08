@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Web deck starter</title>
+  <link rel="stylesheet" href="deck.css">
+</head>
+<body>
+  <main class="deck-viewport">
+    <div class="deck" id="deck" data-transition="push" data-palette="ocean">
+      <section class="slide" id="slide-01" data-layout="cover" data-transition="scale">
+        <div class="slide-content layout-cover density-inspire">
+          <p class="eyebrow" data-animate="tracking">Web deck starter</p>
+          <h1 data-animate="mask" data-delay="60">One clear idea,<br><em class="text-highlight" data-animate="highlight" data-delay="180">one page at a time.</em></h1>
+          <p class="lede" data-animate="rise" data-delay="250">Replace the content. Keep the stage, density, motion, and accessibility contracts.</p>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-02" data-layout="split">
+        <div class="slide-content layout-split split-copy-first density-default">
+          <div>
+            <p class="eyebrow" data-animate="rise">Default mode / split</p>
+            <h2 data-animate="wipe" data-delay="60">Give the visual room to work.</h2>
+            <p class="body-copy" data-animate="rise" data-delay="130">Use one dominant plate instead of several decorative thumbnails. The default scale is calibrated for projection.</p>
+          </div>
+          <div class="media-frame media-contain" data-animate="scale" data-delay="90" aria-label="Illustrative signal diagram">
+            <svg viewBox="0 0 800 560" role="img" aria-label="Many lines converge into one signal">
+              <defs><linearGradient id="signal" x1="0" x2="1"><stop stop-color="#7890ff" stop-opacity=".12"/><stop offset="1" stop-color="#7890ff"/></linearGradient></defs>
+              <g fill="none" stroke="url(#signal)" stroke-width="5" stroke-linecap="round">
+                <path data-draw d="M30 80 C250 80 430 260 760 280"/><path data-draw d="M30 190 C250 190 430 270 760 280"/><path data-draw d="M30 300 C250 300 430 280 760 280"/><path data-draw d="M30 410 C250 410 430 290 760 280"/><path data-draw d="M30 520 C250 520 430 300 760 280"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-03" data-layout="comparison" data-transition="fade">
+        <div class="slide-content density-default density-layout">
+          <p class="eyebrow" data-animate="rise">Four density modes</p>
+          <div class="density-board">
+            <article class="density-swatch density-default" data-animate="rise"><div><span class="mode-size">Default</span><h3>Clear argument</h3><p>The everyday presentation mode: one claim, enough explanation to understand it, and room for a visual or structured comparison.</p></div><div class="mode-meta"><span>Display 5.15, Title 3.65</span><span>Body 1.46, 20-45 words</span></div></article>
+            <article class="density-swatch density-inspire" data-animate="rise" data-delay="70"><div><span class="mode-size">Big idea / Inspire</span><h3>Big idea.</h3><p>A keynote beat with very few words. Use it when the audience should feel or remember one statement before moving on.</p></div><div class="mode-meta"><span>Display 7.20, Title 5.15</span><span>Body 1.62, 0-18 words</span></div></article>
+            <article class="density-swatch density-dense" data-animate="rise" data-delay="140"><div><span class="mode-size">Dense</span><h3>Analysis</h3><p>Compact comparisons, operating plans, and tables still intended for a shared screen. Density comes from structure, not tiny labels.</p></div><div class="mode-meta"><span>Display 4.30cqw</span><span>Body 1.18cqw, 45-90 words</span></div></article>
+            <article class="density-swatch density-research" data-animate="rise" data-delay="210"><div><span class="mode-size">Research</span><h3>Evidence note</h3><p>Paper-like close reading with narrow columns, visible citations, method notes, and explicit source treatment. The type remains comfortably readable while the evidence volume increases.</p></div><div class="mode-meta"><span>Display 3.65cqw</span><span>Body 1.06cqw, 100-190 words</span></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-04" data-layout="grid" data-transition="fade">
+        <div class="slide-content format-board density-default">
+          <div>
+            <p class="eyebrow" data-animate="rise">Format expansion</p>
+            <h2 data-animate="wipe" data-delay="60">Emphasis has<br><em>more than color.</em></h2>
+            <p class="body-copy" data-animate="rise" data-delay="120">Assign stable jobs to weight, italic, underline, foreground color, and background highlight. Combine no more than two treatments on one phrase.</p>
+          </div>
+          <div class="format-grid" data-animate="rise" data-delay="90">
+            <article class="format-card"><span>Weight</span><p>Regular, <b class="weight-medium">Medium</b>, <b class="weight-bold">Bold</b></p></article>
+            <article class="format-card"><span>Voice</span><p>Roman, <em>Italic contrast</em></p></article>
+            <article class="format-card"><span>Underline</span><p><span class="format-underline">Persistent emphasis</span></p></article>
+            <article class="format-card"><span>Marker</span><p><span class="format-marker">Draw the eye</span></p></article>
+            <article class="format-card"><span>Foreground</span><p><span class="format-semantic">Semantic meaning</span></p></article>
+            <article class="format-card"><span>Highlight</span><p><span class="format-highlight">Accent field</span></p></article>
+            <article class="format-card"><span>Text colors</span><p class="format-color-copy"><b class="is-accent">Accent</b><b class="is-info">Info</b><b class="is-positive">Positive</b><b class="is-warning">Warning</b><b class="is-danger">Danger</b></p></article>
+            <article class="format-card"><span>Accent ramp</span><div class="format-color-ramp"><i>Pale</i><i>Soft</i><i>Base</i><i>Strong</i></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-05" data-layout="gallery">
+        <div class="slide-content layout-gallery gallery-quad density-default">
+          <figure class="image-tile" data-animate="scale"><svg viewBox="0 0 400 220" aria-label="Abstract observe image"><rect width="400" height="220" fill="#101a34"/><circle cx="125" cy="110" r="62" fill="#7890ff" opacity=".7"/><path d="M185 110H360" stroke="#f6f1e7" stroke-width="5"/></svg><figcaption class="image-label"><span>Observe</span><span>01</span></figcaption></figure>
+          <figure class="image-tile" data-animate="scale" data-delay="70"><svg viewBox="0 0 400 220" aria-label="Abstract frame image"><rect width="400" height="220" fill="#141f38"/><rect x="65" y="45" width="270" height="130" rx="12" fill="#f6f1e7" opacity=".88"/><rect x="100" y="82" width="200" height="56" fill="#7890ff"/></svg><figcaption class="image-label"><span>Frame</span><span>02</span></figcaption></figure>
+          <figure class="image-tile" data-animate="scale" data-delay="140"><svg viewBox="0 0 400 220" aria-label="Abstract build image"><rect width="400" height="220" fill="#0b1020"/><g fill="#57c99a"><rect x="55" y="70" width="80" height="80"/><rect x="160" y="45" width="80" height="105"/><rect x="265" y="95" width="80" height="55"/></g></svg><figcaption class="image-label"><span>Build</span><span>03</span></figcaption></figure>
+          <figure class="image-tile" data-animate="scale" data-delay="210"><svg viewBox="0 0 400 220" aria-label="Abstract learn image"><rect width="400" height="220" fill="#111a2e"/><path d="M35 175C120 150 160 30 365 55" fill="none" stroke="#f2bc66" stroke-width="12" stroke-linecap="round"/><circle cx="365" cy="55" r="18" fill="#f6f1e7"/></svg><figcaption class="image-label"><span>Learn</span><span>04</span></figcaption></figure>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-06" data-layout="data" data-transition="push">
+        <div class="slide-content density-default">
+          <div class="data-story-head"><div><p class="eyebrow">Data grammar</p><h2>Trend + mix</h2></div><div class="data-story-path"><span>Orient</span><span class="is-current">Trend</span><span>Mix</span><span>Explain</span></div></div>
+          <div class="layout-data">
+            <div class="chart-shell" data-animate="rise">
+              <div class="chart-header"><h3>Signal over time</h3><div class="chart-legend"><span><i></i>Index</span></div></div>
+              <svg class="chart-svg" viewBox="0 0 700 360" role="img" aria-label="Illustrative rising line chart">
+                <g><path class="chart-gridline" d="M55 60H670M55 150H670M55 240H670M55 330H670"/></g>
+                <path class="chart-area" d="M55 300L170 260L285 275L400 190L515 130L670 70L670 330L55 330Z"/>
+                <path class="chart-line" data-draw d="M55 300L170 260L285 275L400 190L515 130L670 70"/>
+                <g><circle class="chart-point" data-animate="pop" cx="55" cy="300" r="8"/><circle class="chart-point" data-animate="pop" data-delay="60" cx="170" cy="260" r="8"/><circle class="chart-point" data-animate="pop" data-delay="120" cx="285" cy="275" r="8"/><circle class="chart-point" data-animate="pop" data-delay="180" cx="400" cy="190" r="8"/><circle class="chart-point" data-animate="pop" data-delay="240" cx="515" cy="130" r="8"/><circle class="chart-point" data-animate="pop" data-delay="300" cx="670" cy="70" r="8"/></g>
+              </svg>
+            </div>
+            <div class="chart-shell donut-layout" data-animate="rise" data-delay="90">
+              <div class="donut-wrap"><svg class="donut" viewBox="0 0 120 120" role="img" aria-label="68 percent donut chart"><circle class="track" cx="60" cy="60" r="48" pathLength="100"/><circle data-ring="68" cx="60" cy="60" r="48" pathLength="100"/></svg><div class="donut-center"><strong data-count="68" data-suffix="%">68%</strong><span>Core</span></div></div>
+              <div class="mini-bars"><div class="mini-bar"><span>Core</span><i><b data-value="68"></b></i><strong>68</strong></div><div class="mini-bar" style="--series:var(--data-2)"><span>Edge</span><i><b data-value="21"></b></i><strong>21</strong></div><div class="mini-bar" style="--series:var(--data-3)"><span>Other</span><i><b data-value="11"></b></i><strong>11</strong></div><p class="caption">Illustrative values.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-07" data-layout="grid" data-transition="rise" data-demo-loop="500">
+        <div class="slide-content content-center density-default">
+          <p class="eyebrow" data-animate="tracking">Text motion vocabulary</p>
+          <div class="motion-board">
+            <div class="motion-sample"><strong data-animate="fade" data-duration="900">Fade</strong><span>Quiet support</span></div>
+            <div class="motion-sample"><strong data-animate="rise" data-duration="900">Rise</strong><span>Default entrance</span></div>
+            <div class="motion-sample"><strong data-animate="scale" data-duration="900">Scale</strong><span>Measured emphasis</span></div>
+            <div class="motion-sample"><strong data-animate="pop" data-duration="900">Pop</strong><span>Node or metric</span></div>
+            <div class="motion-sample"><strong data-animate="wipe" data-duration="900">Wipe</strong><span>Short headline</span></div>
+            <div class="motion-sample"><span class="text-mask"><strong data-animate="mask" data-duration="900">Mask</strong></span><span>Line reveal</span></div>
+            <div class="motion-sample"><strong data-animate="focus" data-duration="900">Focus</strong><span>Reflective beat</span></div>
+            <div class="motion-sample"><strong data-animate="tracking" data-duration="900">Track</strong><span>Eyebrow or label</span></div>
+            <div class="motion-sample"><strong class="text-highlight" data-animate="highlight" data-duration="900">Highlight</strong><span>Load-bearing phrase</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-08" data-layout="appendix" data-transition="fade">
+        <div class="slide-content layout-appendix density-research">
+          <div><span class="appendix-tag">Appendix: research note</span><h2>Evidence can be dense without becoming shapeless.</h2></div>
+          <div class="layout-research-columns">
+            <section><h3>Question</h3><p>State the precise research question, scope, and what would change the decision. Keep one claim per paragraph and distinguish observation from inference.</p><ul><li>Population and period</li><li>Method boundary</li><li>Decision threshold</li></ul></section>
+            <section><h3>Finding</h3><p>The body scale is intentionally close-screen. Use citations, narrow measures, and explicit uncertainty. A compact page still needs an entry point, hierarchy, and one highlighted result.</p><ul><li>Primary result</li><li>Counterevidence</li><li>Confidence</li></ul></section>
+            <section><h3>Implication</h3><p>Explain what the evidence changes, what remains unresolved, and where the detailed table or source document lives. Do not squeeze an entire study into the main narrative.</p><ul><li>Action</li><li>Owner</li><li>Next check</li></ul></section>
+          </div>
+          <p class="caption">Source: replace with a reader-consultable primary source and method note.</p>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-09" data-layout="closing" data-transition="scale">
+        <div class="slide-content layout-closing density-inspire">
+          <p class="eyebrow" data-animate="tracking">Thank you</p>
+          <h2 data-animate="focus" data-duration="620">The stage stays strict.<br><em>The story stays fluid.</em></h2>
+          <div class="contact-block" data-animate="rise" data-delay="180"><a href="mailto:presenter@example.com">presenter@example.com</a><a href="https://example.com">example.com</a><span>City, Country</span></div>
+        </div>
+      </section>
+
+      <button class="page-indicator" type="button" disabled aria-live="polite">01</button>
+      <div class="qa-panel" hidden></div>
+    </div>
+  </main>
+  <noscript><p class="noscript-note">JavaScript is off. Every slide remains available below.</p></noscript>
+  <script src="deck.js"></script>
+</body>
+</html>

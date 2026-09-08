@@ -1,0 +1,27 @@
+#!/bin/sh
+# prose-lint (PostToolUse wrapper, POSIX sh)
+#
+# Event: PostToolUse. Matcher: Write|Edit.
+# Decision: advisory listing mechanical writing tells in an outbound file, or silence.
+# Delegates to harness/hooks/lib/prose_lint.py, which reads the JSON envelope on stdin and
+# prints zero or one JSON line. Exits 0 unconditionally: a missing lib file
+# or a missing Python is silence (fail open), and the decision lives in the
+# JSON, never in the exit code.
+
+# Locate this file with shell builtins only, so the wrapper works even when
+# the parent process supplies a PATH without the POSIX userland tools.
+# Either separator may appear: a Windows host hands the wrapper a backslash
+# path, a POSIX host a forward-slash path.
+case "$0" in
+  */*) DIR=${0%/*} ;;
+  *\\*) DIR=${0%\\*} ;;
+  *) DIR=. ;;
+esac
+DIR=$(cd "$DIR" && pwd)
+LIB="$DIR/../lib"
+PY="$LIB/prose_lint.py"
+[ -f "$PY" ] || exit 0
+. "$LIB/_find_python.sh"
+[ -n "$PYTHON" ] || exit 0
+"$PYTHON" "$PY" "$@"
+exit 0

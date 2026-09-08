@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "runtime": "codex",
+  "families": {
+    "fast": "gpt-5.6-luna",
+    "balanced": "gpt-5.6-terra",
+    "strong": "gpt-5.6-sol",
+    "strong-main": "gpt-6-astra"
+  },
+  "permission_classes": {
+    "read-only": ["filesystem-read"],
+    "edit": ["filesystem-read", "workspace-write"],
+    "shell": ["filesystem-read", "workspace-write", "shell"],
+    "shell-readonly": ["filesystem-read", "shell"]
+  },
+  "notes": [
+    "Family keys are the tier labels from the routing policy; values are provider model ids as the Codex CLI names them.",
+    "The shipped ids were transcribed from a codex-cli 0.153.4 model picker; they are configured, not verified, and provider ids change without notice. Confirm them against your own installation before relying on a generated role.",
+    "A null value is legal and means unresolved; the doctor reports it as UNKNOWN, the renderer skips the roles that need it, and nothing substitutes a default.",
+    "After changing an id, regenerate roles with: python harness/tools/native_routing.py render"
+  ]
+}

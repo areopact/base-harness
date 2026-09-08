@@ -1,0 +1,1 @@
+{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "frontmatter-guard: docs/decisions/fixture-page.md: [ERROR invalid-access-value] access: 'privte' is not one of {public,internal,confidential,restricted,secret}"}}

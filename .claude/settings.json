@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(./.envrc)",
+      "Read(**/.envrc)",
+      "Read(./.npmrc)",
+      "Read(**/.npmrc)",
+      "Read(./.netrc)",
+      "Read(**/.netrc)",
+      "Read(./.pgpass)",
+      "Read(**/.pgpass)",
+      "Read(./.pypirc)",
+      "Read(**/.pypirc)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/*.ppk)",
+      "Read(**/*.keystore)",
+      "Read(**/*.tfvars)",
+      "Read(./.mcp.json)",
+      "Read(**/.mcp.json)",
+      "Read(./.git-credentials)",
+      "Read(**/.git-credentials)",
+      "Read(**/*.jks)",
+      "Read(**/.aws/credentials)",
+      "Read(**/.aws/credentials.*)",
+      "Read(**/.ssh/id_rsa)",
+      "Read(**/.ssh/id_dsa)",
+      "Read(**/.ssh/id_ecdsa)",
+      "Read(**/.ssh/id_ed25519)",
+      "Read(**/.ssh/id_ecdsa_sk)",
+      "Read(**/.ssh/id_ed25519_sk)",
+      "Read(**/application_default_credentials.json)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/session-start/load-identity.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/session-start/pre-bootstrap-detector.sh\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "WebSearch|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/pre-tool-use/memory-first.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/pre-tool-use/dangerous-ops-guard.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/pre-tool-use/openpyxl-guard.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/pre-tool-use/delegation-guard.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/post-tool-use/frontmatter-guard.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/post-tool-use/prose-lint.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/post-tool-use/delegation-guard.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/stop/close-the-loop.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

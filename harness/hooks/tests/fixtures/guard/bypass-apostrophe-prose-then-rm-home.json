@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m \"don't do this\" && rm -rf ~ && echo \"isn't it\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

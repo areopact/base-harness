@@ -1,0 +1,10 @@
+{
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "docs/decisions/fixture-page.md",
+    "content": "---\ntitle: Fixture decision\naccess: internal\n\n# Heading without a closing fence\n"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

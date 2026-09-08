@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "if true; then cat .env; fi"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "echo $(git rev-parse HEAD)"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

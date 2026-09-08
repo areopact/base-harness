@@ -1,0 +1,13 @@
+base-harness
+Copyright and license: see LICENSE (MIT); the copyright holder is named there.
+
+Third-party components vendored or adapted into this repository, together
+with their origins, licenses, and any required notices, are listed in
+THIRD-PARTY.md. That file is GENERATED from harness/registry/sources.json by
+`python harness/tools/gen_manifest.py`; do not edit it by hand. Every entry in
+sources.json names the license of the asset, whether it was modified, and the
+paths it covers. Packs never mix licenses (a lint error otherwise).
+
+If you add or vendor an asset from another project, add a row to
+harness/registry/sources.json and regenerate. Modified Apache-2.0 assets carry
+a change-notice line in the asset itself in addition to the generated table.

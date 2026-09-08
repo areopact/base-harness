@@ -1,0 +1,161 @@
+#!/bin/sh
+# base-harness enforcement floor (pre-commit).
+# Versioned in .githooks/; active once core.hooksPath points here
+# (harness/bootstrap/bootstrap.{ps1,sh} registers it per clone).
+#
+# What this hook is: a NARROW scanner over exact key shapes listed in
+# secret-patterns.txt, a filename block for secret-bearing names, a gitlink
+# rejection, and a size floor for binaries. It catches the honest mistake and
+# is bypassable by design (--no-verify, or the SKIP_* variables below).
+# Authoritative secret coverage belongs to a real scanner in your CI.
+#
+# Invariants:
+#   - secret-patterns.txt contains ONLY patterns; the file has no parser.
+#     A blank line is inert, but a comment line is NOT: git grep reads it as
+#     a live pattern and can match real files ("# comment" matched two
+#     unrelated source files under test), blocking a commit that touched
+#     neither. Keep this file patterns-only. A malformed regex used to:
+#     it made git grep exit nonzero, which a discarded exit status read as
+#     "no hits". The scan below captures that status and fails closed on it.
+#   - The content scan runs ONE git grep over the ENTIRE staged index, not the
+#     diff. A secret-shaped blob anywhere in the index blocks the commit even
+#     when this commit did not touch that file, so a blob staged by another
+#     process or session cannot ride into history unnoticed. One process is
+#     also fast on Windows for bulk commits.
+#   - Matched text is never printed; only file names. Printing the match would
+#     echo the secret into the terminal and any log that captures it.
+#   - Paths are read newline-delimited with core.quotePath=false and
+#     --diff-filter=ACMR so names with spaces or non-ASCII, and renames, are
+#     scanned rather than skipped.
+#   - Failures accumulate in the main shell (no subshell sentinel files), so
+#     the hook behaves the same in a linked worktree where .git is a file.
+#
+# Escape hatches for a knowing false positive on a single local commit:
+#   SKIP_SECRET_SCAN=1 git commit ...     (content and filename scans)
+#   SKIP_SIZE_GUARD=1 git commit ...      (size floor)
+#
+# Chaining: if bootstrap found a prior core.hooksPath it recorded it in the
+# local config key harness.chainedHooksPath. After its own checks pass, this
+# hook execs that path's pre-commit when the key is set and the file exists.
+
+hookdir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+fail=0
+
+if [ "${SKIP_SECRET_SCAN:-}" = "1" ]; then
+  echo "pre-commit: secret scan SKIPPED (SKIP_SECRET_SCAN=1)" >&2
+else
+  patfile="$hookdir/secret-patterns.txt"
+  if [ ! -f "$patfile" ]; then
+    echo "pre-commit: missing $patfile - failing closed" >&2
+    exit 1
+  fi
+
+  # Content scan: whole staged index, one process, file names only. The exit
+  # status is captured (not discarded): 0/1 mean matches/no-matches, anything
+  # higher is a scan failure (e.g. a malformed pattern) and fails closed.
+  hits=$(git grep -l -Ef "$patfile" --cached -- . 2>/dev/null)
+  scanrc=$?
+  if [ "$scanrc" -gt 1 ]; then
+    echo "pre-commit: BLOCKED - secret pattern scan failed (git grep exit $scanrc); check $patfile for a malformed regex" >&2
+    fail=1
+  elif [ -n "$hits" ]; then
+    echo "pre-commit: BLOCKED - secret-shaped content in the staged index:" >&2
+    printf '%s\n' "$hits" | sed 's/^/  /' >&2
+    fail=1
+  fi
+
+  # Filename scan: staged names that mark a file secret-bearing regardless of
+  # content. Template files (.env.example and siblings) are allowed.
+  names=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR |
+    grep -iE '(^|/)\.(env(\.[^/]*)?|envrc|npmrc|netrc|pgpass|pypirc|mcp\.json|git-credentials)$|\.(pem|key|pfx|ppk|p12|keystore|tfvars|jks)$|(^|/)\.aws/credentials(\.[^/]*)?$|(^|/)\.ssh/id_(rsa|dsa|ecdsa|ed25519|ecdsa_sk|ed25519_sk)$|(^|/)application_default_credentials\.json$' |
+    grep -ivE '\.env\.(example|sample|template)$')
+  if [ -n "$names" ]; then
+    echo "pre-commit: BLOCKED - secret-bearing filename staged:" >&2
+    printf '%s\n' "$names" | sed 's/^/  /' >&2
+    fail=1
+  fi
+fi
+
+# Gitlink scan: this repository uses no submodules, so a 160000 index entry is
+# always an accidentally staged nested repository (a stray clone swept in by
+# `git add -A`).
+gitlinks=$(git ls-files --cached -s | grep '^160000 ' | cut -f2-)
+if [ -n "$gitlinks" ]; then
+  echo "pre-commit: BLOCKED - nested git repository staged as a gitlink (no submodules here):" >&2
+  printf '%s\n' "$gitlinks" | sed 's/^/  /' >&2
+  echo "pre-commit: unstage with: git rm --cached <path> (the directory on disk is untouched)" >&2
+  fail=1
+fi
+
+# Size floor: a NEW binary blob over the floor blocks; modifying or renaming
+# one already tracked at HEAD warns only. Compressed containers never delta
+# against their previous version, so each re-commit stores a near-full copy;
+# text formats delta fine and are exempt. Override the floor per clone with
+# `git config harness.sizeFloorBytes <n>`.
+if [ "${SKIP_SIZE_GUARD:-}" != "1" ]; then
+  sizelimit=$(git config harness.sizeFloorBytes 2>/dev/null)
+  case "$sizelimit" in
+    ''|*[!0-9]*) sizelimit=1048576 ;;
+  esac
+  exemptexts=" md txt tsv csv json yaml yml xml svg toml py sh ps1 html css js ts "
+  tab=$(printf '\t')
+  oversized=$(git -c core.quotePath=false diff --cached --name-status --diff-filter=ACMR -M |
+    while IFS="$tab" read -r st p1 p2; do
+      # if/elif rather than case: bash 3.2 (macOS /bin/sh) misparses a case
+      # statement inside command substitution
+      if [ "${st#R}" != "$st" ] || [ "${st#C}" != "$st" ]; then
+        f=$p2
+      else
+        f=$p1
+      fi
+      [ -n "$f" ] || continue
+      sz=$(git cat-file -s ":$f" 2>/dev/null || echo 0)
+      [ "$sz" -gt "$sizelimit" ] || continue
+      base=${f##*/}
+      ext=""
+      if [ "${base##*.}" != "$base" ]; then
+        ext=$(printf '%s' "${base##*.}" | tr 'A-Z' 'a-z')
+      fi
+      if [ -n "$ext" ] && [ "${exemptexts#* $ext }" != "$exemptexts" ]; then
+        continue
+      fi
+      mb=$(awk "BEGIN {printf \"%.1f\", $sz/1048576}")
+      if [ "${st#A}" != "$st" ] || [ "${st#C}" != "$st" ]; then
+        printf 'BLOCK\t%s MB  %s\n' "$mb" "$f"
+      else
+        printf 'WARN\t%s MB  %s\n' "$mb" "$f"
+      fi
+    done)
+  warns=$(printf '%s\n' "$oversized" | grep '^WARN' | cut -f2-)
+  blocks=$(printf '%s\n' "$oversized" | grep '^BLOCK' | cut -f2-)
+  if [ -n "$warns" ]; then
+    echo "pre-commit: size floor - re-committing an oversized tracked binary (history stores another near-full copy):" >&2
+    printf '%s\n' "$warns" | sed 's/^/  /' >&2
+  fi
+  if [ -n "$blocks" ]; then
+    echo "pre-commit: BLOCKED - new binary over the size floor ($sizelimit bytes):" >&2
+    printf '%s\n' "$blocks" | sed 's/^/  /' >&2
+    echo "pre-commit: options: keep it out of git, raise the floor with git config harness.sizeFloorBytes, or SKIP_SIZE_GUARD=1 git commit ..." >&2
+    fail=1
+  fi
+fi
+
+if [ "$fail" = 1 ]; then
+  echo "pre-commit: commit rejected (reasons above)." >&2
+  echo "pre-commit: secret hit? it is COMPROMISED once committed: rotate it now. False positive: SKIP_SECRET_SCAN=1 git commit ..." >&2
+  exit 1
+fi
+
+# Chain a pre-existing hooks path recorded by bootstrap.
+chained=$(git config harness.chainedHooksPath 2>/dev/null)
+if [ -n "$chained" ] && [ "$chained" != ".githooks" ]; then
+  case "$chained" in
+    /*|[A-Za-z]:*) chainedhook="$chained/pre-commit" ;;
+    *) chainedhook="$(git rev-parse --show-toplevel)/$chained/pre-commit" ;;
+  esac
+  if [ -f "$chainedhook" ]; then
+    exec sh "$chainedhook" "$@"
+  fi
+fi
+
+exit 0

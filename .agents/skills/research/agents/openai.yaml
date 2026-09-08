@@ -1,0 +1,5 @@
+interface:
+  display_name: "Research"
+  short_description: "Verified research with independent claim-versus-source checking as the spine: a memory-first... WHEN: /research [deep|ingest] <question or source>..."
+policy:
+  allow_implicit_invocation: false

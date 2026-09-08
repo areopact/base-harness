@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "sed -n '/.env/p' README.md"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

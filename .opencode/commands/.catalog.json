@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "generator": "harness/bootstrap/build_opencode_adapter.py",
+  "commands": 11,
+  "selected": 11,
+  "available": 15,
+  "implemented": 0,
+  "spec_only": 11,
+  "source_sha256": "cd23a314015f12685c689a0003b7ddf4a1b5e1a38f49c9b988c16ff814f88df6"
+}

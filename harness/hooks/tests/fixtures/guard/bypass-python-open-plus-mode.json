@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "python -c \"f=open('.env','a+'); f.seek(0); print(f.read())\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

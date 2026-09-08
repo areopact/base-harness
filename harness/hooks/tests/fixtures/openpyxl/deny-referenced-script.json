@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "python harness/hooks/tests/fixtures/openpyxl/save_workbook.py"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

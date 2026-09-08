@@ -1,0 +1,3405 @@
+{
+  "version": "0.1.0",
+  "files": [
+    {
+      "path": ".githooks/pre-commit",
+      "state": "ported",
+      "source": "upstream-harness:.githooks/pre-commit"
+    },
+    {
+      "path": ".githooks/secret-patterns.txt",
+      "state": "ported",
+      "source": "upstream-harness:.githooks/secret-patterns.txt"
+    },
+    {
+      "path": ".github/workflows/offline-conformance.yml",
+      "state": "ported",
+      "source": "upstream-harness:.github/workflows/harness-compatibility.yml"
+    },
+    {
+      "path": "brain/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "brain/local/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "brain/shared/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/CONTRACT.host.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/CONTRACT.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/claude/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/claude/agents/.gitkeep",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/claude/model-map.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/claude/schema.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/claude/settings.base.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/codex/README.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/codex/README.md"
+    },
+    {
+      "path": "harness/adapters/codex/agents/.gitkeep",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/codex/compatibility.json",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/codex/compatibility.json"
+    },
+    {
+      "path": "harness/adapters/codex/config.toml",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/codex/config.toml"
+    },
+    {
+      "path": "harness/adapters/codex/hooks.json",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/codex/hooks.json"
+    },
+    {
+      "path": "harness/adapters/codex/model-map.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/codex/rules/default.rules",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/codex/rules/default.rules"
+    },
+    {
+      "path": "harness/adapters/codex/schema.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/model_map.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/opencode/README.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/opencode/README.md"
+    },
+    {
+      "path": "harness/adapters/opencode/agents/.gitkeep",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/opencode/compatibility.json",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/opencode/compatibility.json"
+    },
+    {
+      "path": "harness/adapters/opencode/launch/opencode-harness.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/opencode/launch/opencode-os.ps1"
+    },
+    {
+      "path": "harness/adapters/opencode/launch/opencode-harness.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/opencode/launch/opencode-os.sh"
+    },
+    {
+      "path": "harness/adapters/opencode/lib/harness-bridge-internal.js",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/opencode/model-map.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/opencode/opencode.json",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/opencode/opencode.json"
+    },
+    {
+      "path": "harness/adapters/opencode/plugins/harness-bridge.js",
+      "state": "ported",
+      "source": "upstream-harness:harness/adapters/opencode/plugins/harness-bridge.js"
+    },
+    {
+      "path": "harness/adapters/opencode/schema.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/_paths.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_compatibility_records.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_credential_shapes.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_hook_registrations.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_model_maps.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_no_private_vocabulary.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_permission_posture.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_plugin_exports.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/adapters/tests/test_schemas.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/agents/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/bootstrap.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/bootstrap.ps1"
+    },
+    {
+      "path": "harness/bootstrap/bootstrap.sh",
+      "state": "ported",
+      "source": "upstream-template:harness/bootstrap/bootstrap.sh"
+    },
+    {
+      "path": "harness/bootstrap/build_codex_adapter.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/build_codex_adapter.py"
+    },
+    {
+      "path": "harness/bootstrap/build_opencode_adapter.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/build_opencode_adapter.py"
+    },
+    {
+      "path": "harness/bootstrap/contract_files.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/contract_files.py"
+    },
+    {
+      "path": "harness/bootstrap/doctor-codex.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor-codex.ps1"
+    },
+    {
+      "path": "harness/bootstrap/doctor-codex.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor-codex.sh"
+    },
+    {
+      "path": "harness/bootstrap/doctor-opencode.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor-opencode.ps1"
+    },
+    {
+      "path": "harness/bootstrap/doctor-opencode.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor-opencode.sh"
+    },
+    {
+      "path": "harness/bootstrap/doctor.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor.ps1"
+    },
+    {
+      "path": "harness/bootstrap/doctor.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor.sh"
+    },
+    {
+      "path": "harness/bootstrap/doctor_claude.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor.sh"
+    },
+    {
+      "path": "harness/bootstrap/doctor_codex.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor_codex.py"
+    },
+    {
+      "path": "harness/bootstrap/doctor_common.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor_codex.py"
+    },
+    {
+      "path": "harness/bootstrap/doctor_opencode.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/doctor_opencode.py"
+    },
+    {
+      "path": "harness/bootstrap/junctions.json",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/junctions.json"
+    },
+    {
+      "path": "harness/bootstrap/materialize.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/schema_check.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/skill_catalog.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/codex_catalog.py"
+    },
+    {
+      "path": "harness/bootstrap/tests/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/tests/_fixture.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/tests/test_bootstrap_shell.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/tests/test_posix_bootstrap_safety.py"
+    },
+    {
+      "path": "harness/bootstrap/tests/test_contract_files.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/tests/test_contract_files.py"
+    },
+    {
+      "path": "harness/bootstrap/tests/test_doctors.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/tests/test_doctor_codex.py"
+    },
+    {
+      "path": "harness/bootstrap/tests/test_materialize_modes.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/tests/test_materialize_safety.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/tests/test_windows_bootstrap_safety.py"
+    },
+    {
+      "path": "harness/bootstrap/tests/test_skill_catalog.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/tests/test_codex_catalog.py"
+    },
+    {
+      "path": "harness/bootstrap/validate_skills.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/bootstrap/validate_skills.py"
+    },
+    {
+      "path": "harness/hooks/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/codex-dispatch.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/codex-dispatch.ps1"
+    },
+    {
+      "path": "harness/hooks/codex-dispatch.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/codex-dispatch.sh"
+    },
+    {
+      "path": "harness/hooks/lib/_debug.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/_debug.py"
+    },
+    {
+      "path": "harness/hooks/lib/_find_python.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/_find_python.ps1"
+    },
+    {
+      "path": "harness/hooks/lib/_find_python.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/_find_python.sh"
+    },
+    {
+      "path": "harness/hooks/lib/_invoke_python.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/_invoke_python.ps1"
+    },
+    {
+      "path": "harness/hooks/lib/close_the_loop.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/close_the_loop.py"
+    },
+    {
+      "path": "harness/hooks/lib/dangerous_ops_guard.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/dangerous_ops_guard.py"
+    },
+    {
+      "path": "harness/hooks/lib/delegation_guard.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/delegation_guard.py"
+    },
+    {
+      "path": "harness/hooks/lib/dispatch.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/dispatch.py"
+    },
+    {
+      "path": "harness/hooks/lib/frontmatter_guard.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/frontmatter_guard.py"
+    },
+    {
+      "path": "harness/hooks/lib/hook_io.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/hook_io.py"
+    },
+    {
+      "path": "harness/hooks/lib/load_identity.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/load_identity.py"
+    },
+    {
+      "path": "harness/hooks/lib/memory_first.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/brain_first.py"
+    },
+    {
+      "path": "harness/hooks/lib/openpyxl_guard.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/openpyxl_guard.py"
+    },
+    {
+      "path": "harness/hooks/lib/pre_bootstrap_detector.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/lib/prose_lint.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/lib/prose_lint.py"
+    },
+    {
+      "path": "harness/hooks/lib/read_deny.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/post-tool-use/delegation-guard.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/post-tool-use/delegation-guard.ps1"
+    },
+    {
+      "path": "harness/hooks/post-tool-use/delegation-guard.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/post-tool-use/delegation-guard.sh"
+    },
+    {
+      "path": "harness/hooks/post-tool-use/frontmatter-guard.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/post-tool-use/frontmatter-guard.ps1"
+    },
+    {
+      "path": "harness/hooks/post-tool-use/frontmatter-guard.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/post-tool-use/frontmatter-guard.sh"
+    },
+    {
+      "path": "harness/hooks/post-tool-use/prose-lint.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/post-tool-use/prose-lint.ps1"
+    },
+    {
+      "path": "harness/hooks/post-tool-use/prose-lint.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/post-tool-use/prose-lint.sh"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/dangerous-ops-guard.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/dangerous-ops-guard.ps1"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/dangerous-ops-guard.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/dangerous-ops-guard.sh"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/delegation-guard.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/delegation-guard.ps1"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/delegation-guard.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/delegation-guard.sh"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/memory-first.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/brain-first.ps1"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/memory-first.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/brain-first.sh"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/openpyxl-guard.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/openpyxl-guard.ps1"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/openpyxl-guard.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/pre-tool-use/openpyxl-guard.sh"
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/read-deny.ps1",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/read-deny.sh",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/session-start/load-identity.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/session-start/load-identity.ps1"
+    },
+    {
+      "path": "harness/hooks/session-start/load-identity.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/session-start/load-identity.sh"
+    },
+    {
+      "path": "harness/hooks/session-start/pre-bootstrap-detector.ps1",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/session-start/pre-bootstrap-detector.sh",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/stop/close-the-loop.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/stop/close-the-loop.ps1"
+    },
+    {
+      "path": "harness/hooks/stop/close-the-loop.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/stop/close-the-loop.sh"
+    },
+    {
+      "path": "harness/hooks/tests/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/advise-bad-date.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/advise-invalid-access.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/advise-restricted-no-collaborators.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/advise-restricted-unknown-collaborator.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/advise-turn-scoped-shape.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/advise-unclosed-block.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/allow-outside-every-lane.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/frontmatter/allow-valid.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-apostrophe-prose-then-benign-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-attached-option-value-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-awk-program-brace.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-base64-decode-pipe-sh.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-benign-compound.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-cat-env-example-2.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-cat-ssh-config.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-cat-ssh-id-rsa-pub.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-cat-ssh-pub-key.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-cat-windows-repo-path.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-cd-root-then-glob.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-clean-bundled-dry-run.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-command-combined-inspect-flags.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-command-inspect-name.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-command-substitution-date.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-comment-inside-quotes.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-commit-message-dotnet-prose.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-commit-message-mkfs.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-commit-message-open-call.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-commit-message-sql-client.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-echo-rev-parse-substitution.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-echo-token-variable.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-env-example-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-env-prose-mention.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-find-delete.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-cancelled-long.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-cancelled-short.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-equals-true.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-if-includes-without-lease.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-push-feature-branch-2.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-with-lease-main-2.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-force-with-lease.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-git-clean-dry-run.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-git-global-option-push-feature.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-git-push-bare.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-git-push-dry-run-mirror.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-grep-chmod-prose.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-grep-open-call-literal.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-grep-pattern-file.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-grep-token-parent-repo.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-heredoc-safe-sink.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-lease-with-force-if-includes.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-powershell-literalpath-colon-owned.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-powershell-owned-trailing-separator.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-powershell-whatif-bound-true.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-powershell-whatif.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-printf-dd-prose.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-all-origin.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-all-without-force.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-feature-branch.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-force-dry-run.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-main-without-force.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-upstream-feature-2.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-push-upstream-feature.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-python-open-write-mode.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-redirect-read-config.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-refspec-dest-feature.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-dotdot-in-dirname.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-dotdot-inside-relative-path.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-dotdot-suffix-dirname.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-flags-after-operand-non-recursive.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-own-build-dir.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-parent-relative-non-recursive.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rm-variable-expansion.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-rsync-delete-root.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-sed-env-pattern.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-shell-c-positional-argument.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-shell-c-unquoted-single-word.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-single-quoted-git-prose.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-single-quoted-rm-prose.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-single-quoted-substitution-prose.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-sql-commit-message.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-sql-echo-words.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-sql-grep-mention.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-sudo-user-reader-doc.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-write-stdin-silent.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/allow-xargs-rm.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-alias-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-ansi-c-quoted-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-apostrophe-prose-then-rm-home.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-apostrophe-prose-then-rm-root.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-apostrophe-prose-then-substitution-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-attached-option-value-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-backtick-env.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-bare-redirect-substitution-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-bash-c-string-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-builtin-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-bundled-dry-run-cancelled.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-aws-credentials-bak.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-aws-credentials.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-env-list-valued.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-env.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-gcloud-adc.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-npmrc.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-ssh-key.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-var-home-env-quoted.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-var-home-env-substitution.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-var-home-env.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-cat-windows-aws-credentials.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-chmod-recursive-000.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-chown-system-path.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-clean-short-dry-run-cancelled.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-command-and-cmd-both-present.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-command-p-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-command-substitution-env.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-comment-then-newline-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-comment-then-newline-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-comment-then-newline-rm-root.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-dd-raw-device.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-deeply-nested-substitution.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-dotnet-reader-command-position.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-double-quoted-apostrophe-substitution.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-dry-run-cancelled.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-empty-command-falls-through-to-cmd.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-eval-variable-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-exec-command-native.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-all-refs.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-bare-long-flag.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-bare-with-remote.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-bare.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-bundled-flags.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-head-refspec.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-list-valued.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-mirror.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-parenthesized.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-quoted-double.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-quoted-option-value.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-quoted-single.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-trailing-comma.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-force-push-trailing-comment-dry-run.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-get-content-pem.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-branch-force-delete-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-c-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-clean-force.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-filter-branch.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-filter-repo.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-global-option-bare-force.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-git-reset-hard-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-heredoc-interpreter.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-lease-with-delete.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-mkfs-device.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-nested-substitution.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-other-shell-fish-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-plus-refspec.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-array-delete.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-array-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-bound-switch-true.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-drive-root.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-literalpath-colon.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-parent-relative.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-trailing-separator-drive-root.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-trailing-separator-literalpath.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-powershell-trailing-separator-parent.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-process-substitution-output.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-process-substitution-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-ps-unquoted-backslash-path.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-push-delete-colon-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-push-delete-colon-refs-heads-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-push-delete-d-flag-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-push-delete-flag-main.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-pwsh-command-secret-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-python-open-env.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-python-open-nested-call.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-python-open-plus-mode.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-quoted-assignment-prefix.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-quoted-delete-refspec.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-quoted-force-flag.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-quoted-paren-in-substitution.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-reader-trailing-backslash-space.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-redirect-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-reserved-word-do-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-reserved-word-then-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-dot-component.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-dotslash-parent-quoted.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-dotslash-parent-unquoted.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-flags-after-operand.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-home-tilde.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-home-var.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-long-flags.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-parent-component.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-parent-relative.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-repeated-separators.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-root-glob.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-root.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-rm-split-flags.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-sed-env.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-shell-c-quoted-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-shell-c-quoted-secret-read.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-shell-command-native.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-shell-function-force-push.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-short-dry-run-cancelled.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-sql-client-drop.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-sql-client-truncate.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-sql-drop-statement.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/guard/bypass-sudo-user-reader.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/openpyxl/allow-new-file.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/openpyxl/deny-inline-save.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/openpyxl/deny-referenced-script.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/read-deny/allow-internal-label.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/read-deny/allow-secret-label-flag-off.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/read-deny/deny-secret-label.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/advise-bad-date.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/advise-invalid-access.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/advise-restricted-no-collaborators.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/advise-restricted-unknown-collaborator.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/advise-turn-scoped-shape.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/advise-unclosed-block.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/allow-outside-every-lane.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/frontmatter/allow-valid.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-apostrophe-prose-then-benign-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-attached-option-value-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-awk-program-brace.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-base64-decode-pipe-sh.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-benign-compound.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-cat-env-example-2.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-cat-ssh-config.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-cat-ssh-id-rsa-pub.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-cat-ssh-pub-key.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-cat-windows-repo-path.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-cd-root-then-glob.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-clean-bundled-dry-run.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-command-combined-inspect-flags.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-command-inspect-name.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-command-substitution-date.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-comment-inside-quotes.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-commit-message-dotnet-prose.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-commit-message-mkfs.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-commit-message-open-call.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-commit-message-sql-client.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-echo-rev-parse-substitution.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-echo-token-variable.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-env-example-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-env-prose-mention.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-find-delete.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-cancelled-long.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-cancelled-short.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-equals-true.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-if-includes-without-lease.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-push-feature-branch-2.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-with-lease-main-2.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-force-with-lease.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-git-clean-dry-run.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-git-global-option-push-feature.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-git-push-bare.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-git-push-dry-run-mirror.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-grep-chmod-prose.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-grep-open-call-literal.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-grep-pattern-file.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-grep-token-parent-repo.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-heredoc-safe-sink.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-lease-with-force-if-includes.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-powershell-literalpath-colon-owned.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-powershell-owned-trailing-separator.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-powershell-whatif-bound-true.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-powershell-whatif.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-printf-dd-prose.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-all-origin.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-all-without-force.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-feature-branch.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-force-dry-run.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-main-without-force.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-upstream-feature-2.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-push-upstream-feature.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-python-open-write-mode.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-redirect-read-config.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-refspec-dest-feature.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-dotdot-in-dirname.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-dotdot-inside-relative-path.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-dotdot-suffix-dirname.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-flags-after-operand-non-recursive.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-own-build-dir.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-parent-relative-non-recursive.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rm-variable-expansion.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-rsync-delete-root.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-sed-env-pattern.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-shell-c-positional-argument.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-shell-c-unquoted-single-word.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-single-quoted-git-prose.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-single-quoted-rm-prose.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-single-quoted-substitution-prose.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-sql-commit-message.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-sql-echo-words.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-sql-grep-mention.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-sudo-user-reader-doc.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-write-stdin-silent.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/allow-xargs-rm.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-alias-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-ansi-c-quoted-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-apostrophe-prose-then-rm-home.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-apostrophe-prose-then-rm-root.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-apostrophe-prose-then-substitution-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-attached-option-value-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-backtick-env.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-bare-redirect-substitution-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-bash-c-string-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-builtin-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-bundled-dry-run-cancelled.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-aws-credentials-bak.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-aws-credentials.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-env-list-valued.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-env.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-gcloud-adc.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-npmrc.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-ssh-key.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-var-home-env-quoted.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-var-home-env-substitution.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-var-home-env.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-cat-windows-aws-credentials.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-chmod-recursive-000.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-chown-system-path.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-clean-short-dry-run-cancelled.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-command-and-cmd-both-present.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-command-p-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-command-substitution-env.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-comment-then-newline-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-comment-then-newline-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-comment-then-newline-rm-root.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-dd-raw-device.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-deeply-nested-substitution.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-dotnet-reader-command-position.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-double-quoted-apostrophe-substitution.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-dry-run-cancelled.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-empty-command-falls-through-to-cmd.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-eval-variable-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-exec-command-native.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-all-refs.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-bare-long-flag.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-bare-with-remote.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-bare.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-bundled-flags.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-head-refspec.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-list-valued.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-mirror.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-parenthesized.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-quoted-double.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-quoted-option-value.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-quoted-single.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-trailing-comma.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-force-push-trailing-comment-dry-run.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-get-content-pem.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-branch-force-delete-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-c-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-clean-force.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-filter-branch.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-filter-repo.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-global-option-bare-force.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-git-reset-hard-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-heredoc-interpreter.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-lease-with-delete.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-mkfs-device.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-nested-substitution.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-other-shell-fish-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-plus-refspec.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-array-delete.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-array-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-bound-switch-true.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-drive-root.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-literalpath-colon.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-parent-relative.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-trailing-separator-drive-root.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-trailing-separator-literalpath.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-powershell-trailing-separator-parent.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-process-substitution-output.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-process-substitution-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-ps-unquoted-backslash-path.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-push-delete-colon-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-push-delete-colon-refs-heads-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-push-delete-d-flag-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-push-delete-flag-main.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-pwsh-command-secret-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-python-open-env.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-python-open-nested-call.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-python-open-plus-mode.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-quoted-assignment-prefix.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-quoted-delete-refspec.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-quoted-force-flag.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-quoted-paren-in-substitution.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-reader-trailing-backslash-space.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-redirect-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-reserved-word-do-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-reserved-word-then-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-dot-component.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-dotslash-parent-quoted.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-dotslash-parent-unquoted.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-flags-after-operand.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-home-tilde.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-home-var.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-long-flags.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-parent-component.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-parent-relative.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-repeated-separators.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-root-glob.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-root.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-rm-split-flags.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-sed-env.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-shell-c-quoted-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-shell-c-quoted-secret-read.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-shell-command-native.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-shell-function-force-push.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-short-dry-run-cancelled.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-sql-client-drop.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-sql-client-truncate.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-sql-drop-statement.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/guard/bypass-sudo-user-reader.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/openpyxl/allow-new-file.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/openpyxl/deny-inline-save.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/openpyxl/deny-referenced-script.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/openpyxl/formatted-workbook.xlsx",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/openpyxl/save_workbook.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/precommit/binary-secret.bin",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/precommit/encoded-secret.txt",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/precommit/hookspath-unset-secret.txt",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/precommit/skip-secret.txt",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/precommit/split-secret.txt",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/precommit/unmatched-shape-secret.txt",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/read-deny/allow-internal-label.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/read-deny/allow-secret-label-flag-off.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/read-deny/deny-secret-label.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/read-deny/internal-page.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/read-deny/secret-page.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/run.ps1",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/run.ps1"
+    },
+    {
+      "path": "harness/hooks/tests/run.sh",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/run.sh"
+    },
+    {
+      "path": "harness/hooks/tests/test_dispatch.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_dispatch.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_exit_codes.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/test_find_python_ps1.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/test_guard_regressions.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_guard_regressions.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_hook_io.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_hook_io.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_identity_selection.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_identity_selection.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_latency.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_latency.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_no_state.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_no_state.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_pre_bootstrap_detector.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/test_precommit_gaps.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/test_read_deny.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/test_structure_parameterization.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/kernel-manifest.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/capabilities.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/collaborators.yaml",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/environment.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/runtimes.json",
+      "state": "ported",
+      "source": "upstream-harness:harness/registry/runtimes.json"
+    },
+    {
+      "path": "harness/registry/selection.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/sources.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/structure.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/structure.schema.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/tests/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/tests/test_harness_registry.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/registry/tests/test_structure_defaults.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/rules/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/rules/access-policy.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/access-policy.md"
+    },
+    {
+      "path": "harness/rules/agent-discipline.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/agent-discipline.md"
+    },
+    {
+      "path": "harness/rules/base-routing.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/base-routing.md"
+    },
+    {
+      "path": "harness/rules/cli-interaction.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/cli-interaction.md"
+    },
+    {
+      "path": "harness/rules/close-the-loop.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/close-the-loop.md"
+    },
+    {
+      "path": "harness/rules/git-workflow.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/git-workflow.md"
+    },
+    {
+      "path": "harness/rules/hook-design.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/hook-design.md"
+    },
+    {
+      "path": "harness/rules/index.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/rules/memory-first.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/brain-first.md"
+    },
+    {
+      "path": "harness/rules/memory-routing.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/brain-routing.md"
+    },
+    {
+      "path": "harness/rules/openpyxl-hands-off.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/openpyxl-hands-off.md"
+    },
+    {
+      "path": "harness/rules/output-discipline.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/output-discipline.md"
+    },
+    {
+      "path": "harness/rules/output-quality.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/output-quality.md"
+    },
+    {
+      "path": "harness/rules/secrets.md",
+      "state": "ported",
+      "source": "upstream-harness:harness/rules/secrets.md"
+    },
+    {
+      "path": "harness/skills/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/RESOLVER.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/brainstorm/LENSES.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/brainstorm/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/brainstorm/references/perspectives.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/brainstorm/references/venture.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/capture/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/commit/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/daily/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-outline/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-outline/references/education.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-outline/references/introduction.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-outline/references/investment.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/assets/starter/deck.css",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/assets/starter/deck.js",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/assets/starter/index.html",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/references/design-system.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/references/investment-web.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/references/layout-catalog.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/references/motion-and-data.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/scripts/check_deck.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/deck-render/scripts/inline_bundle.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/doctor/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/eli5/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/humanize/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/humanize/references/false-positives.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/humanize/references/patterns.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/prompt/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/prompt/references/best-practices.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/research/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/audience.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/ceo.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/design-audit.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/design-plan.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/devex.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/eng.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/pipeline.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/review/references/spec-quality.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/skillify/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/verify/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/skills/workflow/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/adopt.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/deidentify-terms.txt",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/deidentify_lint.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/_helpers.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/test_adopt.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/test_deidentify_lint.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/test_export.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/test_export_fuzz.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/test_init.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/export_tests/test_selector.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/gen_manifest.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/gen_manifest.py"
+    },
+    {
+      "path": "harness/tools/harness_registry.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/harness_registry.py"
+    },
+    {
+      "path": "harness/tools/init.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/lint.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/native_routing.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/native_routing.py"
+    },
+    {
+      "path": "harness/tools/release_check.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/resolver_lint.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/resolver_lint.py"
+    },
+    {
+      "path": "harness/tools/routing_policy.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/routing_policy.py"
+    },
+    {
+      "path": "harness/tools/selector.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/skill_usage.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/skill_usage.py"
+    },
+    {
+      "path": "harness/tools/templates/IDENTITY.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/OPERATOR.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/brain/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/brain/local/.gitkeep",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/brain/local/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/brain/shared/README.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/brain/shared/knowledge/.gitkeep",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/brain/skeleton.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/lanes.example.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/structure.default.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/__init__.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/_repo.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/test_gen_manifest.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/test_lint.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/test_native_routing.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/tests/test_native_routing.py"
+    },
+    {
+      "path": "harness/tools/tests/test_release_check.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/test_resolver_lint.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/tests/test_resolver_lint.py"
+    },
+    {
+      "path": "harness/tools/tests/test_routing_policy.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/tests/test_routing_policy.py"
+    },
+    {
+      "path": "harness/tools/tests/test_tools_no_private_vocabulary.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/test_workflow.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/tests/test_workflow.py"
+    },
+    {
+      "path": "harness/tools/workflow.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/workflow.py"
+    },
+    {
+      "path": "harness/tools/workflow_state.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/tools/workflow_state.py"
+    }
+  ]
+}

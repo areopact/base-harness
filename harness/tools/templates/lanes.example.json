@@ -1,0 +1,233 @@
+{
+  "note": "Template: these are shapes, not content. Each entry under examples carries one complete structure.json object; copy the inner structure object to harness/registry/structure.json and edit it. The outer object is not itself a valid structure.json. solo-host, existing-repo-host, and private-instance-host are the three host shapes in docs/HOST-SHAPES.md; docs-only-host and branches-host are narrower variants.",
+  "examples": {
+    "docs-only-host": {
+      "note": "A repository with documentation and decisions under docs/ and no personal memory module. Every memory lane is unset; the docs lane exports as public.",
+      "structure": {
+        "schema_version": 1,
+        "lanes": {
+          "identity": null,
+          "knowledge": null,
+          "journal": null,
+          "decisions": [
+            "docs/decisions"
+          ],
+          "records": null,
+          "docs": [
+            "docs"
+          ]
+        },
+        "git": {
+          "mode": "main-only"
+        },
+        "outbound_globs": [],
+        "brain": {
+          "local_tracked": false,
+          "local_path": "brain/local"
+        },
+        "tiers": {
+          "lane_defaults": {
+            "identity": "internal",
+            "knowledge": "internal",
+            "journal": "internal",
+            "decisions": "internal",
+            "records": "internal",
+            "docs": "public"
+          },
+          "unlisted_path": "internal"
+        },
+        "delegation": {
+          "mandatory": false
+        },
+        "selection_scope": "repo"
+      }
+    },
+    "branches-host": {
+      "note": "A team repository that lands work through branches and pull requests. Shared memory stays in the repository; the local lane is untracked so no personal file can ride into a pull request (the structure validator accepts repository-relative paths only; adopt.py moves the lane outside the repository as soon as the validator admits an external path). Selection is user-local so each contributor materializes only the skills they use.",
+      "structure": {
+        "schema_version": 1,
+        "lanes": {
+          "identity": [
+            "brain/shared/IDENTITY.md"
+          ],
+          "knowledge": [
+            "brain/shared/knowledge"
+          ],
+          "journal": null,
+          "decisions": [
+            "docs/decisions"
+          ],
+          "records": null,
+          "docs": [
+            "docs"
+          ]
+        },
+        "git": {
+          "mode": "branches"
+        },
+        "outbound_globs": [],
+        "brain": {
+          "local_tracked": false,
+          "local_path": "brain/local"
+        },
+        "tiers": {
+          "lane_defaults": {
+            "identity": "internal",
+            "knowledge": "internal",
+            "journal": "internal",
+            "decisions": "internal",
+            "records": "internal",
+            "docs": "public"
+          },
+          "unlisted_path": "exclude"
+        },
+        "delegation": {
+          "mandatory": false
+        },
+        "selection_scope": "user"
+      }
+    },
+    "solo-host": {
+      "note": "A single operator on a repository created from the template. All six lanes are set where the memory module provides them; records stays unset until the operator has dated events to file. Main-only git, repository-shared selection, local lane untracked inside the repository.",
+      "structure": {
+        "schema_version": 1,
+        "lanes": {
+          "identity": [
+            "brain/shared/IDENTITY.md",
+            "brain/local/OPERATOR.md"
+          ],
+          "knowledge": [
+            "brain/shared/knowledge",
+            "brain/local/knowledge"
+          ],
+          "journal": [
+            "brain/local/journal"
+          ],
+          "decisions": [
+            "docs/decisions"
+          ],
+          "records": null,
+          "docs": [
+            "docs"
+          ]
+        },
+        "git": {
+          "mode": "main-only"
+        },
+        "outbound_globs": [],
+        "brain": {
+          "local_tracked": false,
+          "local_path": "brain/local"
+        },
+        "tiers": {
+          "lane_defaults": {
+            "identity": "internal",
+            "knowledge": "internal",
+            "journal": "internal",
+            "decisions": "internal",
+            "records": "internal",
+            "docs": "public"
+          },
+          "unlisted_path": "internal"
+        },
+        "delegation": {
+          "mandatory": false
+        },
+        "selection_scope": "repo"
+      }
+    },
+    "existing-repo-host": {
+      "note": "An existing team repository adopted with adopt.py. Decisions and records stay unset because the host keeps them in its own system; the docs lane points at the host's documentation folder; the identity lane holds only the shared agent identity so no operator profile can ride into a pull request. Branches git mode, user-local selection, unlisted paths excluded from every export. The design places the local lane outside the repository in this shape; the validator accepts repository-relative paths only, so it stays in-repository and untracked until that lands.",
+      "structure": {
+        "schema_version": 1,
+        "lanes": {
+          "identity": [
+            "brain/shared/IDENTITY.md"
+          ],
+          "knowledge": [
+            "brain/shared/knowledge"
+          ],
+          "journal": null,
+          "decisions": null,
+          "records": null,
+          "docs": [
+            "docs"
+          ]
+        },
+        "git": {
+          "mode": "branches"
+        },
+        "outbound_globs": [],
+        "brain": {
+          "local_tracked": false,
+          "local_path": "brain/local"
+        },
+        "tiers": {
+          "lane_defaults": {
+            "identity": "internal",
+            "knowledge": "internal",
+            "journal": "internal",
+            "decisions": "internal",
+            "records": "internal",
+            "docs": "public"
+          },
+          "unlisted_path": "exclude"
+        },
+        "delegation": {
+          "mandatory": false
+        },
+        "selection_scope": "user"
+      }
+    },
+    "private-instance-host": {
+      "note": "A private personal repository that mirrors the harness structure and lint but keeps every lane's content private: a flat memory folder instead of shared and local halves, a records lane for dated events, memory lanes at the confidential tier, docs internal, unlisted paths excluded, and mandatory delegation for substantive work. Nothing in this shape is exported below confidential. The lane paths are illustrative; a host names its own.",
+      "structure": {
+        "schema_version": 1,
+        "lanes": {
+          "identity": [
+            "brain/IDENTITY.md",
+            "brain/OPERATOR.md"
+          ],
+          "knowledge": [
+            "brain/knowledge"
+          ],
+          "journal": [
+            "brain/journal"
+          ],
+          "decisions": [
+            "brain/decisions"
+          ],
+          "records": [
+            "records"
+          ],
+          "docs": [
+            "docs"
+          ]
+        },
+        "git": {
+          "mode": "main-only"
+        },
+        "outbound_globs": [],
+        "brain": {
+          "local_tracked": true,
+          "local_path": "brain"
+        },
+        "tiers": {
+          "lane_defaults": {
+            "identity": "confidential",
+            "knowledge": "confidential",
+            "journal": "confidential",
+            "decisions": "confidential",
+            "records": "confidential",
+            "docs": "internal"
+          },
+          "unlisted_path": "exclude"
+        },
+        "delegation": {
+          "mandatory": true
+        },
+        "selection_scope": "repo"
+      }
+    }
+  }
+}

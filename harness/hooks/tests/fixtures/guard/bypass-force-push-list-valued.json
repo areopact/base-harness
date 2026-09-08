@@ -1,0 +1,13 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "exec_command",
+  "tool_input": {
+    "cmd": [
+      "bash",
+      "-lc",
+      "git push -f origin main"
+    ]
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

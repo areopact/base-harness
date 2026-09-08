@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "capabilities": {
+    "delegated-execution": {
+      "kind": "runtime-tool",
+      "runtimes": {
+        "claude": "provided",
+        "codex": "unknown",
+        "opencode": "unknown"
+      },
+      "probe": {
+        "type": "none",
+        "value": null
+      },
+      "unready_behavior": "run the stages sequentially in the main loop and report that no delegated worker ran"
+    },
+    "peer-runtime-cli": {
+      "kind": "runtime-tool",
+      "runtimes": {
+        "claude": "unknown",
+        "codex": "unknown",
+        "opencode": "unknown"
+      },
+      "probe": {
+        "type": "none",
+        "value": null
+      },
+      "unready_behavior": "run one seat in the active runtime and label the missing seats as coverage gaps"
+    },
+    "user-file-delivery": {
+      "kind": "runtime-tool",
+      "runtimes": {
+        "claude": "provided",
+        "codex": "absent",
+        "opencode": "absent"
+      },
+      "probe": {
+        "type": "none",
+        "value": null
+      },
+      "unready_behavior": "write the file to the repository and print its path"
+    },
+    "web-search": {
+      "kind": "runtime-tool",
+      "runtimes": {
+        "claude": "unknown",
+        "codex": "unknown",
+        "opencode": "unknown"
+      },
+      "probe": {
+        "type": "none",
+        "value": null
+      },
+      "unready_behavior": "ask the operator for the source or work from local material"
+    }
+  }
+}

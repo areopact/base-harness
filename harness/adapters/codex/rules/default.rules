@@ -1,0 +1,34 @@
+# Codex execpolicy rules (Starlark). Behavioral Markdown rules live in
+# harness/rules/; this file only shapes shell-command decisions.
+
+prefix_rule(
+    pattern = ["git", "add", [".", "-A", "--all"]],
+    decision = "forbidden",
+    justification = "Stage explicit paths only; a broad add sweeps unrelated or untracked files into the commit.",
+    match = ["git add .", "git add -A", "git add --all"],
+    not_match = ["git add harness/hooks/lib/hook_io.py"],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "prompt",
+    justification = "A hard reset discards uncommitted work; inspect status and confirm the exact target first.",
+    match = ["git reset --hard", "git reset --hard HEAD~1"],
+    not_match = ["git reset --soft HEAD~1"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--force"],
+    decision = "forbidden",
+    justification = "Never force-push; use a normal push, or --force-with-lease only where the host's branch rules allow it.",
+    match = ["git push --force origin main"],
+    not_match = ["git push --force-with-lease origin topic"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "-f"],
+    decision = "forbidden",
+    justification = "Never force-push; use a normal push, or --force-with-lease only where the host's branch rules allow it.",
+    match = ["git push -f origin main"],
+    not_match = ["git push origin main"],
+)

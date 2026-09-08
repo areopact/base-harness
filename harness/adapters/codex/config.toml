@@ -1,0 +1,31 @@
+# Repository-scoped Codex defaults. Canonical source; bootstrap copies this
+# file into the project's Codex config directory. It declares environment,
+# hooks, and agents only.
+# Approval, sandbox, and permission controls belong to the operator's own
+# Codex configuration and are never set here; the doctor asserts their absence.
+
+allow_login_shell = false
+developer_instructions = """
+[base-harness codex adapter]
+The shared operating contract is AGENTS.md at the repository root. Codex-specific
+guidance lives in harness/adapters/codex/README.md; read it before changing
+adapter wiring or assuming another runtime's syntax applies. Invoke local skills
+as $skill-name or by natural language. Hosted web search is outside the local
+hook path, so follow the memory-first contract before using it even when no hook
+fires. Use clickable absolute path:line links for file references.
+"""
+
+[shell_environment_policy]
+inherit = "core"
+ignore_default_excludes = false
+
+# Compatibility shim: on Codex CLI releases where hooks were feature-gated,
+# this flag turned them on. On codex-cli 0.153.4, `codex features list`
+# reports hooks as stable and this setting is a no-op; it is kept so an
+# older CLI on the minimum-supported floor still gets hooks enabled.
+[features]
+hooks = true
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 6

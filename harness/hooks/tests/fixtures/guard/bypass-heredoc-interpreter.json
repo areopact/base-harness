@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "bash <<'RUN'\nrm -rf /\nRUN\n"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

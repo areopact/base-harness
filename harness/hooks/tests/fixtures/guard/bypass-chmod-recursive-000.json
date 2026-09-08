@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "chmod -R 000 /var/www"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

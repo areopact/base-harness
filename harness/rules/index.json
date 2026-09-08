@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "slug": "access-policy",
+      "kind": "path-scoped",
+      "globs": ["**/*.md"],
+      "summary": "Five additive, clearance-free access labels that govern export and, on one runtime, an optional read deny; defaults come from structure.json lanes."
+    },
+    {
+      "slug": "agent-discipline",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "State assumptions before acting, touch only what the goal requires, define success up front and verify before claiming done."
+    },
+    {
+      "slug": "base-routing",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Authored delegation policy: planning tiers, profiles as logical tier labels, task catalog, tool profiles, and floors that bind only when delegation is mandatory."
+    },
+    {
+      "slug": "cli-interaction",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Terminal presentation: answer first, form matched to content, plan and result shapes, prose questions, honest empty states."
+    },
+    {
+      "slug": "close-the-loop",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "End-of-session checklist over the configured lanes: verify, commit or park, update docs, file records and decisions, synthesize knowledge, no orphans."
+    },
+    {
+      "slug": "git-workflow",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Shared-tree etiquette, the main-only and branches modes selected by structure.json, the size guard, and the commit format."
+    },
+    {
+      "slug": "hook-design",
+      "kind": "path-scoped",
+      "globs": ["harness/hooks/**"],
+      "summary": "Hooks are bounded, read-only, network-free, stateless, exit 0 with a JSON decision, and climb the enforcement ladder only on evidence."
+    },
+    {
+      "slug": "memory-first",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Exhaust the configured lanes in order (knowledge, decisions, docs, records, journal) before any external lookup; the hook is a reminder, not a gate."
+    },
+    {
+      "slug": "memory-routing",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Which lane each kind of information belongs in, the four-layer test, and the working, standing, promoted, superseded maturity vocabulary."
+    },
+    {
+      "slug": "openpyxl-hands-off",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Never save over a formatted spreadsheet with openpyxl; the guard hook denies the pattern at the shell boundary."
+    },
+    {
+      "slug": "output-discipline",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Truth over punch in educational content and no em-dashes in generated prose."
+    },
+    {
+      "slug": "output-quality",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Deterministic links, the twelve mechanical tells, prose floors, exact phrasing, title quality, and soft-wrapped paragraphs."
+    },
+    {
+      "slug": "secrets",
+      "kind": "always-on",
+      "globs": [],
+      "summary": "Secrets live only in gitignored local stores; configs reference names; environment.json declares topology without values; rotate on any commit."
+    }
+  ],
+  "bootstrap_path_allowlist": [
+    "docs/**",
+    "README.md",
+    "harness/adapters/**/README.md",
+    "harness/bootstrap/README.md",
+    "harness/hooks/README.md"
+  ]
+}

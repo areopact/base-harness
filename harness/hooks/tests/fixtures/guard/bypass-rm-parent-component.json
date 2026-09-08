@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "rm -rf /tmp/../etc"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

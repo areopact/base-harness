@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "base-harness-internal": {
+      "origin": "internal",
+      "license": "MIT",
+      "notice": null,
+      "modified": false,
+      "assets": []
+    },
+    "gbrain": {
+      "origin": "https://github.com/garrytan/gbrain",
+      "license": "MIT",
+      "notice": "License confirmed at the upstream repository's LICENSE file, checked 2026-09-07.",
+      "modified": true,
+      "assets": [
+        "harness/rules/output-quality.md#1-deterministic-links",
+        "harness/skills/review/references/audience.md"
+      ]
+    },
+    "gstack": {
+      "origin": "https://github.com/garrytan/gstack",
+      "license": "MIT",
+      "notice": "License confirmed at the upstream repository's LICENSE file, MIT, checked 2026-09-08 (LICENSE blob 35029511144443297cad2d26e4bac17d0e352f93 at commit 0530392821c277b95e5cd65aa9d9fda4248718b2). The review lens references adapt the gstack review skill family and harness/skills/review/SKILL.md adapts the review skill itself, crediting both the gstack review family and the gbrain cross-modal-review skill (see the gbrain entry's harness/skills/review/references/audience.md asset); the brainstorm skill's venture forcing questions adapt the gstack office-hours method; each file names its own upstream skill.",
+      "modified": true,
+      "assets": [
+        "harness/skills/review/references/spec-quality.md",
+        "harness/skills/review/references/ceo.md",
+        "harness/skills/review/references/eng.md",
+        "harness/skills/review/references/design-plan.md",
+        "harness/skills/review/references/design-audit.md",
+        "harness/skills/review/references/devex.md",
+        "harness/skills/review/references/pipeline.md",
+        "harness/skills/review/SKILL.md",
+        "harness/skills/brainstorm/SKILL.md",
+        "harness/skills/brainstorm/references/venture.md"
+      ]
+    },
+    "humanizer": {
+      "origin": "https://github.com/blader/humanizer",
+      "license": "MIT",
+      "notice": "Itself derived from Wikipedia's WikiProject AI Cleanup; covers the mechanical-tell catalogue in output-quality.md section 2.",
+      "modified": true,
+      "assets": [
+        "harness/rules/output-quality.md#2-no-slop",
+        "harness/skills/humanize/SKILL.md",
+        "harness/skills/humanize/references/patterns.md",
+        "harness/skills/humanize/references/false-positives.md"
+      ]
+    }
+  }
+}

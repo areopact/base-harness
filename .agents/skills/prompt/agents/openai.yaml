@@ -1,0 +1,5 @@
+interface:
+  display_name: "Prompt"
+  short_description: "Refine a user prompt before execution: clarify only material gaps, preview exactly one versioned... WHEN: /prompt <task>, \"improve this prompt\"..."
+policy:
+  allow_implicit_invocation: false

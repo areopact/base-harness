@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m \"docs: explain why the migration never uses drop table\""
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

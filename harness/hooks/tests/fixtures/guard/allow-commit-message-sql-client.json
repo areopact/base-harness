@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m 'docs: explain psql drop table migration'"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

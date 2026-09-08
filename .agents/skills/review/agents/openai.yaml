@@ -1,0 +1,5 @@
+interface:
+  display_name: "Review"
+  short_description: "Review specs, plans, decks, memos, decision docs, supplied plan text, and inspectable... WHEN: /review, \"review this spec\", \"red-team this\"..."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git -C /tmp/checkout push -f origin master"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

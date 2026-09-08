@@ -1,0 +1,62 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && bash harness/hooks/codex-dispatch.sh --runtime codex --event SessionStart'",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path (git rev-parse --show-toplevel) 'harness\\hooks\\codex-dispatch.ps1') -Runtime codex -Event SessionStart",
+            "timeout": 10,
+            "additionalContextLimit": 3200,
+            "statusMessage": "Loading session context"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "WebSearch|WebFetch|web_search|web__run|web\\.run|Bash|shell_command|exec_command|Edit|Write|NotebookEdit|apply_patch|Agent|agent|spawn_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && bash harness/hooks/codex-dispatch.sh --runtime codex --event PreToolUse'",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path (git rev-parse --show-toplevel) 'harness\\hooks\\codex-dispatch.ps1') -Runtime codex -Event PreToolUse",
+            "timeout": 5,
+            "additionalContextLimit": 600,
+            "statusMessage": "Checking tool policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|apply_patch|Agent|agent|spawn_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && bash harness/hooks/codex-dispatch.sh --runtime codex --event PostToolUse'",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path (git rev-parse --show-toplevel) 'harness\\hooks\\codex-dispatch.ps1') -Runtime codex -Event PostToolUse",
+            "timeout": 10,
+            "additionalContextLimit": 1200,
+            "statusMessage": "Checking tool result"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && bash harness/hooks/codex-dispatch.sh --runtime codex --event Stop'",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path (git rev-parse --show-toplevel) 'harness\\hooks\\codex-dispatch.ps1') -Runtime codex -Event Stop",
+            "timeout": 10,
+            "statusMessage": "Checking close-the-loop reminders"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "permission": {
+    "read": {
+      "*": "allow",
+      ".env": "deny",
+      ".env.*": "deny",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      ".npmrc": "deny",
+      "**/.npmrc": "deny",
+      ".netrc": "deny",
+      "**/.netrc": "deny",
+      ".pgpass": "deny",
+      "**/.pgpass": "deny",
+      ".pypirc": "deny",
+      "**/.pypirc": "deny",
+      "**/*.pem": "deny",
+      "**/*.key": "deny",
+      "**/*.pfx": "deny",
+      "**/*.p12": "deny",
+      "**/*.ppk": "deny",
+      "**/*.keystore": "deny",
+      "**/*.tfvars": "deny",
+      ".envrc": "deny",
+      "**/.envrc": "deny",
+      ".mcp.json": "deny",
+      "**/.mcp.json": "deny",
+      ".git-credentials": "deny",
+      "**/.git-credentials": "deny",
+      "**/*.jks": "deny",
+      "**/.aws/credentials": "deny",
+      "**/.aws/credentials.*": "deny",
+      "**/.ssh/id_rsa": "deny",
+      "**/.ssh/id_dsa": "deny",
+      "**/.ssh/id_ecdsa": "deny",
+      "**/.ssh/id_ed25519": "deny",
+      "**/.ssh/id_ecdsa_sk": "deny",
+      "**/.ssh/id_ed25519_sk": "deny",
+      "**/application_default_credentials.json": "deny"
+    },
+    "skill": {
+      "*": "allow"
+    }
+  }
+}

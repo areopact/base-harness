@@ -1,0 +1,36 @@
+# Line endings: LF in the repository and on checkout for every text format the
+# harness parses. bash (including Git Bash on Windows) fails on CRLF, and the
+# lint rejects CR in tracked files.
+*.sh         text eol=lf
+*.py         text eol=lf
+*.md         text eol=lf
+*.json       text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.toml       text eol=lf
+*.txt        text eol=lf
+.githooks/*  text eol=lf
+# PowerShell tolerates either ending; keep LF for consistency with the lint.
+*.ps1        text eol=lf
+# Everything else that git detects as text (extensionless markers such as
+# .gitkeep and .generated-by, fixture .expected files, LICENSE, NOTICE, the
+# plugin .js and Codex .rules files): LF in the repository AND on checkout.
+# A native-eol checkout on a host with core.autocrlf=true would write CRLF
+# into these, which the lint rejects and which makes a freshly regenerated
+# LF file show as modified. Binary detection is unaffected.
+*            text=auto eol=lf
+
+# Generated files: in branches mode, regenerate-and-diff instead of merging by
+# hand. `merge=ours` is only honored when a driver is defined locally:
+#   git config merge.ours.driver true
+# Bootstrap sets that driver. Without it git falls back to a normal merge.
+AGENTS.md                    merge=ours
+.claude/settings.json        merge=ours
+.codex/config.toml           merge=ours
+.codex/hooks.json            merge=ours
+opencode.json                merge=ours
+harness/skills/RESOLVER.md   merge=ours
+harness/kernel-manifest.json merge=ours
+THIRD-PARTY.md               merge=ours
+.agents/skills/**            merge=ours
+.opencode/commands/**        merge=ours

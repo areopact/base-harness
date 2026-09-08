@@ -1,0 +1,238 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "harness/registry/structure.schema.json",
+  "title": "Harness host structure",
+  "description": "Host facts read by every kernel file through harness_registry.load_structure or hook_io.load_structure. Six fixed lanes; a lane is a non-empty list of repo-relative POSIX paths or null when not configured.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "lanes",
+    "git",
+    "outbound_globs",
+    "brain",
+    "tiers",
+    "delegation",
+    "selection_scope",
+    "contract",
+    "host"
+  ],
+  "definitions": {
+    "repoRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!\\.\\.(?:/|$))(?!.*/\\.\\.(?:/|$))[^\\\\]+$"
+    },
+    "lane": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/repoRelativePath"
+          }
+        }
+      ]
+    },
+    "tierLabel": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted",
+        "secret"
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "lanes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "knowledge",
+        "journal",
+        "decisions",
+        "records",
+        "docs"
+      ],
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/lane"
+        },
+        "knowledge": {
+          "$ref": "#/definitions/lane"
+        },
+        "journal": {
+          "$ref": "#/definitions/lane"
+        },
+        "decisions": {
+          "$ref": "#/definitions/lane"
+        },
+        "records": {
+          "$ref": "#/definitions/lane"
+        },
+        "docs": {
+          "$ref": "#/definitions/lane"
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "main-only",
+            "branches"
+          ]
+        }
+      }
+    },
+    "outbound_globs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "brain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_tracked",
+        "local_path"
+      ],
+      "properties": {
+        "local_tracked": {
+          "type": "boolean"
+        },
+        "local_path": {
+          "$ref": "#/definitions/repoRelativePath"
+        }
+      }
+    },
+    "tiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane_defaults",
+        "unlisted_path"
+      ],
+      "properties": {
+        "lane_defaults": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identity",
+            "knowledge",
+            "journal",
+            "decisions",
+            "records",
+            "docs"
+          ],
+          "properties": {
+            "identity": {
+              "$ref": "#/definitions/tierLabel"
+            },
+            "knowledge": {
+              "$ref": "#/definitions/tierLabel"
+            },
+            "journal": {
+              "$ref": "#/definitions/tierLabel"
+            },
+            "decisions": {
+              "$ref": "#/definitions/tierLabel"
+            },
+            "records": {
+              "$ref": "#/definitions/tierLabel"
+            },
+            "docs": {
+              "$ref": "#/definitions/tierLabel"
+            }
+          }
+        },
+        "unlisted_path": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "exclude"
+          ]
+        }
+      }
+    },
+    "delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mandatory"
+      ],
+      "properties": {
+        "mandatory": {
+          "type": "boolean"
+        }
+      }
+    },
+    "selection_scope": {
+      "type": "string",
+      "enum": [
+        "repo",
+        "user"
+      ]
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "rendered",
+            "host-owned"
+          ]
+        }
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adopted",
+        "roots",
+        "harness_owned"
+      ],
+      "properties": {
+        "adopted": {
+          "type": "boolean"
+        },
+        "roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repoRelativePath"
+          }
+        },
+        "harness_owned": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repoRelativePath"
+          }
+        }
+      }
+    }
+  }
+}

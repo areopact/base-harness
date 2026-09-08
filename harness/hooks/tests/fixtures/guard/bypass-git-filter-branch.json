@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git filter-branch --tree-filter 'rm -f passwords.txt' HEAD"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

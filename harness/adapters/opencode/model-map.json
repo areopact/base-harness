@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "runtime": "opencode",
+  "families": {
+    "fast": "opencode-go/glm-5.3-flash",
+    "balanced": "opencode-go/glm-5.3",
+    "strong": "opencode-go/deepseek-v4-pro",
+    "strong-main": "opencode-go/kimi-k3"
+  },
+  "permission_classes": {
+    "read-only": ["read", "glob", "grep"],
+    "edit": ["read", "glob", "grep", "edit"],
+    "shell": ["read", "glob", "grep", "edit", "bash"],
+    "shell-readonly": ["read", "glob", "grep", "bash"]
+  },
+  "notes": [
+    "Family keys are the tier labels from the routing policy; values are provider/model ids in OpenCode's provider/model form.",
+    "The shipped ids name one provider (opencode-go) as an editorial default so every generated role renders out of the box; they were transcribed from an OpenCode 1.18.29 model list and are configured, not verified. OpenCode is provider-neutral: rebind all four to the provider you have configured and consented to.",
+    "A null value is legal and means unresolved; the doctor reports it as UNKNOWN, the renderer skips the roles that need it, and nothing substitutes a default.",
+    "After changing an id, regenerate roles with: python harness/tools/native_routing.py render"
+  ]
+}

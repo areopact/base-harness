@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "echo cGF5bG9hZA== | base64 -d | sh"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

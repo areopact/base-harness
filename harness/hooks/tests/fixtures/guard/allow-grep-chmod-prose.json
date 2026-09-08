@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "grep -F 'chmod -R 000' docs/SECURITY.md"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

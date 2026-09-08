@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Generated OpenCode project config",
+  "description": "Shape of the opencode.json that bootstrap copies from harness/adapters/opencode/opencode.json. The top level is closed and property names starting with an underscore are rejected at every level, so a comment key fails validation instead of being silently ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "propertyNames": { "pattern": "^[^_]" },
+  "required": ["permission"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "share": { "type": "string", "enum": ["disabled", "manual", "auto"] },
+    "permission": {
+      "type": "object",
+      "additionalProperties": false,
+      "propertyNames": { "pattern": "^[^_]" },
+      "properties": {
+        "read": { "$ref": "#/definitions/ruleMap" },
+        "edit": { "$ref": "#/definitions/ruleMap" },
+        "bash": { "$ref": "#/definitions/ruleMap" },
+        "webfetch": { "$ref": "#/definitions/ruleMap" },
+        "websearch": { "$ref": "#/definitions/ruleMap" },
+        "skill": { "$ref": "#/definitions/ruleMap" },
+        "task": { "$ref": "#/definitions/ruleMap" }
+      }
+    },
+    "default_agent": { "type": "string" },
+    "instructions": { "type": "array", "items": { "type": "string" } },
+    "plugin": { "type": "array", "items": { "type": "string" } },
+    "model": { "type": "string" },
+    "small_model": { "type": "string" }
+  },
+  "definitions": {
+    "decision": { "type": "string", "enum": ["allow", "ask", "deny"] },
+    "ruleMap": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[^_]" },
+      "additionalProperties": { "$ref": "#/definitions/decision" }
+    }
+  }
+}

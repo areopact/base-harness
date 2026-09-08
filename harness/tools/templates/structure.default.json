@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "lanes": {
+    "identity": ["brain/shared/IDENTITY.md", "brain/local/OPERATOR.md"],
+    "knowledge": ["brain/shared/knowledge", "brain/local/knowledge"],
+    "journal": ["brain/local/journal"],
+    "decisions": ["docs/decisions"],
+    "records": null,
+    "docs": ["docs"]
+  },
+  "git": { "mode": "main-only" },
+  "outbound_globs": [],
+  "brain": { "local_tracked": false, "local_path": "brain/local" },
+  "tiers": {
+    "lane_defaults": {
+      "identity": "internal",
+      "knowledge": "internal",
+      "journal": "internal",
+      "decisions": "internal",
+      "records": "internal",
+      "docs": "public"
+    },
+    "unlisted_path": "internal"
+  },
+  "delegation": { "mandatory": false },
+  "selection_scope": "repo",
+  "contract": { "mode": "rendered" },
+  "host": { "adopted": false, "roots": [], "harness_owned": [] }
+}

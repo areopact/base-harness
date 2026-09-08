@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "cat <<'NOTE' > notes.txt\nrm -rf / is never acceptable\nNOTE\n"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

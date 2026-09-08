@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "junctions": [
+    {
+      "src": "harness/CONTRACT.md",
+      "dst": "AGENTS.md",
+      "mode": "contract-render",
+      "runtime": "all",
+      "description": "Root agent contract rendered from CONTRACT.md plus CONTRACT.host.md; Codex and OpenCode read it natively and root CLAUDE.md points at it"
+    },
+    {
+      "src": "harness/adapters/claude/settings.base.json",
+      "dst": ".claude/settings.json",
+      "mode": "managed-copy",
+      "runtime": "claude",
+      "description": "Claude Code project settings: minimal permission posture plus hook registrations, as an independent byte copy"
+    },
+    {
+      "src": "harness/CONTRACT.md",
+      "dst": ".claude/CLAUDE.md",
+      "mode": "contract-render",
+      "runtime": "claude",
+      "description": "Declared for registry parity; the root CLAUDE.md pointer already delivers the contract to Claude Code, so the engine keeps this path absent to avoid loading the contract twice. Not materialized by design: this is a secondary contract-render row (dst != AGENTS.md), the same predicate materialize.py itself uses to skip it (see materialize.py Engine.check, 'Every contract-render row is served by the root render')."
+    },
+    {
+      "src": "harness/skills",
+      "dst": ".claude/skills",
+      "mode": "link",
+      "runtime": "claude",
+      "description": "Per-skill directory: one junction or symlink per selected skill, pruned on deselection (per_skill.claude)"
+    },
+    {
+      "src": "harness/adapters/claude/agents",
+      "dst": ".claude/agents",
+      "mode": "link",
+      "runtime": "claude",
+      "description": "Generated Claude Code routing roles"
+    },
+    {
+      "src": "harness/rules",
+      "dst": ".claude/rules",
+      "mode": "link",
+      "runtime": "claude",
+      "description": "Always-on and path-scoped rule files Claude Code auto-loads"
+    },
+    {
+      "src": "harness/hooks",
+      "dst": ".claude/hooks",
+      "mode": "link",
+      "runtime": "claude",
+      "description": "Shared hook tree exposed at the Claude Code hook path"
+    },
+    {
+      "src": "harness/adapters/codex/config.toml",
+      "dst": ".codex/config.toml",
+      "mode": "managed-copy",
+      "runtime": "codex",
+      "description": "Codex project configuration as an independent byte copy; loads only in a trusted project"
+    },
+    {
+      "src": "harness/adapters/codex/hooks.json",
+      "dst": ".codex/hooks.json",
+      "mode": "managed-copy",
+      "runtime": "codex",
+      "description": "Codex hook registry: one dispatcher entry per event, as an independent byte copy"
+    },
+    {
+      "src": "harness/adapters/codex/agents",
+      "dst": ".codex/agents",
+      "mode": "link",
+      "runtime": "codex",
+      "description": "Generated Codex TOML routing roles"
+    },
+    {
+      "src": "harness/adapters/codex/rules",
+      "dst": ".codex/rules",
+      "mode": "link",
+      "runtime": "codex",
+      "description": "Codex Starlark command rules"
+    },
+    {
+      "src": "harness/hooks",
+      "dst": ".codex/hooks",
+      "mode": "link",
+      "runtime": "codex",
+      "description": "Shared hook tree exposed at the Codex hook path"
+    },
+    {
+      "src": "harness/skills",
+      "dst": ".agents/skills",
+      "mode": "generated",
+      "runtime": "codex",
+      "description": "Generated Codex skill catalog for selected skills only (build_codex_adapter.py)"
+    },
+    {
+      "src": "harness/adapters/opencode/opencode.json",
+      "dst": "opencode.json",
+      "mode": "managed-copy",
+      "runtime": "opencode",
+      "description": "OpenCode project configuration as an independent byte copy"
+    },
+    {
+      "src": "harness/.selected/skills",
+      "dst": ".opencode/skills",
+      "mode": "link",
+      "runtime": "opencode",
+      "description": "OpenCode skill root linked to the generated selected-skill tree (per_skill.opencode)"
+    },
+    {
+      "src": "harness/adapters/opencode/agents",
+      "dst": ".opencode/agents",
+      "mode": "link",
+      "runtime": "opencode",
+      "description": "Generated OpenCode Markdown routing roles"
+    },
+    {
+      "src": "harness/adapters/opencode/plugins",
+      "dst": ".opencode/plugins",
+      "mode": "link",
+      "runtime": "opencode",
+      "description": "OpenCode plugin bridge to the shared hook dispatcher"
+    },
+    {
+      "src": "harness/adapters/opencode/lib",
+      "dst": ".opencode/lib",
+      "mode": "link",
+      "runtime": "opencode",
+      "description": "Plugin helper module the bridge imports; materialized so a copy-mode plugin can resolve its relative import"
+    },
+    {
+      "src": "harness/skills",
+      "dst": ".opencode/commands",
+      "mode": "generated",
+      "runtime": "opencode",
+      "description": "Generated OpenCode slash commands for selected skills only (build_opencode_adapter.py)"
+    }
+  ],
+  "retired_destinations": [
+    {
+      "dst": ".codex/skills",
+      "replacement": ".agents/skills",
+      "description": "Codex discovers repository skills only from the generated .agents/skills catalog"
+    }
+  ],
+  "per_skill": {
+    "claude": {
+      "mode": "link",
+      "dst_dir": ".claude/skills"
+    },
+    "codex": {
+      "mode": "generated",
+      "dst_dir": ".agents/skills"
+    },
+    "opencode": {
+      "mode": "generated",
+      "dst_dir": "harness/.selected/skills",
+      "link_as": ".opencode/skills",
+      "commands_dir": ".opencode/commands"
+    }
+  }
+}

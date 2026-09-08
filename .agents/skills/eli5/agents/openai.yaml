@@ -1,0 +1,5 @@
+interface:
+  display_name: "Eli5"
+  short_description: "Ephemeral visual explainer: turn one topic into a big-pictures-few-words HTML page, written to... WHEN: user invokes /eli5 <topic>, says..."
+policy:
+  allow_implicit_invocation: false

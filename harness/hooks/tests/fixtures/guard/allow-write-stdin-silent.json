@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "write_stdin",
+  "tool_input": {
+    "input": "y\n"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

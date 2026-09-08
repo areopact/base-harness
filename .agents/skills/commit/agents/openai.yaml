@@ -1,0 +1,5 @@
+interface:
+  display_name: "Commit"
+  short_description: "Create a conventional commit that respects the repository's declared git mode, stages explicit... WHEN: user invokes /commit, says \"commit this\"..."
+policy:
+  allow_implicit_invocation: false

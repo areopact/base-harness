@@ -1,0 +1,17 @@
+# Collaborator registry for the restricted tier.
+#
+# A page classified "restricted" names the collaborators allowed to receive it
+# in its frontmatter (allowed_collaborators). export.py --tier restricted
+# refuses to run until this list is non-empty and every referenced id exists
+# here. Each entry carries an id (kebab-case), a display name, and tier_max,
+# the highest tier label that person may receive:
+#
+# collaborators:
+#   - id: example-collaborator
+#     name: Example Collaborator
+#     tier_max: restricted
+#
+# This file holds names and clearance labels only. It never holds contact
+# details, credentials, or any value that identifies a private individual
+# beyond what the operator chooses to publish.
+collaborators: []

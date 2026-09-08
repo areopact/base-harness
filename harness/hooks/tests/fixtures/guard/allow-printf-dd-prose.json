@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "printf '%s\\n' 'dd if=image of=/dev/sda'"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

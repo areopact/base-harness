@@ -1,0 +1,38 @@
+# Public seed term list for harness/tools/deidentify_lint.py.
+#
+# One term per line, matched as a case-insensitive substring of every scanned
+# line, including code comments. Lines starting with # and blank lines are
+# ignored, so a word used in one of these comments never becomes a term.
+# deidentify_lint.py reads this file when --terms is omitted and skips it from
+# the scan, so an entry never reports against itself.
+#
+# This file is published with the repository, so it holds only terms that are
+# safe to publish: a list of private vocabulary is itself private vocabulary.
+# A host that publishes from a private source keeps its own list outside the
+# published tree (personal names, organization and product names, hostnames,
+# machine names, internal codenames, ticket prefixes, private path defaults)
+# and passes it with --terms. Only one term file is read per run, so copy the
+# entries below into that private list.
+#
+# Prefer terms of five characters or more: a short term is a substring of
+# ordinary words and reports prose that carries no private meaning.
+#
+# Release command shape: a host running the release gate points --terms at
+# its own private list (never this seed file) and adds --require-terms so an
+# empty or missing private list cannot pass silently, for example:
+#   python harness/tools/deidentify_lint.py . --terms <private-list> --require-terms 3
+
+# Session trailers and links tie a commit or a page to one person's private
+# assistant session; they carry nothing a reader of a public repository can
+# open, so they never belong in one. The second entry is the path fragment of
+# the session URL, written without its host so the structural path check does
+# not read the term itself as a path.
+claude-session:
+code/session_
+
+# Generic private-source vocabulary: safe to publish because it names a
+# category, not a specific host, person, or organization. "vault" is the
+# generic name this harness family uses for a personal knowledge base; a
+# published template that still says "vault" somewhere is carrying a
+# leftover from someone's private fork.
+vault

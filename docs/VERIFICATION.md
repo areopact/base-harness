@@ -134,7 +134,7 @@ Each of these was hit for real during construction of this template or its prede
 
 The existing-repository path was exercised end to end on a real host on 2026-09-09: a private curriculum repository with its own `AGENTS.md`, `.github` workflow, and `npm run verify`. Rows use the same vocabulary as above; the host is not named beyond its shape, and its own files were not changed by the harness.
 
-| Runtime | Claim | Status | Date | Scope | Reproduce |
+| Runtime | Mechanism | Status | Last live test | Scope | Reproducible in your clone by |
 |---|---|---|---|---|---|
 | all | adopt lands the kernel with every lane unset, the host contract stays host-owned, bootstrap and `-Check` are clean, the three offline doctors report repository PASS, template lint and de-identification lint run in adopted-host scope with zero findings, the host's own `npm run verify` is untouched | verified | 2026-09-09 | live | `python <template>/harness/tools/adopt.py <host> -y`, merge the `.gitignore` and `.gitattributes` siblings, append the `AGENTS.harness.md` reference, `bootstrap.ps1` then `-Check`, the three doctors, `lint.py --strict`, `deidentify_lint.py . --structural`, `npm run verify` |
 | all | the host's CI runs the copied conformance workflow next to its own checks and both are green on the host's main after the kernel upgrade | verified | 2026-09-09 | ci | the host's own check plus the six conformance jobs on the merge commit; first adoption exposed two template defects fixed in commits 3 and 4 (executable bit staged by adopt, suite pinned to a fixed test structure) |

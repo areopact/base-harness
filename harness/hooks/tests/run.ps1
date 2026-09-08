@@ -15,6 +15,12 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Hooks = (Resolve-Path (Join-Path $ScriptDir "..")).Path
 $Root = (Resolve-Path (Join-Path $Hooks "..\..")).Path
 
+# Pin structure lookups to the template's shipped default (test-only
+# override, see hook_io.py) so the fixture replay below stays deterministic
+# on any host: an adopted host's structure.json can carry a different git
+# mode and unset lanes, which would flip a fixture's expected verdict.
+$env:HARNESS_STRUCTURE_FILE = Join-Path $Root "harness\tools\templates\structure.default.json"
+
 . (Join-Path $Hooks "lib\_find_python.ps1")
 if (-not $Python) { Write-Error "no working Python interpreter on PATH"; exit 1 }
 

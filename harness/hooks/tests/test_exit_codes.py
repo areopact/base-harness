@@ -37,6 +37,27 @@ DISPATCH_EVENTS = ("SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUs
 STDIN_CASES = {"silence": "{}", "empty": "", "malformed": "not json {"}
 TIMEOUT = 60
 
+# See test_guard_regressions.py: the wrapper subprocesses run this checkout's
+# hook_io.load_structure(), which reads whatever structure.json the checkout
+# ships. Pin it to the template default so the "decision" cases (which need a
+# deny/advisory, not silence) stay deterministic on any host. The wrappers do
+# not sanitize their environment, so a process-env override reaches them.
+_STRUCTURE_OVERRIDE = str((ROOT / "harness" / "tools" / "templates" / "structure.default.json").resolve())
+_PRIOR_STRUCTURE_ENV = None
+
+
+def setUpModule():
+    global _PRIOR_STRUCTURE_ENV
+    _PRIOR_STRUCTURE_ENV = os.environ.get("HARNESS_STRUCTURE_FILE")
+    os.environ["HARNESS_STRUCTURE_FILE"] = _STRUCTURE_OVERRIDE
+
+
+def tearDownModule():
+    if _PRIOR_STRUCTURE_ENV is None:
+        os.environ.pop("HARNESS_STRUCTURE_FILE", None)
+    else:
+        os.environ["HARNESS_STRUCTURE_FILE"] = _PRIOR_STRUCTURE_ENV
+
 def find_bash():
     """The first bash on PATH, skipping Windows aliases that are not a POSIX shell."""
     found = shutil.which("bash")

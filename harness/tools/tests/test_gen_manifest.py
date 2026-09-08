@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import io
 import json
+import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
 from ._repo import ROOT, copy_files, install_bridge  # noqa: F401
 
 import gen_manifest as gm
+
+
+def _host_adopted() -> bool:
+    """True when this checkout's own structure.json declares host.adopted."""
+    try:
+        data = json.loads((ROOT / "harness" / "registry" / "structure.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return bool(isinstance(data, dict) and (data.get("host") or {}).get("adopted"))
 
 SOURCES_JSON = {
     "schema_version": 1,
@@ -103,6 +113,7 @@ def test_explicit_neighbor_overrides_the_when_not_derivation(tmp_path):
     assert any("names the skill itself" in problem for problem in skills["own"].problems)
 
 
+@unittest.skipIf(_host_adopted(), "asserts the template's own README.md and docs prose; not valid on an adopted host")
 def test_docs_state_the_built_catalog_counts():
     """README.md, docs/PACKS.md, and docs/ARCHITECTURE.md each spell the
     selected-of-available count; this pins them to the catalog and the

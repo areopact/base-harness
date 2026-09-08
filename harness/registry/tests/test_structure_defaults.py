@@ -24,6 +24,15 @@ import harness_registry as registry  # noqa: E402
 REGISTRY = ROOT / "harness" / "registry"
 
 
+def _host_adopted() -> bool:
+    """True when this checkout's own structure.json declares host.adopted."""
+    try:
+        data = json.loads((REGISTRY / "structure.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return bool(isinstance(data, dict) and (data.get("host") or {}).get("adopted"))
+
+
 def _write_structure(root: Path, payload) -> None:
     target = root / "harness" / "registry"
     target.mkdir(parents=True, exist_ok=True)
@@ -39,6 +48,7 @@ def test_missing_file_returns_default_verbatim(tmp_path):
     assert registry.load_structure(tmp_path) == registry.DEFAULT_STRUCTURE
 
 
+@unittest.skipIf(_host_adopted(), "asserts the template's own shipped structure.json; not valid on an adopted host")
 def test_shipped_structure_equals_default_verbatim():
     shipped = json.loads((REGISTRY / "structure.json").read_text(encoding="utf-8"))
     assert shipped == registry.DEFAULT_STRUCTURE
@@ -94,6 +104,7 @@ def test_unknown_nested_key_raises(tmp_path):
 
 
 # T3
+@unittest.skipIf(_host_adopted(), "asserts the template's own shipped lane defaults; not valid on an adopted host")
 def test_lane_paths_on_shipped_default():
     assert registry.lane_paths("records", ROOT) == []
     assert registry.lane_paths("docs", ROOT) == ["docs"]

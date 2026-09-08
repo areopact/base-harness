@@ -5,18 +5,28 @@ reads harness/registry/structure.json through load_structure() and fails
 open: a missing or malformed file yields the shipped defaults plus one stderr
 note, never an exception and never a deny. It imports nothing from
 harness/tools so a hook stays runnable with the standard library alone.
+
+Test hook: when load_structure() is called with no explicit root, it honors
+the HARNESS_STRUCTURE_FILE environment variable (an absolute path to a
+structure JSON) in place of REPO_ROOT's own harness/registry/structure.json.
+This lets the fixture suite stay deterministic regardless of the
+structure.json an adopted host ships, since a hook fixture cannot pass root
+through the public decide()/classify() entry points it exercises. Production
+hooks never set this variable; an explicit root argument always wins over it.
 """
 
 from __future__ import annotations
 
 import copy
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STRUCTURE_RELATIVE = ("harness", "registry", "structure.json")
+STRUCTURE_FILE_ENV = "HARNESS_STRUCTURE_FILE"
 PATCH_PATH_RE = re.compile(
     r"^\*\*\* (Add File|Update File|Delete File|Move to):\s+(.+?)\s*$"
 )
@@ -89,9 +99,22 @@ def _valid_lane(value) -> bool:
 
 
 def load_structure(root: str | Path | None = None) -> dict:
-    """Return the host structure, merged over the defaults; never raises."""
-    base = Path(root) if root is not None else REPO_ROOT
-    path = base.joinpath(*STRUCTURE_RELATIVE)
+    """Return the host structure, merged over the defaults; never raises.
+
+    root=None, or an explicit root that resolves to REPO_ROOT, normally reads
+    REPO_ROOT's own harness/registry/structure.json, but defers to
+    HARNESS_STRUCTURE_FILE (a test-only override, see the module docstring)
+    when that variable is set. Some libs resolve their own default root to
+    REPO_ROOT before calling in (frontmatter_guard, for one), so the REPO_ROOT
+    case is treated the same as root=None; any other explicit root always
+    reads that root's structure.json and ignores the variable.
+    """
+    base = Path(root).resolve() if root is not None else REPO_ROOT
+    if base == REPO_ROOT:
+        override = os.environ.get(STRUCTURE_FILE_ENV)
+        path = Path(override) if override else REPO_ROOT.joinpath(*STRUCTURE_RELATIVE)
+    else:
+        path = base.joinpath(*STRUCTURE_RELATIVE)
     defaults = copy.deepcopy(DEFAULT_STRUCTURE)
     try:
         if not path.is_file():

@@ -20,6 +20,12 @@ SCRIPT_DIR=$(cd "$SCRIPT_DIR" && pwd)
 HOOKS=$(cd "$SCRIPT_DIR/.." && pwd)
 ROOT=$(cd "$HOOKS/../.." && pwd)
 
+# Pin structure lookups to the template's shipped default (test-only
+# override, see hook_io.py) so the fixture replay below stays deterministic
+# on any host: an adopted host's structure.json can carry a different git
+# mode and unset lanes, which would flip a fixture's expected verdict.
+export HARNESS_STRUCTURE_FILE="$ROOT/harness/tools/templates/structure.default.json"
+
 . "$HOOKS/lib/_find_python.sh"
 if [ -z "$PYTHON" ]; then
   echo "FAIL: no working Python interpreter on PATH" >&2

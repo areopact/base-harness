@@ -12,6 +12,19 @@ sys.path.insert(0, str(TESTS.parent / "lib"))
 import pre_bootstrap_detector as detector  # noqa: E402
 from hook_io import REPO_ROOT  # noqa: E402
 
+
+def _host_adopted() -> bool:
+    """True when this checkout's own structure.json declares host.adopted.
+
+    Read directly (not through hook_io.load_structure) so this check never
+    interacts with another test module's HARNESS_STRUCTURE_FILE override.
+    """
+    try:
+        data = json.loads((REPO_ROOT / "harness" / "registry" / "structure.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return bool(isinstance(data, dict) and (data.get("host") or {}).get("adopted"))
+
 JUNCTIONS = {
     "schema_version": 1,
     "junctions": [
@@ -66,6 +79,7 @@ class PreBootstrapDetectorTests(unittest.TestCase):
             # copy mode: a plain directory at a link destination counts as materialized
             assert detector.missing_destinations(root, "claude") == []
 
+    @unittest.skipIf(_host_adopted(), "asserts this template checkout's own bootstrapped tree; not valid on an adopted host")
     def test_this_repositorys_bootstrapped_tree_is_silence_for_every_runtime(self):
         """F1: a correctly bootstrapped clone must never trip the detector.
         This repository's own junctions.json is the manifest under test, on

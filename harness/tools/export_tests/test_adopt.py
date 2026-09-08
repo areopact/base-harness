@@ -7,12 +7,23 @@ import io
 import json
 import re
 import sys
+import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _helpers import ROOT, TempDirCase, commit_all, git, init_repo, walk_files, write, load_tool  # noqa: E402
 
 adopt = load_tool("adopt")
+
+
+def _host_adopted() -> bool:
+    """True when ROOT (the checkout these tests adopt from as source) is
+    itself an adopted host, not a pristine template."""
+    try:
+        data = json.loads((ROOT / "harness" / "registry" / "structure.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return bool(isinstance(data, dict) and (data.get("host") or {}).get("adopted"))
 
 
 def run(args: list) -> tuple:
@@ -173,6 +184,7 @@ class TestApply(TempDirCase):
         match = re.search(r"adopted-files\.json: (\d+) path\(s\) would be recorded", out)
         assert match and int(match.group(1)) > 0, out
 
+    @unittest.skipIf(_host_adopted(), "adopts ROOT as the source template; not valid when ROOT is itself an adopted host")
     def test_adopted_files_written_on_apply(self):
         target = self.seed_target("adopted-apply")
         code, out, _ = run([str(target), "-y"])

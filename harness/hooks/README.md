@@ -113,6 +113,20 @@ for a fixture is the exact stdout of its lib with a trailing newline, or an
 empty file for silence; regenerate one by piping the fixture into the wrapper
 and confirming the verdict by hand before saving it.
 
+Every fixture's expected bytes are written against the template's shipped
+`structure.json` (main-only git mode, populated lanes). `hook_io.load_structure()`
+normally reads this checkout's own `harness/registry/structure.json`, so on an
+adopted host (a different git mode, unset lanes) a fixture's verdict can
+change. `HARNESS_STRUCTURE_FILE` (an absolute path to a structure JSON)
+overrides that lookup whenever `load_structure()` is called with no explicit
+root, or with a root that resolves to this checkout's own root; an explicit,
+different root (a test's own `tmp_path`) always ignores it. Both `run.sh` and
+`run.ps1` set it to `harness/tools/templates/structure.default.json` before
+replaying fixtures against the native wrappers, and `test_guard_regressions.py`,
+`test_dispatch.py`, and `test_exit_codes.py` set it for their own module's
+tests. This is a test-only mechanism: no production hook or wrapper sets this
+variable, and setting it outside a test run has no defined behavior.
+
 The suite is hermetic: it writes only under the operating system temporary
 directory, starts no runtime, and never touches the network. Passing it is
 file-shape and in-process evidence ("configured"); whether a runtime actually

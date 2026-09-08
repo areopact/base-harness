@@ -74,6 +74,26 @@ def _copy(relative: str, root: Path) -> None:
     shutil.copy(source, target)
 
 
+STRUCTURE_DEFAULT_SOURCE = REAL_ROOT / "harness" / "tools" / "templates" / "structure.default.json"
+
+
+def _write_default_structure(root: Path) -> None:
+    """Seed harness/registry/structure.json from the fixed template default.
+
+    build_repo used to _copy() this checkout's own structure.json, which on
+    an adopted host carries the host's git mode, lanes, and contract mode
+    (host-owned) rather than the template's. A materialize test then saw
+    behavior (host-owned AGENTS.md, branches-mode pushes) it never asked
+    for. Every fixture repo now starts from the same fixed default
+    regardless of which checkout the suite runs from; a test that wants
+    host-owned or another shape still writes it explicitly, as
+    test_contract_files.py and test_doctors.py already do.
+    """
+    target = root / "harness" / "registry" / "structure.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(STRUCTURE_DEFAULT_SOURCE, target)
+
+
 def write_skill(root: Path, name: str, packs: list[str], status: str = "implemented") -> Path:
     directory = root / "harness" / "skills" / name
     directory.mkdir(parents=True, exist_ok=True)
@@ -164,9 +184,10 @@ def build_repo(
     root = tmp_path / "repo"
     root.mkdir()
     for relative in ("harness/CONTRACT.md", "harness/CONTRACT.host.md", "harness/bootstrap/junctions.json",
-                     "harness/registry/runtimes.json", "harness/registry/structure.json",
+                     "harness/registry/runtimes.json",
                      ".githooks/pre-commit", ".githooks/secret-patterns.txt"):
         _copy(relative, root)
+    _write_default_structure(root)
     for relative in ADAPTER_FILES:
         _copy(relative, root)
     for runtime in ("claude", "codex", "opencode"):

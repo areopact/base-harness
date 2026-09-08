@@ -27,6 +27,25 @@ import read_deny  # noqa: E402
 
 DENY_FIXTURE = TESTS / "fixtures" / "guard" / "bypass-force-push-main.json"
 
+# See test_guard_regressions.py: pin structure lookups to the template's
+# shipped default for this module's lifetime, so dispatch routing through
+# dangerous_ops_guard and frontmatter_guard stays deterministic on any host.
+_STRUCTURE_OVERRIDE = str((ROOT / "harness" / "tools" / "templates" / "structure.default.json").resolve())
+_PRIOR_STRUCTURE_ENV = None
+
+
+def setUpModule():
+    global _PRIOR_STRUCTURE_ENV
+    _PRIOR_STRUCTURE_ENV = os.environ.get("HARNESS_STRUCTURE_FILE")
+    os.environ["HARNESS_STRUCTURE_FILE"] = _STRUCTURE_OVERRIDE
+
+
+def tearDownModule():
+    if _PRIOR_STRUCTURE_ENV is None:
+        os.environ.pop("HARNESS_STRUCTURE_FILE", None)
+    else:
+        os.environ["HARNESS_STRUCTURE_FILE"] = _PRIOR_STRUCTURE_ENV
+
 
 def deny_raw(tool_name="Bash"):
     data = json.loads(DENY_FIXTURE.read_text(encoding="utf-8"))

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import subprocess
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -17,6 +18,19 @@ from pathlib import Path
 from ._repo import ROOT, copy_files, install_bridge  # noqa: F401
 
 import lint
+
+# The two lane-token tests below need a structure.json with populated lanes
+# to seed a plausible lane path; copy_files() would copy this checkout's own
+# harness/registry/structure.json, which on an adopted host can carry unset
+# lanes and breaks the seed. The template's fixed default always ships
+# populated lanes (see harness/hooks/lib/hook_io.py's matching test-only use).
+STRUCTURE_DEFAULT_SOURCE = ROOT / "harness" / "tools" / "templates" / "structure.default.json"
+
+
+def _write_default_structure(repo: Path) -> None:
+    destination = repo / "harness" / "registry" / "structure.json"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(STRUCTURE_DEFAULT_SOURCE, destination)
 
 REGISTRY_FILES = (
     "harness/registry/structure.json",
@@ -129,7 +143,8 @@ def test_l1_contract_composition(tmp_path):
 
 def test_l2_byte_budget(tmp_path):
     repo = _repo(tmp_path)
-    copy_files(repo, ("harness/registry/runtimes.json", "harness/registry/structure.json"))
+    copy_files(repo, ("harness/registry/runtimes.json",))
+    _write_default_structure(repo)
     _write(repo, "AGENTS.md", "x" * (lint.CONTRACT_BUDGET + 1))
     findings = _only(repo, "L2")
     assert any(item.path == "AGENTS.md" and item.level == "ERROR" for item in findings), [item.render() for item in findings]
@@ -522,7 +537,7 @@ def test_l12_path_scoped_rule_with_matching_frontmatter_is_clean(tmp_path):
 
 def test_l13_literal_lane_token_in_a_hook_lib_is_soft(tmp_path):
     repo = _repo(tmp_path)
-    copy_files(repo, ("harness/registry/structure.json",))
+    _write_default_structure(repo)
     structure = json.loads((repo / "harness/registry/structure.json").read_text(encoding="utf-8"))
     token = structure["lanes"]["journal"][0]
     _write(repo, "harness/hooks/lib/some_hook.py", f'JOURNAL = "{token}"\n')

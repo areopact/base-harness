@@ -45,6 +45,7 @@ Initial public template.
 - Adopted-host scoping: on an adopted host, lint and the de-identification lint scan only the template's own files by default; `--all` restores the whole-tree scan.
 - Release gate: added `harness/tools/release_check.py`, the ship-gate chain named in `ROADMAP.md`'s v0.1.0 gate.
 - Docs corrections: removed the false Git Bash `ln -s` copy claim (`bootstrap.sh` delegates to `materialize.py`, which makes real NTFS junctions on Windows too); corrected stale skill-metadata, model-map, dispatcher-count, and pack-flag ("`--pack` replaces, not adds") claims across `README.md`, `docs/VERIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/ROUTING-TASKS.md`, `docs/PACKS.md`, `CONTRIBUTING.md`, `brain/README.md`, and the doctor, research, and skillify skills.
+- `adopt.py`: a Windows adopter's own commit recorded mode 644 for the landed `harness/*.sh` scripts and `.githooks/pre-commit` (`core.filemode` is false there, so the working tree carries no executable bit for git to read at commit time), which then failed the template's own lint L18 on the adopter's POSIX CI; adopt now stages the executable bit for those files in the target's git index on apply, chmods them on disk where POSIX supports it, and warns with the manual command when git is unavailable.
 
 ## [0.1.1] - Planned
 

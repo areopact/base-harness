@@ -35,6 +35,14 @@ Actions:
     earlier adoption rather than overwriting it. lint.py and
     deidentify_lint.py read this file to scope their default scan to the
     template's own files on an adopted host (--all restores the whole tree).
+  * An apply stages the executable bit (git update-index --add --chmod=+x)
+    for every landed harness/*.sh file and .githooks/pre-commit, the same
+    scope lint check L18 and materialize.py's _ensure_scripts_executable
+    use. On POSIX the file is also chmod'd on disk. This is the only way
+    the bit reaches history on Windows, where core.filemode is false and
+    the working-tree copy carries no executable bit for git to read at
+    commit time: the adopter's own commit stages these paths' modes along
+    with everything else.
 
 The run ends with a numbered checklist that closes with the bootstrap and
 doctor commands.
@@ -291,6 +299,71 @@ def apply_actions(source: Path, target: Path, actions: list, structure: dict) ->
 
 
 # --------------------------------------------------------------------------
+# executable bit
+# --------------------------------------------------------------------------
+
+
+def is_script_path(rel: str) -> bool:
+    """The exact predicate lint check L18 and materialize.py's
+    _ensure_scripts_executable use: every harness/*.sh file, plus the
+    pre-commit hook. A landed sibling (a .harness suffix) is in scope too
+    when its own landing path still matches, since it is a real file on
+    disk that core.hooksPath or a sourcing script will execute."""
+    return (rel.startswith("harness/") and rel.endswith(".sh")) or rel == ".githooks/pre-commit"
+
+
+def landed_script_paths(actions: list) -> list:
+    """Repository-relative paths this run lands (copy or land-as) that are
+    shell entry points in L18's scope."""
+    return sorted(
+        {
+            dst_rel
+            for verb, _src_rel, dst_rel in actions
+            if (verb == "copy" or verb.startswith("land-as")) and is_script_path(dst_rel)
+        }
+    )
+
+
+def manual_chmod_command(paths: list) -> str:
+    return "git update-index --add --chmod=+x -- " + " ".join(paths)
+
+
+def set_executable_bits(target: Path, paths: list) -> tuple:
+    """Stage the executable bit for every landed script in the target's git
+    index: on POSIX this also chmods the file on disk, but the index write
+    is what carries the bit forward on every platform, since Windows has no
+    on-disk executable bit for git to read at commit time (proven live: a
+    Windows adopter's commit landed harness/**/*.sh at mode 100644, and the
+    template's own lint L18 then failed on the adopter's POSIX CI).
+
+    Returns (staged_paths, warning). warning is None on success; it is a
+    manual-command string when git is absent or the target is not a git
+    work tree, so the caller can print one WARN and continue rather than
+    crash. An empty paths list is a no-op: ([], None)."""
+    if not paths:
+        return [], None
+    if shutil.which("git") is None:
+        return [], manual_chmod_command(paths)
+    code, out, _ = git(target, "rev-parse", "--is-inside-work-tree")
+    if code != 0 or out.strip() != "true":
+        return [], manual_chmod_command(paths)
+    if os.name != "nt":
+        for rel in paths:
+            path = target / rel
+            if not path.is_file():
+                continue
+            try:
+                mode = path.stat().st_mode
+                path.chmod(mode | 0o111)
+            except OSError:
+                continue
+    code, _out, err = git(target, "update-index", "--add", "--chmod=+x", "--", *paths)
+    if code != 0:
+        return [], manual_chmod_command(paths) + f" (git update-index failed: {err.strip()})"
+    return paths, None
+
+
+# --------------------------------------------------------------------------
 # adopted-files.json
 # --------------------------------------------------------------------------
 
@@ -439,12 +512,18 @@ def main(argv=None) -> int:
     landed = [a for a in actions if a[0].startswith("land-as")]
     print(f"  {len(actions)} action(s); {len(landed)} existing file(s) kept with a .harness sibling")
 
+    script_paths = landed_script_paths(actions)
     new_adopted_paths = adopted_file_paths(actions)
     template_version = kernel_template_version(source)
     print(f"  adopted-files.json: {len(new_adopted_paths)} path(s) would be recorded (template_version {template_version})")
 
     if args.apply:
         apply_actions(source, target, actions, structure)
+        staged, warning = set_executable_bits(target, script_paths)
+        if warning:
+            print(f"adopt: WARN: could not stage the executable bit; run manually: {warning}", file=sys.stderr)
+        elif staged:
+            print(f"adopt: staged {len(staged)} script(s) with the executable bit; Windows records the bit only through the index")
         merged, total, added = write_adopted_files(target, new_adopted_paths, template_version)
         if merged:
             print(f"adopt: harness/registry/adopted-files.json merged ({added} new path(s), {total} total)")
@@ -452,6 +531,8 @@ def main(argv=None) -> int:
             print(f"adopt: harness/registry/adopted-files.json written ({total} path(s))")
         print("adopt: applied")
     else:
+        if script_paths:
+            print(f"adopt: dry run would stage {len(script_paths)} script(s) with the executable bit (harness/*.sh, .githooks/pre-commit)")
         print("adopt: dry run, nothing written; pass -y/--apply to perform these actions")
 
     print("post-adoption checklist:")

@@ -207,3 +207,69 @@ class TestApply(TempDirCase):
         assert "docs/old-adoption-only.md" in doc["paths"]
         assert set(original["paths"]) <= set(doc["paths"])
         assert total == len(doc["paths"])
+
+
+class TestExecutableBit(TempDirCase):
+    """The Windows adoption defect: core.filemode is false there, so a
+    commit made on Windows records no executable bit for the landed
+    harness/*.sh scripts and .githooks/pre-commit, and the template's own
+    lint L18 then fails on the adopter's POSIX CI. adopt stages the bit in
+    the index itself so the adopter's own commit carries it forward on
+    every platform."""
+
+    def seed_target(self, name: str) -> Path:
+        target = init_repo(self.tmp / name)
+        write(target / "README.md", "host readme\n")
+        commit_all(target, "seed")
+        return target
+
+    def _modes(self, target: Path) -> dict:
+        result = git(target, "ls-files", "-s")
+        modes = {}
+        for line in result.stdout.splitlines():
+            if "\t" not in line:
+                continue
+            meta, path = line.split("\t", 1)
+            parts = meta.split()
+            if parts:
+                modes[path] = parts[0]
+        return modes
+
+    def test_apply_stages_100755_for_scripts_and_hook(self):
+        target = self.seed_target("execbit")
+        code, out, _ = run([str(target), "-y"])
+        assert code == 0, out
+        modes = self._modes(target)
+        scripts = [p for p in modes if (p.startswith("harness/") and p.endswith(".sh")) or p == ".githooks/pre-commit"]
+        assert scripts, "expected at least one landed script in scope"
+        for path in scripts:
+            assert modes[path] == "100755", f"{path} is {modes[path]}, expected 100755"
+        assert "staged" in out and "executable bit" in out
+
+    def test_dry_run_stages_nothing(self):
+        target = self.seed_target("execbit-dry")
+        code, out, _ = run([str(target)])
+        assert code == 0, out
+        assert git(target, "status", "--porcelain").stdout.strip() == ""
+        assert not (target / "harness").exists()
+        assert "would stage" in out and "executable bit" in out
+
+    def test_target_without_git_warns_and_does_not_crash(self):
+        target = self.seed_target("execbit-nogit")
+        actions = adopt.plan_actions(ROOT, target)
+        paths = adopt.landed_script_paths(actions)
+        assert paths, "expected at least one script path in the plan"
+        original_which = adopt.shutil.which
+        adopt.shutil.which = lambda name: None
+        try:
+            staged, warning = adopt.set_executable_bits(target, paths)
+        finally:
+            adopt.shutil.which = original_which
+        assert staged == []
+        assert warning is not None
+        assert "git update-index --add --chmod=+x --" in warning
+
+    def test_no_paths_is_a_no_op(self):
+        target = self.seed_target("execbit-empty")
+        staged, warning = adopt.set_executable_bits(target, [])
+        assert staged == [] and warning is None

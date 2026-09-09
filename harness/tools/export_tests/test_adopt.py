@@ -33,6 +33,43 @@ def run(args: list) -> tuple:
     return code, out.getvalue(), err.getvalue()
 
 
+class TestDeriveHostName(TempDirCase):
+    def test_https_origin_uses_repo_basename(self):
+        target = init_repo(self.tmp / "checkout")
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+        assert git(target, "remote", "add", "origin", "https://github.com/org/ilmu.git").returncode == 0
+        name, source = adopt.derive_host_name(target)
+        assert name == "ilmu"
+        assert "origin remote" in source
+
+    def test_ssh_origin_uses_repo_basename(self):
+        target = init_repo(self.tmp / "checkout2")
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+        assert git(target, "remote", "add", "origin", "git@example.com:org/ilmu.git").returncode == 0
+        name, source = adopt.derive_host_name(target)
+        assert name == "ilmu"
+        assert "origin remote" in source
+
+    def test_no_origin_falls_back_to_folder_name(self):
+        target = init_repo(self.tmp / "ilmu-adopt-final")
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+        name, source = adopt.derive_host_name(target)
+        assert name == "ilmu-adopt-final"
+        assert "folder name" in source
+
+    def test_odd_characters_are_sanitized(self):
+        target = init_repo(self.tmp / "checkout3")
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+        assert git(target, "remote", "add", "origin", "https://github.com/org/il mu!@#.git").returncode == 0
+        name, source = adopt.derive_host_name(target)
+        assert re.fullmatch(r"[A-Za-z0-9._-]+", name), name
+        assert "origin remote" in source
+
+
 class TestRefusals(TempDirCase):
     def test_non_git_target(self):
         target = self.tmp / "plain"

@@ -54,6 +54,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -82,6 +83,8 @@ HARNESS_SKIP_FILES = {"harness/registry/structure.json", "harness/registry/selec
 PROTECTION_MARKERS = ["CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/rulesets"]
 LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
 EXTERNAL_LOCAL_TEMPLATE = "~/.harness-local/{name}"
+HOST_NAME_SANITIZE_RE = re.compile(r"[^A-Za-z0-9._-]+")
+URL_SEGMENT_SPLIT_RE = re.compile(r"[:/\\]")
 
 
 # --------------------------------------------------------------------------
@@ -95,6 +98,30 @@ def git(repo: Path, *args) -> tuple:
     except OSError as exc:
         return 127, "", str(exc)
     return result.returncode, result.stdout, result.stderr
+
+
+def sanitize_host_name(raw: str) -> str:
+    """Collapse everything outside [A-Za-z0-9._-] to '-' and trim stray edges."""
+    cleaned = HOST_NAME_SANITIZE_RE.sub("-", raw).strip("-")
+    return cleaned or "host"
+
+
+def derive_host_name(target: Path) -> tuple:
+    """(name, source) for EXTERNAL_LOCAL_TEMPLATE: the basename of the
+    target repository's origin remote (https, ssh, or local-path form),
+    trailing .git stripped, sanitized to [A-Za-z0-9._-]. Falls back to the
+    target folder's own name when there is no git, no origin, or the origin
+    URL yields no usable segment."""
+    code, out, _ = git(target, "remote", "get-url", "origin")
+    url = out.strip() if code == 0 else ""
+    if url:
+        stripped = url.rstrip("/")
+        if stripped.lower().endswith(".git"):
+            stripped = stripped[: -len(".git")]
+        segments = [seg for seg in URL_SEGMENT_SPLIT_RE.split(stripped) if seg]
+        if segments:
+            return sanitize_host_name(segments[-1]), f"origin remote ({url})"
+    return sanitize_host_name(target.name), "folder name (no usable origin remote)"
 
 
 def _registry_module():
@@ -224,7 +251,8 @@ def build_structure(target: Path, actions: list | None = None) -> tuple:
     }
     local_note = f"brain.local_path {structure['brain']['local_path']} (repository-relative, untracked)"
     if mode == "branches":
-        external = EXTERNAL_LOCAL_TEMPLATE.format(name=target.name)
+        name, name_source = derive_host_name(target)
+        external = EXTERNAL_LOCAL_TEMPLATE.format(name=name)
         candidate = dict(structure)
         candidate["brain"] = {"local_tracked": False, "local_path": external}
         errors = structure_errors(candidate)
@@ -235,7 +263,7 @@ def build_structure(target: Path, actions: list | None = None) -> tuple:
             )
         else:
             structure = candidate
-            local_note = f"brain.local_path {external} (outside the repository; branches mode)"
+            local_note = f"brain.local_path {external} (outside the repository; branches mode; name from {name_source})"
     return structure, reason, local_note
 
 

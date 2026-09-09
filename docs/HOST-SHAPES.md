@@ -67,7 +67,7 @@ What the shipped checks actually report right after adopt, merge, and bootstrap 
 
 ### Branches mode
 
-When adopt detects branches mode, the checklist adds a line about the local memory lane. The design places that lane outside the repository under a per-repository directory in the user's home and resolves the operator profile per git user, so no personal note can ride into a pull request. The current validator accepts repository-relative paths only, so the lane stays in-repository and untracked, and each contributor keeps a separate clone. Generated files carry `merge=ours` in `.gitattributes`, honored once bootstrap sets `merge.ours.driver` locally: on conflict, regenerate and diff rather than merging by hand.
+When adopt detects branches mode, the checklist adds a line about the local memory lane. The design places that lane outside the repository under a per-repository directory in the user's home, named from the target's git `origin` remote rather than the adopting checkout's own folder name, and resolves the operator profile per git user, so no personal note can ride into a pull request. The current validator accepts repository-relative paths only, so the lane stays in-repository and untracked, and each contributor keeps a separate clone. Generated files carry `merge=ours` in `.gitattributes`, honored once bootstrap sets `merge.ours.driver` locally: on conflict, regenerate and diff rather than merging by hand.
 
 ## Private source repository (mirrored structure, private content)
 

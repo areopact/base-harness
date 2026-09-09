@@ -58,6 +58,15 @@ def _load(name: str):
     return json.loads((REGISTRY / name).read_text(encoding="utf-8"))
 
 
+def _host_adopted() -> bool:
+    """True when this checkout's own structure.json declares host.adopted."""
+    try:
+        data = _load("structure.json")
+    except (OSError, ValueError):
+        return False
+    return bool(isinstance(data, dict) and (data.get("host") or {}).get("adopted"))
+
+
 def test_shipped_registries_validate():
     notes = []
     assert registry.validate_all(ROOT, notes) == []
@@ -225,10 +234,15 @@ def test_capabilities_and_sources_validate():
     assert any("unsafe asset path" in item for item in registry.validate_sources(doc))
 
 
+@unittest.skipIf(_host_adopted(), "asserts the template's own shipped selection.json; not valid on an adopted host")
+def test_shipped_selection_packs():
+    selection = _load("selection.json")
+    assert selection["packs"] == ["core", "maintain"]
+
+
 def test_selection_validates_and_rejects_overlap():
     selection = _load("selection.json")
     assert registry.validate_selection(selection) == []
-    assert selection["packs"] == ["core", "maintain"]
     doc = copy.deepcopy(selection)
     doc["include"] = ["doctor"]
     doc["exclude"] = ["doctor"]

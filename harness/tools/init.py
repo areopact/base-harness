@@ -18,9 +18,11 @@ to harness/registry/structure.json. Nothing is created on disk: lane folders
 are created on first write.
 
 --brain scaffolds brain/ from harness/tools/templates/brain/ plus the identity
-shapes: the module README, the shared identity file, the shared knowledge
-folder, and the operator file and folder of the local lane (brain.local_path
-in structure.json). An existing file is never overwritten.
+shapes: the module README, the shared and local lane guides, the shared
+identity file, the shared knowledge folder, and the operator file and folder
+of the local lane (brain.local_path in structure.json). Every brain/ path
+listed in harness/kernel-manifest.json is placed. An existing file is never
+overwritten.
 When structure.json brain.local_tracked is false the local lane is added to
 .gitignore. Tracking is enabled only by the explicit --track-local flag; the
 tool prints the consequence before writing it.
@@ -287,6 +289,8 @@ def run_brain(root: Path, track_local: bool, out=None) -> int:
 
     print(f"scaffolding the memory module under {root}", file=out)
     _place(template_root / "README.md", root / "brain" / "README.md", out, root)
+    _place(template_root / "shared" / "README.md", root / "brain" / "shared" / "README.md", out, root)
+    _place(template_root / "local" / "README.md", root / "brain" / "local" / "README.md", out, root)
     _place(TEMPLATES / "IDENTITY.md", root / "brain" / "shared" / "IDENTITY.md", out, root)
     _place(template_root / "shared" / "knowledge" / ".gitkeep", root / "brain" / "shared" / "knowledge" / ".gitkeep", out, root)
     try:

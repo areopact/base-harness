@@ -4,9 +4,9 @@ The same kernel serves three kinds of repository. What differs is `harness/regis
 
 ## Solo repository (template)
 
-Created with "Use this template" or by cloning a copy. One operator, one clone, all six lanes served by the memory module where it provides them.
+Created with "Use this template" or by cloning a copy. One operator, one clone, all five lanes served by the memory module where it provides them.
 
-Structure: the shipped default. Identity `brain/shared/IDENTITY.md` plus `brain/local/OPERATOR.md`; knowledge `brain/shared/knowledge` plus `brain/local/knowledge`; journal `brain/local/journal`; decisions `docs/decisions`; records `null` until the operator has dated events to file; docs `docs`. `git.mode` is `main-only`, `selection_scope` is `repo`, `brain.local_tracked` is `false`, `tiers.unlisted_path` is `internal`, `delegation.mandatory` is `false`.
+Structure: the shipped default. Identity `brain/shared/IDENTITY.md` plus `brain/local/OPERATOR.md`; knowledge `brain/shared/knowledge` plus `brain/local/knowledge`; decisions `docs/decisions`; records `null` until the operator has dated events to file; docs `docs`. `git.mode` is `main-only`, `selection_scope` is `repo`, `brain.local_tracked` is `false`, `tiers.unlisted_path` is `internal`, `delegation.mandatory` is `false`.
 
 Steps, in order: bootstrap for the platform; the doctor for the runtime in use; optionally `python harness/tools/init.py --brain` to place `IDENTITY.md`, `OPERATOR.md`, and the `knowledge/` marker; optionally `python harness/tools/selector.py` to change the packs. In main-only mode committed generated files (`AGENTS.md`, `harness/skills/RESOLVER.md`) are byte-checked by the lint: regenerate and commit, never hand-edit.
 
@@ -73,7 +73,7 @@ When adopt detects branches mode, the checklist adds a line about the local memo
 
 The shape of the repository the kernel was extracted from, described generically. It mirrors the harness structure and lint but keeps every lane's content private, and it is not a template consumer in this version (see `docs/ARCHITECTURE.md`, "Kernel manifest and the source relationship").
 
-Structure, from the `private-instance-host` example: a flat memory folder instead of shared and local halves (identity and knowledge, journal, and decisions all under one memory root with `brain.local_tracked` true and `brain.local_path` pointing at that root); a records lane for dated events; every memory lane at the `confidential` tier; docs at `internal`; `tiers.unlisted_path` set to `exclude`; `delegation.mandatory` true so substantive work takes the delegated plan, worker, and review sequence; `git.mode` main-only; repository-shared selection. Nothing in this shape is exported below `confidential`, and an export at `internal` carries only the docs lane. The lane paths in the example are illustrative; a private host names its own.
+Structure, from the `private-instance-host` example: a flat memory folder instead of shared and local halves (identity, knowledge, and decisions all under one memory root with `brain.local_tracked` true and `brain.local_path` pointing at that root); a records lane for dated events; every memory lane at the `confidential` tier; docs at `internal`; `tiers.unlisted_path` set to `exclude`; `delegation.mandatory` true so substantive work takes the delegated plan, worker, and review sequence; `git.mode` main-only; repository-shared selection. Nothing in this shape is exported below `confidential`, and an export at `internal` carries only the docs lane. The lane paths in the example are illustrative; a private host names its own.
 
 What such a host runs that a template consumer does not: the de-identification lint with a private term list and `--history` before anything leaves the repository; a per-file export policy through `export.py` rather than a public remote; and, when the source-updating tooling lands, the drift check between its kernel and the template's manifest.
 

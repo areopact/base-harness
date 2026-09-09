@@ -6,7 +6,7 @@ Enforcement rung: advisory. Never blocks; always exits 0.
 One `git status --porcelain` (read-only, optional locks disabled) lists the
 staged, modified, and untracked files. Each path is attributed to the lane
 in structure.json that contains it. The reminder names the lanes that hold
-changes but have no companion entry in the decisions or journal lane, and
+changes but have no companion entry in the decisions lane, and
 lists Markdown files whose `updated:` frontmatter is not today's date.
 
 Silent when the tree is clean or when no lane is configured at all.
@@ -23,8 +23,8 @@ from _debug import debug
 from hook_io import REPO_ROOT, load_structure
 
 HOOK_NAME = "close-the-loop"
-LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
-EVIDENCE_LANES = ("decisions", "journal")
+LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
+EVIDENCE_LANES = ("decisions",)
 
 
 def dirty_paths(root):
@@ -110,7 +110,7 @@ def build_message(paths, lanes, root, today):
                 + f" for changes in {', '.join(content_lanes)}"
             )
         else:
-            parts.append("no decisions or journal lane is configured to record why these changed")
+            parts.append("no decisions lane is configured to record why these changed")
     stale = []
     for path in paths:
         if not path.endswith(".md") or lane_of(path, lanes) is None:

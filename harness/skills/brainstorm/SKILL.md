@@ -24,7 +24,7 @@ metadata:
 
 Brainstorm is discussion and analysis, not a commitment or an implementation engine. It helps the user see credible options, their strongest objections, and what would change the answer. Do not manufacture a durable decision, edit an artifact, or start implementation unless the user separately asks.
 
-This skill writes nothing and declares no lane. If the user asks to record the result, hand off to the skill that owns the destination (a decision, a journal entry, a document) rather than writing from here.
+This skill writes nothing and declares no lane. If the user asks to record the result, hand off to the skill that owns the destination (a decision, a document) rather than writing from here.
 
 The reference files are read from this skill's folder. On a runtime that materializes only `SKILL.md` (the generated Codex wrapper), read them from the repository path `harness/skills/brainstorm/`.
 

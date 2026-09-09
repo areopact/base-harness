@@ -11,12 +11,17 @@ Initial public template.
 - Kernel: registry-driven bootstrap (`--check`, `--copy`, `--force`), contract composition (`harness/CONTRACT.md` + `harness/CONTRACT.host.md` rendered to `AGENTS.md`), offline doctors for Claude Code, Codex CLI, and OpenCode with six evidence layers, hook library with one Python implementation per hook and per-runtime wrappers, `.githooks/pre-commit` floor, strict runtime JSON schemas, kernel manifest.
 - Registries: `runtimes.json`, `structure.json` (lanes, git mode, tiers, brain, delegation flag), `selection.json`, `capabilities.json`, `sources.json`, `environment.json`.
 - Selector: `selector.py` with materialize-and-prune; packs declared in skill `metadata.packs`; shipped default `core` plus `maintain`.
-- Skills, v0.1.0 catalog: core (brainstorm, prompt, capture, eli5, research, review, humanize), maintain (doctor, verify, commit, skillify), delegation module (workflow, opt-in). Shipped on disk but not selected by default: decks (deck-outline, deck-render --web) and memory (daily); `--pack` replaces the current pack list rather than adding to it, so select them on top of the shipped default with `selector.py --pack core --pack maintain --pack decks` or `--pack core --pack maintain --pack memory`.
+- Skills, v0.1.0 catalog: core (brainstorm, prompt, capture, eli5, research, review, humanize), maintain (doctor, commit, skillify), delegation module (workflow, opt-in). Shipped on disk but not selected by default: decks (deck-outline, deck-render --web) and memory (daily); `--pack` replaces the current pack list rather than adding to it, so select them on top of the shipped default with `selector.py --pack core --pack maintain --pack decks` or `--pack core --pack maintain --pack memory`.
 - Memory lanes and the optional reference memory module (`brain/shared`, `brain/local`).
 - Classification and export: five labels, `export.py` copy mode with its own fuzz suite, `frontmatter_guard`.
 - `adopt.py` and `init.py` for existing repositories.
 - Docs: ARCHITECTURE, VERIFICATION, PACKS, LANES, HOST-SHAPES, ADDING-A-SKILL, ROUTING-TASKS.
 - CI: offline conformance on ubuntu, windows, and macos; fresh-template job; permission-posture assertion; de-identification lint.
+
+### Removed
+
+- Skills: the verify skill; its prove-before-done mode lives in doctor.
+- Skills: the daily and capture skills; the template ships no triage cadence, so a journal and an inbox have no reader, memory stays pages, and the journal lane is removed with them.
 
 ### Security
 

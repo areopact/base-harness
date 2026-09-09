@@ -28,7 +28,7 @@ harness/
   kernel-manifest.json         every kernel file with state ported | new and its source path
   registry/                    runtimes, structure, selection, capabilities, sources, environment, collaborators
   rules/                       always-on and path-scoped behavior law; index.json is the machine-readable list; a path-scoped rule carries `paths:` frontmatter, which only Claude Code honors (auto-loaded through the `.claude/rules` link; the rule loads only when a matching file is touched). Codex and OpenCode do not materialize harness/rules/ at all: the rendered contract's lookup section points at each rule page, and the agent reads it on demand, with `paths:` frontmatter carried along as inert text
-  skills/                      README, generated RESOLVER.md, one folder per skill (15 in this build)
+  skills/                      README, generated RESOLVER.md, one folder per skill (14 in this build)
   hooks/                       lib/*.py canonical modules; <event>/*.{sh,ps1} wrappers; codex-dispatch; tests/
   adapters/                    claude/, codex/, opencode/ native configuration sources; model_map.py; tests/
   agents/                      documents the generated-role mechanism; holds no role files
@@ -39,7 +39,7 @@ brain/                         optional reference memory module: README, shared/
 docs/                          this documentation; the default docs lane
 ```
 
-Fixed points of the shape: the six lane names are fixed and every lane is either a list of repository-relative paths or `null`; the decisions lane defaults to `docs/decisions`; the shipped selection is `core` plus `maintain`; lane folders are created on first write, never pre-created; no tracked file outside `docs/`, `README.md`, and the allowlisted component READMEs may link to a bootstrap-created path (lint L9).
+Fixed points of the shape: the five lane names are fixed and every lane is either a list of repository-relative paths or `null`; the decisions lane defaults to `docs/decisions`; the shipped selection is `core` plus `maintain`; lane folders are created on first write, never pre-created; no tracked file outside `docs/`, `README.md`, and the allowlisted component READMEs may link to a bootstrap-created path (lint L9).
 
 ## Registries
 
@@ -47,7 +47,7 @@ Fixed points of the shape: the six lane names are fixed and every lane is either
 
 | File | Declares | Read by |
 |---|---|---|
-| `structure.json` | host facts: the six lanes, `git.mode`, `outbound_globs`, `brain.local_path` and `brain.local_tracked`, `tiers.lane_defaults` and `tiers.unlisted_path`, `delegation.mandatory`, `selection_scope` | every kernel file that needs a host fact, through `harness_registry.load_structure()` (validating, raises) or `hook_io.load_structure()` (standalone, fails open); the two must agree |
+| `structure.json` | host facts: the five lanes, `git.mode`, `outbound_globs`, `brain.local_path` and `brain.local_tracked`, `tiers.lane_defaults` and `tiers.unlisted_path`, `delegation.mandatory`, `selection_scope` | every kernel file that needs a host fact, through `harness_registry.load_structure()` (validating, raises) or `hook_io.load_structure()` (standalone, fails open); the two must agree |
 | `structure.schema.json` | JSON Schema for `structure.json`, closed at every level | CI, the doctors, `tests/test_structure_defaults.py` |
 | `selection.json` | `packs`, `include`, `exclude` | bootstrap materialization, the two adapter generators, the doctors |
 | `runtimes.json` | per runtime: tier, status, adapter and doctor paths, capabilities, `identity_context_limit`, materializations; retired materializations; `hook_events` with support, delivery, context limit, and the degradation rung per runtime | bootstrap, `contract_files.py`, `dispatch.py`, `load_identity.py`, the doctors, lint L2 and L8 |
@@ -99,9 +99,9 @@ Shipped hooks and their rungs on the enforcement ladder (advisory, soft-block, h
 | PostToolUse | `frontmatter-guard` | advisory | every configured lane; `collaborators.yaml` |
 | PostToolUse | `prose-lint` | advisory | `outbound_globs` (empty by default, so silent) |
 | PostToolUse | `delegation-guard` | advisory, inert unless `delegation.mandatory` | `delegation.mandatory` |
-| Stop | `close-the-loop` | advisory | every configured lane; decisions and journal as evidence lanes |
+| Stop | `close-the-loop` | advisory | every configured lane; decisions as the evidence lane |
 
-`dispatch.py` caps `additionalContext` at the `context_limit` declared per runtime and event in `runtimes.json` and appends a visible note when it truncates. SessionStart is budgeted per lane by weight (identity 40, knowledge 20, journal 10, other 5) with a footer naming trimmed and omitted sources; it is never tail-truncated. The regression suite has 54 fixtures across the `guard`, `frontmatter`, `openpyxl`, and `read-deny` groups, each piped through the native wrapper and diffed byte for byte against an expected file.
+`dispatch.py` caps `additionalContext` at the `context_limit` declared per runtime and event in `runtimes.json` and appends a visible note when it truncates. SessionStart is budgeted per lane by weight (identity 40, knowledge 20, other 5) with a footer naming trimmed and omitted sources; it is never tail-truncated. The regression suite has 54 fixtures across the `guard`, `frontmatter`, `openpyxl`, and `read-deny` groups, each piped through the native wrapper and diffed byte for byte against an expected file.
 
 ## The degradation ladder
 
@@ -133,11 +133,11 @@ Offline doctors populate `configured` only and never launch a runtime, touch the
 
 ## Selection and packs
 
-A skill declares its packs in `metadata.packs`; `harness/registry/selection.json` names the selected packs plus explicit `include` and `exclude` lists; the effective set is the union of pack members and includes, minus excludes. `python harness/tools/selector.py` edits the file (flags or an interactive prompt on a terminal), refuses a skill name that does not exist, warns on a pack no shipped skill declares, and then re-runs bootstrap's materialization, which prunes links for deselected skills. `selection_scope` in `structure.json` picks the repository-shared file or a user-local `selection.local.json`. The doctors count selection from the materialized artifacts per runtime and reconcile to the selection file; a mismatch is a `configured` FAIL. This build ships 15 skills on disk, 11 of them selected by default from the `core` and `maintain` packs, so every catalog reads `11 selected of 15 available`; zero skills remains a legal state that bootstrap tolerates (lint reports it as a WARN under `--strict` and an ERROR only under `--release`). The pack catalog and its release plan are in `docs/PACKS.md`.
+A skill declares its packs in `metadata.packs`; `harness/registry/selection.json` names the selected packs plus explicit `include` and `exclude` lists; the effective set is the union of pack members and includes, minus excludes. `python harness/tools/selector.py` edits the file (flags or an interactive prompt on a terminal), refuses a skill name that does not exist, warns on a pack no shipped skill declares, and then re-runs bootstrap's materialization, which prunes links for deselected skills. `selection_scope` in `structure.json` picks the repository-shared file or a user-local `selection.local.json`. The doctors count selection from the materialized artifacts per runtime and reconcile to the selection file; a mismatch is a `configured` FAIL. This build ships 12 skills on disk, 9 of them selected by default from the `core` and `maintain` packs, so every catalog reads `9 selected of 12 available`; zero skills remains a legal state that bootstrap tolerates (lint reports it as a WARN under `--strict` and an ERROR only under `--release`). The pack catalog and its release plan are in `docs/PACKS.md`.
 
 ## Memory lanes and the brain module
 
-Six lanes with fixed names (identity, knowledge, journal, decisions, records, docs) and host-chosen paths in `structure.json`. `brain/` is the optional reference provider for the identity, knowledge, and journal lanes, split into a tracked `shared/` half and an untracked `local/` half. Memory carries evidence authority only; instruction authority belongs to the contract, the rules, and the docs lane. Lane semantics, consumers, and unready behavior: `docs/LANES.md`. Maturity, promotion, reclassification, and the solo-to-team migration: `brain/README.md`.
+Five lanes with fixed names (identity, knowledge, decisions, records, docs) and host-chosen paths in `structure.json`. `brain/` is the optional reference provider for the identity and knowledge lanes, split into a tracked `shared/` half and an untracked `local/` half. Memory carries evidence authority only; instruction authority belongs to the contract, the rules, and the docs lane. Lane semantics, consumers, and unready behavior: `docs/LANES.md`. Maturity, promotion, reclassification, and the solo-to-team migration: `brain/README.md`.
 
 ## Classification and export
 

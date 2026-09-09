@@ -28,7 +28,6 @@ INTERFACE_DEFAULTS = {
     "lanes": {
         "identity": ["brain/shared/IDENTITY.md", "brain/local/OPERATOR.md"],
         "knowledge": ["brain/shared/knowledge", "brain/local/knowledge"],
-        "journal": ["brain/local/journal"],
         "decisions": ["docs/decisions"],
         "records": None,
         "docs": ["docs"],
@@ -40,7 +39,6 @@ INTERFACE_DEFAULTS = {
         "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public",
@@ -50,7 +48,7 @@ INTERFACE_DEFAULTS = {
     "delegation": {"mandatory": False},
     "selection_scope": "repo",
     "contract": {"mode": "rendered"},
-    "host": {"adopted": False, "roots": [], "harness_owned": []},
+    "host": {"adopted": False, "roots": [], "harness_owned": [], "profile": "solo", "verify_command": None},
 }
 
 
@@ -100,11 +98,11 @@ class StructureDefaultsTests(unittest.TestCase):
 
     def test_malformed_lane_value_is_treated_as_not_configured(self):
         with tempfile.TemporaryDirectory() as temp:
-            write_structure(temp, json.dumps({"lanes": {"docs": ["/absolute"], "journal": "string"}}))
+            write_structure(temp, json.dumps({"lanes": {"docs": ["/absolute"], "records": "string"}}))
             with contextlib.redirect_stderr(io.StringIO()):
                 result = load_structure(temp)
             assert result["lanes"]["docs"] is None
-            assert result["lanes"]["journal"] is None
+            assert result["lanes"]["records"] is None
             assert lane_paths("docs", temp) == []
 
     def test_loader_never_raises_on_unreadable_root(self):

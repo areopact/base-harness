@@ -15,7 +15,6 @@ Because the whole folder is ignored, this guide is itself untracked in a default
 |---|---|---|
 | `OPERATOR.md` | identity | How the operator prefers to work: style, preferences, communication, corrections stated as the rule that now applies. The template is a shape with no person in it. |
 | `knowledge/` | knowledge | Working beliefs with a stated open question. Promotion to `brain/shared/knowledge/` is an explicit edit, never a sync. |
-| `journal/` | journal | Daily entries, session notes, half-thoughts awaiting routing. An entry older than two weeks is routed or discarded. |
 | `HOT.md` | (generated) | A current-work digest rebuilt from its sources. Reserved for a later release; nothing generates it in this version. |
 | `archive/` | knowledge | Local pages that were promoted or superseded. |
 

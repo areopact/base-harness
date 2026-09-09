@@ -5,7 +5,7 @@ description: >
   existing owner. WHEN: user observes "this keeps happening", says "fix this
   durably", "turn this recurring failure into a rule", or "make this failure
   structurally impossible", or invokes /skillify; after the same correction
-  has appeared three or more times in feedback, journal entries, or
+  has appeared three or more times in feedback, records, or
   close-the-loop summaries. WHEN NOT: one-off mistakes; failures the user has
   explicitly accepted as inherent ambiguity; pressure-testing a single
   artifact rather than a pattern (/review).
@@ -41,7 +41,7 @@ The goal is a durable, evidence-backed reduction in recurrence. A repair can mak
 ## Inputs
 
 - A pattern name in kebab-case (for example `stale-lockfile-commit`, `wrong-lane-path`, `frontmatter-date-drift`).
-- At least three references to past occurrences. References can be session IDs, journal entries, records, decisions, standing knowledge, or owner rule paths.
+- At least three references to past occurrences. References can be session IDs, records, decisions, standing knowledge, or owner rule paths.
 
 ## Behavior
 

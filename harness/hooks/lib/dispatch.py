@@ -6,7 +6,7 @@ their JSON outputs, and applies the runtime's context limit from
 harness/registry/runtimes.json. A deny short-circuits every later module.
 The dispatcher itself always exits 0; the decision lives in the JSON.
 
-SessionStart output is budgeted per lane (identity, knowledge, journal,
+SessionStart output is budgeted per lane (identity, knowledge,
 other) with weights, never tail-truncated, and always carries a footer
 naming the trimmed and omitted sources when the budget applied.
 """
@@ -42,7 +42,7 @@ EDIT_TOOLS = {"Edit", "Write", "NotebookEdit", "apply_patch"}
 REGISTRY = REPO_ROOT / "harness" / "registry" / "runtimes.json"
 SESSION_HEADER = re.compile(r"(?m)^=== (.+?) ===\s*$")
 HEADER_PATH = re.compile(r"\(([^()]+)\)\s*$")
-SESSION_WEIGHTS = {"identity": 40, "knowledge": 20, "journal": 10, "other": 5}
+SESSION_WEIGHTS = {"identity": 40, "knowledge": 20, "other": 5}
 FOOTER_RESERVE = 600
 CAP_SUFFIX = "\n[hook context capped; read the named source files on demand]"
 TRIM_SUFFIX = "\n[... trimmed; read the named source on demand]"
@@ -69,7 +69,7 @@ def cap_context(value: str, limit: int | None) -> str:
 
 def _lane_kind(path: str, root: Path | None = None) -> str:
     """Classify a source path by the structure.json lane that contains it."""
-    for kind in ("identity", "knowledge", "journal"):
+    for kind in ("identity", "knowledge"):
         for lane in lane_paths(kind, root):
             if path == lane or path.startswith(lane + "/"):
                 return kind

@@ -27,7 +27,7 @@ Additivity: an export at level N carries every page labelled N or below, never a
 
 ### Defaults
 
-Folder defaults are not a table on this page. `structure.json` names one default label per lane (identity, knowledge, journal, decisions, records, docs) and one policy for paths outside every lane: `internal` or `exclude`. A subfolder inherits its lane's default, never a same-named folder elsewhere. A page with no `access:` field takes its lane default at export time.
+Folder defaults are not a table on this page. `structure.json` names one default label per lane (identity, knowledge, decisions, records, docs) and one policy for paths outside every lane: `internal` or `exclude`. A subfolder inherits its lane's default, never a same-named folder elsewhere. A page with no `access:` field takes its lane default at export time.
 
 ### What the label does not do
 

@@ -68,9 +68,11 @@ DESTINATION_SURFACES = {
 # Sources under this prefix are produced by bootstrap; they need not exist in a fresh clone.
 GENERATED_SOURCE_PREFIXES = ("harness/.selected/",)
 
-LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
+LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
 TIER_LABELS = ("public", "internal", "confidential", "restricted", "secret")
 GIT_MODES = {"main-only", "branches"}
+HOST_PROFILES = ("solo", "team")
+VERIFY_COMMAND_RE = re.compile(r"^(npm run|pnpm run|yarn|make) [A-Za-z0-9:_.-]+$")
 UNLISTED_PATH_POLICIES = {"internal", "exclude"}
 CONTRACT_MODES = {"rendered", "host-owned"}
 SELECTION_SCOPES = {"repo", "user"}
@@ -80,7 +82,6 @@ DEFAULT_STRUCTURE: dict[str, Any] = {
     "lanes": {
         "identity": ["brain/shared/IDENTITY.md", "brain/local/OPERATOR.md"],
         "knowledge": ["brain/shared/knowledge", "brain/local/knowledge"],
-        "journal": ["brain/local/journal"],
         "decisions": ["docs/decisions"],
         "records": None,
         "docs": ["docs"],
@@ -92,7 +93,6 @@ DEFAULT_STRUCTURE: dict[str, Any] = {
         "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public",
@@ -102,7 +102,7 @@ DEFAULT_STRUCTURE: dict[str, Any] = {
     "delegation": {"mandatory": False},
     "selection_scope": "repo",
     "contract": {"mode": "rendered"},
-    "host": {"adopted": False, "roots": [], "harness_owned": []},
+    "host": {"adopted": False, "roots": [], "harness_owned": [], "profile": "solo", "verify_command": None},
 }
 
 CAPABILITY_KINDS = {"runtime-tool", "mcp", "cli", "local-script"}
@@ -306,10 +306,16 @@ def validate_structure(registry: dict[str, Any], root: Optional[Path] = None) ->
         errors.append(f"{label}: schema_version must be 1")
 
     lanes = registry.get("lanes")
-    if not isinstance(lanes, dict) or set(lanes) != set(LANE_NAMES):
-        errors.append(f"{label}.lanes: must contain exactly {', '.join(LANE_NAMES)}")
+    if not isinstance(lanes, dict):
+        errors.append(f"{label}.lanes: must be an object")
     else:
+        _unknown_fields(lanes, set(LANE_NAMES), f"{label}.lanes", errors)
+        missing = sorted(set(LANE_NAMES) - set(lanes))
+        if missing:
+            errors.append(f"{label}.lanes: missing {', '.join(missing)}")
         for lane, value in lanes.items():
+            if lane not in LANE_NAMES:
+                continue
             if value is None:
                 continue
             if not isinstance(value, list) or not value:
@@ -380,13 +386,21 @@ def validate_structure(registry: dict[str, Any], root: Optional[Path] = None) ->
     if not isinstance(host, dict):
         errors.append(f"{label}.host: must be an object")
     else:
-        _unknown_fields(host, {"adopted", "roots", "harness_owned"}, f"{label}.host", errors)
+        _unknown_fields(host, {"adopted", "roots", "harness_owned", "profile", "verify_command"}, f"{label}.host", errors)
         if not isinstance(host.get("adopted"), bool):
             errors.append(f"{label}.host.adopted: must be a boolean")
         for field in ("roots", "harness_owned"):
             value = host.get(field)
             if not isinstance(value, list) or any(not isinstance(item, str) or not _safe_relative(item) for item in value):
                 errors.append(f"{label}.host.{field}: must be a list of safe repository-relative paths")
+        if "profile" in host and host["profile"] not in HOST_PROFILES:
+            errors.append(f"{label}.host.profile: must be one of {sorted(HOST_PROFILES)}")
+        if "verify_command" in host:
+            verify_command = host["verify_command"]
+            if verify_command is not None and (
+                not isinstance(verify_command, str) or not VERIFY_COMMAND_RE.fullmatch(verify_command)
+            ):
+                errors.append(f"{label}.host.verify_command: must be null or a package-manager/make verify command")
     return errors
 
 

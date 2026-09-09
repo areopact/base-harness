@@ -39,7 +39,7 @@ from hook_io import (
 )
 
 HOOK_NAME = "frontmatter-guard"
-LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
+LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
 DATE_KEYS = ("created", "updated", "date", "last_assessed", "archived")
 COLLABORATORS_RELATIVE = ("harness", "registry", "collaborators.yaml")
 MAX_FILE_BYTES = 5_000_000

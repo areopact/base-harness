@@ -29,7 +29,7 @@ environment variable `HARNESS_HOOK_DEBUG_DIR` names a directory,
 The dispatcher caps `additionalContext` at the `context_limit` declared for
 the runtime and event in `harness/registry/runtimes.json` and appends
 `[hook context capped; read the named source files on demand]`. `SessionStart`
-is budgeted per lane (identity 40, knowledge 20, journal 10, other 5) with a
+is budgeted per lane (identity 40, knowledge 20, other 5) with a
 footer naming trimmed and omitted sources; it is never tail-truncated.
 
 ## Event and hook matrix
@@ -46,7 +46,7 @@ footer naming trimmed and omitted sources; it is never tail-truncated.
 | `PostToolUse` | `Write\|Edit` | `post-tool-use/frontmatter-guard` | `frontmatter_guard` | advisory | tier label, collaborator list, closed block, ISO dates under any lane |
 | `PostToolUse` | `Write\|Edit` | `post-tool-use/prose-lint` | `prose_lint` | advisory | mechanical writing tells in files matched by `outbound_globs` (empty by default) |
 | `PostToolUse` | `Agent\|Workflow` | `post-tool-use/delegation-guard` | `delegation_guard` | advisory | as above, result-side |
-| `Stop` | (none) | `stop/close-the-loop` | `close_the_loop` | advisory | lanes with uncommitted changes and no decisions or journal entry |
+| `Stop` | (none) | `stop/close-the-loop` | `close_the_loop` | advisory | lanes with uncommitted changes and no decisions entry |
 
 Codex routes every event through `codex-dispatch.{sh,ps1} --runtime codex
 --event <Event>`; `harness/hooks/lib/dispatch.py` selects the modules above from the

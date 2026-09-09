@@ -1,14 +1,13 @@
 # Lanes
 
-A lane is a named place where one kind of information lives. The harness fixes six lane names and lets the host choose the paths, or leave a lane unset. Every hook and tool that needs a host fact reads the lanes from `harness/registry/structure.json`; nothing in the kernel names a folder directly (lint L13, `harness/hooks/tests/test_structure_parameterization.py`). Which lane a piece of information belongs in is the memory-routing rule (`harness/rules/memory-routing.md`); which order to consult them in is the memory-first rule (`harness/rules/memory-first.md`). This page describes the lanes as the built code treats them.
+A lane is a named place where one kind of information lives. The harness fixes five lane names and lets the host choose the paths, or leave a lane unset. Every hook and tool that needs a host fact reads the lanes from `harness/registry/structure.json`; nothing in the kernel names a folder directly (lint L13, `harness/hooks/tests/test_structure_parameterization.py`). Which lane a piece of information belongs in is the memory-routing rule (`harness/rules/memory-routing.md`); which order to consult them in is the memory-first rule (`harness/rules/memory-first.md`). This page describes the lanes as the built code treats them.
 
-## The six lanes
+## The five lanes
 
 | Lane | Question it answers | Shape of the value | Shipped default | Tier default |
 |---|---|---|---|---|
 | identity | Who is the agent, and how does the operator work | files (one page each) | `brain/shared/IDENTITY.md`, `brain/local/OPERATOR.md` | internal |
 | knowledge | What is believed now, and how firmly | folders | `brain/shared/knowledge`, `brain/local/knowledge` | internal |
-| journal | What was noted and not yet routed | folders | `brain/local/journal` | internal |
 | decisions | What was chosen, and what was given up | folders | `docs/decisions` | internal |
 | records | What happened, with a date | folders | `null` (unset) | internal |
 | docs | What governs or can be reused now | folders | `docs` | public |
@@ -26,11 +25,11 @@ Each lane is read by a specific set of kernel files. The table names them so a h
 | identity | `harness/tools/lint.py` L2 | every identity file must fit the smallest tier-1 `identity_context_limit`; an absent file is a note, not an error |
 | knowledge, decisions, docs, records | `harness/hooks/lib/memory_first.py` (PreToolUse on web tools) | tokenizes the query and matches filename stems and directory names under each lane path, three levels deep, at most 4000 entries; content is never read |
 | every configured lane | `harness/hooks/lib/frontmatter_guard.py` (PostToolUse on Write and Edit) | checks a Markdown file under any lane path: block closed, `access:` in the five labels, `allowed_collaborators` present exactly when `restricted` and every id in `collaborators.yaml`, ISO dates in `created`, `updated`, `date`, `last_assessed`, `archived` |
-| every configured lane; decisions and journal as evidence | `harness/hooks/lib/close_the_loop.py` (Stop) | attributes each dirty path from `git status --porcelain` to its lane and names the lanes with changes that have no companion entry in the decisions or journal lane; lists Markdown files whose `updated:` is not today |
+| every configured lane; decisions as evidence | `harness/hooks/lib/close_the_loop.py` (Stop) | attributes each dirty path from `git status --porcelain` to its lane and names the lanes with changes that have no companion entry in the decisions lane; lists Markdown files whose `updated:` is not today |
 | every lane | `harness/tools/export.py` | the deepest lane a path falls under supplies the default tier from `tiers.lane_defaults` when the file has no `access:` field |
 | decisions, docs | `harness/tools/adopt.py` | detects an existing `docs/` folder and an existing `docs/decisions/` or `decisions/` folder and sets those two lanes; every other lane is written as `null` |
-| all six | `harness/tools/init.py --lanes` | prompts per lane, validates each path, refuses to write an invalid structure |
-| all six | the doctors | print the host shape on the `configured` layer |
+| all five | `harness/tools/init.py --lanes` | prompts per lane, validates each path, refuses to write an invalid structure |
+| all five | the doctors | print the host shape on the `configured` layer |
 
 The runtime's own memory features are outside this table. The harness does not read or write a runtime's auto-memory; a host that uses one keeps it separate from the lanes.
 
@@ -64,7 +63,7 @@ Delivery surfaces differ too: Claude Code runs the wrapper as a SessionStart hoo
 
 ## The brain module: shared and local
 
-`brain/` is the reference provider for the identity, knowledge, and journal lanes. `brain/shared/` is repository content, tracked and exported at internal by default; it holds `IDENTITY.md` (optional; a shape with no persona) and `knowledge/` for standing beliefs. `brain/local/` is one user on one machine: `OPERATOR.md`, working `knowledge/`, `journal/`, and a reserved `HOT.md` that nothing generates in this version. The local lane is untracked by default (`.gitignore` carries `/brain/local/`, `structure.json` `brain.local_tracked` is `false`). `python harness/tools/init.py --brain` scaffolds the module from `harness/tools/templates/brain/` without overwriting an existing file; `--track-local` is the only supported way to track the local lane and prints the consequence before writing.
+`brain/` is the reference provider for the identity and knowledge lanes. `brain/shared/` is repository content, tracked and exported at internal by default; it holds `IDENTITY.md` (optional; a shape with no persona) and `knowledge/` for standing beliefs. `brain/local/` is one user on one machine: `OPERATOR.md`, working `knowledge/`, and a reserved `HOT.md` that nothing generates in this version. The local lane is untracked by default (`.gitignore` carries `/brain/local/`, `structure.json` `brain.local_tracked` is `false`). `python harness/tools/init.py --brain` scaffolds the module from `harness/tools/templates/brain/` without overwriting an existing file; `--track-local` is the only supported way to track the local lane and prints the consequence before writing.
 
 In branches mode the design places the local lane outside the repository and resolves the operator profile per git user. The current kernel does not implement that: the structure validator accepts repository-relative `local_path` values only, `adopt.py` reports the rejection and keeps the in-repository path, and `load_identity` reads the identity lane paths verbatim. The candidate external path is `~/.harness-local/<name>`, where `<name>` is the basename of the target's git `origin` remote (falling back to the target folder's own name when there is no usable origin), so the path names the repository rather than one adopter's local checkout folder. Until it lands, a branches-mode host keeps the local lane untracked inside each contributor's own clone. `brain/README.md` and `brain/local/README.md` carry the detail.
 

@@ -14,7 +14,6 @@ When the same topic lands in several lanes as the same prose, every later edit h
 |---|---|
 | Who the agent is, how it works, its voice and anti-patterns; who the operator is and how they prefer to work | identity |
 | A cross-session belief, hypothesis, mental model, or operating fact that another task or runtime would benefit from | knowledge |
-| A session note, a daily entry, a half-thought, a pointer to triage later | journal |
 | A one-way door: what was chosen, the options considered, the risks accepted | decisions |
 | An event with a date: a meeting, a call, a chat, a session, a research run, an incident | records |
 | Current status, plans, architecture, living reference pages, reusable frameworks and templates | docs |
@@ -51,7 +50,6 @@ Evidence quality, contradiction handling, and scope decide maturity. A fixed obs
 
 | Signal | Action |
 |---|---|
-| The journal lane holds an untriaged entry for more than two weeks | Route it to its lane or discard it |
 | A knowledge page has not been reassessed in a quarter and its subject is volatile | Reassess before relying on it |
 | A working belief has no open question or evidence path | Clarify it, promote it to standing, or archive it |
 | A promoted or superseded page still reads as current | Add its pointer and move it to the lane's archive |

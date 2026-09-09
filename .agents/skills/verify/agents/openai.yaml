@@ -1,5 +1,0 @@
-interface:
-  display_name: "Verify"
-  short_description: "Prove a change actually works by exercising it end to end before claiming done, and report the... WHEN: user invokes /verify, says \"prove this works\"..."
-policy:
-  allow_implicit_invocation: false

@@ -127,7 +127,7 @@ class TestApply(TempDirCase):
         assert not (target / "harness" / "registry" / "selection.local.json").exists()
         doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
         assert doc["git"] == {"mode": "branches"}
-        assert doc["lanes"] == {"identity": None, "knowledge": None, "journal": None, "decisions": ["docs/decisions"], "records": None, "docs": ["docs"]}
+        assert doc["lanes"] == {"identity": None, "knowledge": None, "decisions": ["docs/decisions"], "records": None, "docs": ["docs"]}
         assert doc["brain"]["local_tracked"] is False
         registry = adopt._registry_module()
         if registry is not None:

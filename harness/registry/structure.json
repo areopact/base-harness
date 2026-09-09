@@ -9,9 +9,6 @@
       "brain/shared/knowledge",
       "brain/local/knowledge"
     ],
-    "journal": [
-      "brain/local/journal"
-    ],
     "decisions": [
       "docs/decisions"
     ],
@@ -32,7 +29,6 @@
     "lane_defaults": {
       "identity": "internal",
       "knowledge": "internal",
-      "journal": "internal",
       "decisions": "internal",
       "records": "internal",
       "docs": "public"
@@ -49,6 +45,8 @@
   "host": {
     "adopted": false,
     "roots": [],
-    "harness_owned": []
+    "harness_owned": [],
+    "profile": "solo",
+    "verify_command": null
   }
 }

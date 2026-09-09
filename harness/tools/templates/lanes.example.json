@@ -8,7 +8,6 @@
         "lanes": {
           "identity": null,
           "knowledge": null,
-          "journal": null,
           "decisions": [
             "docs/decisions"
           ],
@@ -29,7 +28,6 @@
           "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public"
@@ -53,7 +51,6 @@
           "knowledge": [
             "brain/shared/knowledge"
           ],
-          "journal": null,
           "decisions": [
             "docs/decisions"
           ],
@@ -74,7 +71,6 @@
           "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public"
@@ -100,9 +96,6 @@
             "brain/shared/knowledge",
             "brain/local/knowledge"
           ],
-          "journal": [
-            "brain/local/journal"
-          ],
           "decisions": [
             "docs/decisions"
           ],
@@ -123,7 +116,6 @@
           "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public"
@@ -147,7 +139,6 @@
           "knowledge": [
             "brain/shared/knowledge"
           ],
-          "journal": null,
           "decisions": null,
           "records": null,
           "docs": [
@@ -166,7 +157,6 @@
           "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public"
@@ -191,9 +181,6 @@
           "knowledge": [
             "brain/knowledge"
           ],
-          "journal": [
-            "brain/journal"
-          ],
           "decisions": [
             "brain/decisions"
           ],
@@ -216,7 +203,6 @@
           "lane_defaults": {
             "identity": "confidential",
             "knowledge": "confidential",
-            "journal": "confidential",
             "decisions": "confidential",
             "records": "confidential",
             "docs": "internal"

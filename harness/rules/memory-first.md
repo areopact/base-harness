@@ -16,7 +16,6 @@ Run these in order before any external lookup. Each step names a lane; a lane se
 2. **Decisions lane.** What was chosen and why. A standing decision outranks a later opinion.
 3. **Docs lane.** Current status, plans, architecture, and living reference pages: what governs now.
 4. **Records lane.** Dated evidence: what happened. Records answer the past; a time-sensitive question answered only from a record must be reverified.
-5. **Journal lane.** Session-level notes and daily entries; the lowest-authority local source, useful for recent context.
 
 Only after these return empty (or clearly stale) is an external call justified.
 

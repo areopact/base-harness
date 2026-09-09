@@ -20,8 +20,6 @@ brain/
     README.md               folder guide              ignored    shape ships beside this file (see note)
     OPERATOR.md             identity lane             ignored    init --brain, from harness/tools/templates/OPERATOR.md
     knowledge/              knowledge lane, working   ignored    first write
-    journal/                journal lane              ignored    first write
-      YYYY-MM-DD.md         one entry per day         ignored    first write
     archive/                promoted or superseded    ignored    first archive
     HOT.md                  generated digest          ignored    reserved; no generator in this version
 ```
@@ -36,7 +34,6 @@ Note on the two folder guides: `init.py --brain` currently places `brain/README.
 |---|---|---|
 | `IDENTITY.md`, `OPERATOR.md` | `title`, `access` | none |
 | knowledge page | `title`, `type: knowledge`, `maturity`, `access` | `last_assessed`, `promoted_to`, `superseded_by`, `allowed_collaborators` (required only when `access: restricted`) |
-| journal entry | `title`, `access` | `kind` |
 | README guides | `title`, `access` | none |
 
 `access` is one of `public`, `internal`, `confidential`, `restricted`, `secret`. `maturity` is one of `working`, `standing`, `promoted`, `superseded`.

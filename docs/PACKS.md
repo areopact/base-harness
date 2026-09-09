@@ -1,6 +1,6 @@
 # Packs
 
-A pack is a label a skill declares in `metadata.packs`; selection names packs, and bootstrap materializes only the skills in the selected packs (plus explicit includes, minus excludes). This page lists the catalog by pack with each skill's release and status. The built state matters more than the plan: this build ships fifteen skill folders under `harness/skills/`, the generated resolver carries one row per trigger phrase, and every runtime catalog reads `11 selected of 15 available` (core and maintain selected; decks, memory, and delegation on disk as source). Every skill's status stays `spec-only` in this catalog: promotion to `implemented` is a separate change, not automatic from a live observation. The doctor skill has been invoked live on all three runtimes (`docs/VERIFICATION.md`); every other skill still waits on its first observed run, and `docs/VERIFICATION.md` holds the pending rows.
+A pack is a label a skill declares in `metadata.packs`; selection names packs, and bootstrap materializes only the skills in the selected packs (plus explicit includes, minus excludes). This page lists the catalog by pack with each skill's release and status. The built state matters more than the plan: this build ships twelve skill folders under `harness/skills/`, the generated resolver carries one row per trigger phrase, and every runtime catalog reads `9 selected of 12 available` (core and maintain selected; decks and delegation on disk as source). Every skill's status stays `spec-only` in this catalog: promotion to `implemented` is a separate change, not automatic from a live observation. The doctor skill has been invoked live on all three runtimes (`docs/VERIFICATION.md`); every other skill still waits on its first observed run, and `docs/VERIFICATION.md` holds the pending rows.
 
 ## How packs work
 
@@ -19,7 +19,6 @@ Selected by default. Skills for thinking and writing work that any technical pro
 |---|---|---|---|
 | brainstorm | explore options, think through alternatives, compare approaches; `--hats` for perspectives, `--peers` degrades to one seat | port | spec-only |
 | prompt | improve or clarify a prompt; `--rewrite-only` | port | spec-only |
-| capture | drop a half-thought somewhere to triage later | rewritten lane-free: it uses the journal lane when configured and the runtime's native memory when not | spec-only |
 | eli5 | explain a topic simply with a picture explainer; `--deck` hands the result to a deck renderer | declares `distribution: runtime-provided` against the `user-file-delivery` capability (provided on Claude Code, absent on Codex and OpenCode); fallback: write the file to the repository and print its path | spec-only |
 | research | quick cited answer, `deep` and `ingest` modes | rewritten without the source repository's machine-specific tier filter; declares `distribution: runtime-provided` against `web-search` and `delegated-execution`; when delegated execution is absent, deep mode runs its stages sequentially in the main loop and says so | spec-only |
 | review | red-team or pressure-test an artifact; all lenses, `--hats`, `--peers` | port | spec-only |
@@ -31,8 +30,7 @@ Selected by default. Skills that keep the harness itself healthy.
 
 | Skill | Intent | Notes | Status at landing |
 |---|---|---|---|
-| doctor | run the three doctors from inside a session and report per runtime | ported from the predecessor template's diagnostic skill and wired to `doctor.sh`, `doctor_codex.py --offline`, `doctor_opencode.py --offline` | spec-only |
-| verify | the close-the-loop verification checklist as a skill | ported; referenced by `harness/rules/close-the-loop.md` | spec-only |
+| doctor | run the three doctors from inside a session and report per runtime; also carries the close-the-loop verification checklist as its "prove before done" mode | ported from the predecessor template's diagnostic skill and wired to `doctor.sh`, `doctor_codex.py --offline`, `doctor_opencode.py --offline` | spec-only |
 | commit | a conventional commit that respects `git.mode` and stages explicit paths | rewritten from the predecessor plus the source conventions | spec-only |
 | skillify | "this keeps happening, fix it durably": the owner-first repair doctrine | port | spec-only |
 
@@ -44,14 +42,6 @@ Shipped as source, not selected by default: `python harness/tools/selector.py --
 |---|---|---|---|
 | deck-outline | outline a teaching, investor, or intro deck | port, four files | spec-only |
 | deck-render | render an outline as a web presentation (`--web`) with pure-Python checks (`harness/skills/deck-render/scripts/check_deck.py` and `inline_bundle.py` beside it) | port, ten files | spec-only |
-
-## memory
-
-Shipped as source, not selected by default. Selected automatically when the brain module is present once the selector supports that rule; in this build `selector.py` has no module-conditional selection, so select the pack explicitly on top of the shipped default (`python harness/tools/selector.py --pack core --pack maintain --pack memory`).
-
-| Skill | Intent | Notes | Status at landing |
-|---|---|---|---|
-| daily | log to today's journal entry | port; writes to the journal lane and, when the lane is unset, prints one line naming `init.py --lanes` and stops | spec-only |
 
 ## delegation module (opt-in)
 
@@ -76,4 +66,4 @@ Every skill carries `metadata.license` (one of `MIT`, `Apache-2.0`, `BSD-3-Claus
 
 ## Planned (v0.2)
 
-From `ROADMAP.md`: an engineering pack (debug, code-review, write-safety with its freeze hook); memory pack growth (meeting, brief, knowledge-synthesis); reports and youtube skills; connectors under a connection standard with capability rows reserved in `capabilities.json`, plus focus; a marketplace channel after a spike proves that a pack directory installs as a plugin on at least one runtime. None of these is a commitment.
+From `ROADMAP.md`: an engineering pack (debug, code-review, write-safety with its freeze hook); reports and youtube skills; connectors under a connection standard with capability rows reserved in `capabilities.json`, plus focus; a marketplace channel after a spike proves that a pack directory installs as a plugin on at least one runtime. None of these is a commitment.

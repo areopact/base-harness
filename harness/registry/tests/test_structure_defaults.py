@@ -57,11 +57,10 @@ def test_shipped_structure_equals_default_verbatim():
 
 # T2
 def test_partial_file_merges_over_defaults(tmp_path):
-    _write_structure(tmp_path, {"git": {"mode": "branches"}, "lanes": {"records": ["notes"], "journal": None}})
+    _write_structure(tmp_path, {"git": {"mode": "branches"}, "lanes": {"records": ["notes"]}})
     loaded = registry.load_structure(tmp_path)
     assert loaded["git"]["mode"] == "branches"
     assert loaded["lanes"]["records"] == ["notes"]
-    assert loaded["lanes"]["journal"] is None
     assert loaded["lanes"]["docs"] == ["docs"]
     assert loaded["tiers"] == registry.DEFAULT_STRUCTURE["tiers"]
     assert loaded["brain"] == registry.DEFAULT_STRUCTURE["brain"]
@@ -101,6 +100,18 @@ def test_unknown_nested_key_raises(tmp_path):
         assert "remote" in str(exc)
     else:
         raise AssertionError("unknown nested key must raise StructureError")
+
+
+def test_journal_lane_is_now_an_unknown_field(tmp_path):
+    # The journal lane was retired; a host that still carries it is told
+    # exactly what to remove rather than crashing.
+    _write_structure(tmp_path, {"lanes": {"records": ["notes"], "journal": None}})
+    try:
+        registry.load_structure(tmp_path)
+    except registry.StructureError as exc:
+        assert "lanes" in str(exc) and "journal" in str(exc)
+    else:
+        raise AssertionError("a journal lane must raise StructureError")
 
 
 # T3
@@ -285,10 +296,65 @@ def test_hook_loader_agrees_on_defaults_and_merge(tmp_path):
     spec.loader.exec_module(hook_io)
     assert hook_io.DEFAULT_STRUCTURE == registry.DEFAULT_STRUCTURE
     assert hook_io.load_structure(tmp_path) == registry.load_structure(tmp_path)
-    _write_structure(tmp_path, {"git": {"mode": "branches"}, "lanes": {"records": ["notes"], "journal": None}})
+    _write_structure(tmp_path, {"git": {"mode": "branches"}, "lanes": {"records": ["notes"]}})
     assert hook_io.load_structure(tmp_path) == registry.load_structure(tmp_path)
     for lane in registry.LANE_NAMES:
         assert hook_io.lane_paths(lane, tmp_path) == registry.lane_paths(lane, tmp_path)
+
+
+# host.profile and host.verify_command
+def test_host_profile_invalid_values_yield_one_clean_error():
+    for bad_profile in ("trunk", "Team", "", None, 3, []):
+        candidate = copy.deepcopy(registry.DEFAULT_STRUCTURE)
+        candidate["host"]["profile"] = bad_profile
+        errors = registry.validate_structure(candidate)
+        matching = [item for item in errors if "host.profile" in item]
+        assert len(matching) == 1, bad_profile
+
+
+def test_host_verify_command_accepts_package_manager_and_make_targets():
+    for good in ("npm run verify", "make check", "yarn verify", "pnpm run verify"):
+        candidate = copy.deepcopy(registry.DEFAULT_STRUCTURE)
+        candidate["host"]["verify_command"] = good
+        assert registry.validate_structure(candidate) == [], good
+        assert _schema_errors(candidate) == [], good
+
+
+def test_host_verify_command_rejects_shell_and_chained_commands():
+    for bad in ("rm -rf /", "npm run verify && x"):
+        candidate = copy.deepcopy(registry.DEFAULT_STRUCTURE)
+        candidate["host"]["verify_command"] = bad
+        errors = registry.validate_structure(candidate)
+        matching = [item for item in errors if "host.verify_command" in item]
+        assert len(matching) == 1, bad
+        assert _schema_errors(candidate) != [], bad
+
+
+def test_load_structure_defaults_host_profile_when_absent(tmp_path):
+    _write_structure(tmp_path, {"host": {"adopted": False, "roots": [], "harness_owned": []}})
+    loaded = registry.load_structure(tmp_path)
+    assert loaded["host"]["profile"] == "solo"
+    assert loaded["host"]["verify_command"] is None
+
+
+def test_load_structure_defaults_when_host_key_absent(tmp_path):
+    _write_structure(tmp_path, {"git": {"mode": "branches"}})
+    loaded = registry.load_structure(tmp_path)
+    assert loaded["host"] == registry.DEFAULT_STRUCTURE["host"]
+
+
+def test_hook_loader_defaults_host_profile_when_absent(tmp_path):
+    hook_io_path = ROOT / "harness" / "hooks" / "lib" / "hook_io.py"
+    if not hook_io_path.is_file():
+        return  # the hooks package has not landed; nothing to compare yet
+    spec = importlib.util.spec_from_file_location("hook_io_under_test_profile", hook_io_path)
+    hook_io = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hook_io)
+    _write_structure(tmp_path, {"host": {"adopted": False, "roots": [], "harness_owned": []}})
+    loaded = hook_io.load_structure(tmp_path)
+    assert loaded["host"]["profile"] == "solo"
+    _write_structure(tmp_path, {"git": {"mode": "branches"}})
+    assert hook_io.load_structure(tmp_path)["host"] == hook_io.DEFAULT_STRUCTURE["host"]
 
 
 if "pytest" not in sys.modules:

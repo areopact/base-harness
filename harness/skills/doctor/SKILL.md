@@ -5,10 +5,10 @@ description: >
   report per runtime whether the harness is wired, without ever turning an
   unproven layer green. WHEN: user invokes /doctor, says "test the harness",
   "is the harness wired correctly", "run the doctors", "diagnose the harness",
-  or "check bootstrap state"; after a fresh clone, a bootstrap run, or a change
-  to an adapter, the registry, or the skill selection. WHEN NOT: proving that a
-  code change works (/verify); committing (/commit); repairing a hook or a
-  skill (edit its source, then run bootstrap and this skill again).
+  "check bootstrap state", or "prove this change works"; after a fresh clone,
+  a bootstrap run, or a change to an adapter, the registry, or the skill
+  selection. WHEN NOT: committing the proven change (/commit); repairing a
+  hook or a skill (edit its source, then run bootstrap and this skill again).
 metadata:
   packs: [maintain]
   triggers:
@@ -17,6 +17,10 @@ metadata:
     - "run the doctors"
     - "diagnose the harness"
     - "check bootstrap state"
+    - "prove this works"
+    - "verify this change"
+    - "did this actually work"
+    - "evidence before done"
   requires: []
   distribution: native
   status: spec-only
@@ -92,3 +96,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File harness/bootstrap/bootstrap.
 ```
 
 `--check` exits 0 only when the materialized tree matches its sources byte for byte. A `FAIL` that survives a bootstrap is a source problem (a wrong adapter file, a registry mismatch, a real directory sitting where a link belongs); name the failing line and stop rather than editing generated output by hand. The recovery sweep in `harness/bootstrap/README.md` covers the remaining cases.
+
+## Mode: prove before done
+
+Invoked as "prove this works", "verify this change", "did this actually work", or "evidence before done": prove a change actually works by exercising it end to end before claiming done, and report the rung reached with evidence. This mode applies to any nontrivial change, not just the harness's own wiring; skip it for docs-only or test-only diffs with no runtime surface.
+
+Evidence over assertion. "The code looks right" and "the tests pass" are both weaker claims than "I ran it and watched it do the thing."
+
+### The ladder (climb as high as the change allows)
+
+1. **Static**: build, typecheck, and lint pass. Necessary, never sufficient.
+2. **Tests**: the relevant test suite passes, including a test that would have failed before the change (if none exists, write one or say why not).
+3. **Exercised**: the actual affected flow was driven end to end: the CLI was invoked, the endpoint was called, the page was loaded, the migration was run against a scratch database. Capture the real command and its real output.
+4. **Negative case**: the error path or guard added actually fires when provoked.
+
+### Reporting
+
+State what was verified at which rung, with the evidence (command plus observed output), and name explicitly anything NOT verified ("untested on POSIX", "not run against production-shaped data"). An honest gap beats a confident guess. The close-the-loop checklist in `harness/rules/close-the-loop.md` already requires this honesty as its first step; this mode is that step made explicit.
+
+### Anti-patterns
+
+- Claiming done from rung 1.
+- Running only the new unit test and skipping the integration path the change actually sits on.
+- Verifying the happy path of a change whose whole point was error handling.

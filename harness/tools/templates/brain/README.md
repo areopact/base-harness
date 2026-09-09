@@ -13,13 +13,12 @@ Scaffold the module with `python harness/tools/init.py --brain`. Lane folders ar
 
 ## Lanes
 
-Six lanes, fixed names, host-chosen paths. The shipped defaults place them as follows.
+Five lanes, fixed names, host-chosen paths. The shipped defaults place them as follows.
 
 | Lane | Question it answers | Default path | Tracked | Tier default |
 |---|---|---|---|---|
 | identity | Who is the agent, and how does the operator work | `brain/shared/IDENTITY.md`, `brain/local/OPERATOR.md` | shared yes, local no | internal |
 | knowledge | What is believed now, and how firmly | `brain/shared/knowledge/`, `brain/local/knowledge/` | shared yes, local no | internal |
-| journal | What was noted today and not yet routed | `brain/local/journal/` | no | internal |
 | decisions | What was chosen, and what was given up | `docs/decisions/` | yes | internal |
 | records | What happened, with a date | unset | n/a | internal |
 | docs | What governs or can be reused now | `docs/` | yes | public |
@@ -81,7 +80,7 @@ A promoted or superseded page moves to `archive/` under its lane's shared or loc
 
 ## The local lane
 
-`brain.local_path` names the per-user lane root (default `brain/local`). `brain.local_tracked` is `false` by default and the shipped `.gitignore` excludes the whole folder, so the operator profile, working knowledge, and journal never enter the repository history by accident.
+`brain.local_path` names the per-user lane root (default `brain/local`). `brain.local_tracked` is `false` by default and the shipped `.gitignore` excludes the whole folder, so the operator profile and working knowledge never enter the repository history by accident.
 
 Setting `brain.local_tracked` to `true` has one consequence that the tooling states before it acts: every file under the local lane is committed, and on a repository with a public remote that is publication. The only supported way to enable it is `python harness/tools/init.py --brain --track-local`, which prints the consequence and then flips the flag and the `.gitignore` entry together. When tracked, the local lane takes the internal tier by default like every other lane, which is the second consequence: a page there is then readable by everyone with repository access and is included in every export at internal or above.
 

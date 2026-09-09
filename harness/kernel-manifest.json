@@ -2992,17 +2992,7 @@
       "source": null
     },
     {
-      "path": "harness/skills/capture/SKILL.md",
-      "state": "new",
-      "source": null
-    },
-    {
       "path": "harness/skills/commit/SKILL.md",
-      "state": "new",
-      "source": null
-    },
-    {
-      "path": "harness/skills/daily/SKILL.md",
       "state": "new",
       "source": null
     },
@@ -3163,11 +3153,6 @@
     },
     {
       "path": "harness/skills/skillify/SKILL.md",
-      "state": "new",
-      "source": null
-    },
-    {
-      "path": "harness/skills/verify/SKILL.md",
       "state": "new",
       "source": null
     },

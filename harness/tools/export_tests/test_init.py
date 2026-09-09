@@ -39,13 +39,13 @@ class TestLanes(TempDirCase):
         assert init.parse_lane_answer("", ["x"]) == ["x"]
 
     def test_e15_prompt_repeats_and_writes_nulls(self):
-        answers = ["../evil", "docs/id", "none", "none", "none", "none", "docs"]
+        answers = ["../evil", "docs/id", "none", "none", "none", "docs"]
         out = io.StringIO()
         code = init.run_lanes(self.tmp, ask=scripted(answers), out=out)
         assert code == 0, out.getvalue()
         assert "rejected" in out.getvalue()
         doc = json.loads((self.tmp / "harness" / "registry" / "structure.json").read_text())
-        assert doc["lanes"] == {"identity": ["docs/id"], "knowledge": None, "journal": None, "decisions": None, "records": None, "docs": ["docs"]}
+        assert doc["lanes"] == {"identity": ["docs/id"], "knowledge": None, "decisions": None, "records": None, "docs": ["docs"]}
         assert not (self.tmp / "docs").exists()
         assert sorted(p.name for p in self.tmp.iterdir()) == ["harness"]
 
@@ -58,7 +58,7 @@ class TestLanes(TempDirCase):
 
     def test_e15_cli_reads_stdin(self):
         write_structure(self.tmp, structure(lanes={"docs": ["docs"]}))
-        stdin = "\n".join(["none", "none", "none", "docs/decisions", "none", ""]) + "\n"
+        stdin = "\n".join(["none", "none", "docs/decisions", "none", ""]) + "\n"
         result = run_cli("init", "--lanes", "--root", str(self.tmp), stdin=stdin)
         assert result.returncode == 0, result.stderr + result.stdout
         doc = json.loads((self.tmp / "harness" / "registry" / "structure.json").read_text())

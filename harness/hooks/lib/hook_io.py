@@ -31,7 +31,7 @@ PATCH_PATH_RE = re.compile(
     r"^\*\*\* (Add File|Update File|Delete File|Move to):\s+(.+?)\s*$"
 )
 
-LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
+LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
 TIER_LABELS = ("public", "internal", "confidential", "restricted", "secret")
 
 # The defaults contract: a missing structure.json yields exactly this object.
@@ -42,7 +42,6 @@ DEFAULT_STRUCTURE = {
     "lanes": {
         "identity": ["brain/shared/IDENTITY.md", "brain/local/OPERATOR.md"],
         "knowledge": ["brain/shared/knowledge", "brain/local/knowledge"],
-        "journal": ["brain/local/journal"],
         "decisions": ["docs/decisions"],
         "records": None,
         "docs": ["docs"],
@@ -54,7 +53,6 @@ DEFAULT_STRUCTURE = {
         "lane_defaults": {
             "identity": "internal",
             "knowledge": "internal",
-            "journal": "internal",
             "decisions": "internal",
             "records": "internal",
             "docs": "public",
@@ -64,7 +62,7 @@ DEFAULT_STRUCTURE = {
     "delegation": {"mandatory": False},
     "selection_scope": "repo",
     "contract": {"mode": "rendered"},
-    "host": {"adopted": False, "roots": [], "harness_owned": []},
+    "host": {"adopted": False, "roots": [], "harness_owned": [], "profile": "solo", "verify_command": None},
 }
 
 

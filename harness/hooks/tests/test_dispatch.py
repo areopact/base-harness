@@ -170,7 +170,7 @@ class SessionStartBudgetTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         write_registry(
             self.root,
-            {"lanes": {"identity": ["examples/IDENTITY.md"], "knowledge": ["examples/knowledge"], "journal": ["examples/journal"]}},
+            {"lanes": {"identity": ["examples/IDENTITY.md"], "knowledge": ["examples/knowledge"]}},
             {"runtimes": {}},
         )
 

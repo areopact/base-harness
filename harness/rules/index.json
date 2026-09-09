@@ -47,7 +47,7 @@
       "slug": "memory-first",
       "kind": "always-on",
       "globs": [],
-      "summary": "Exhaust the configured lanes in order (knowledge, decisions, docs, records, journal) before any external lookup; the hook is a reminder, not a gate."
+      "summary": "Exhaust the configured lanes in order (knowledge, decisions, docs, records) before any external lookup; the hook is a reminder, not a gate."
     },
     {
       "slug": "memory-routing",

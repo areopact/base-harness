@@ -12,12 +12,10 @@ Ordering, not dates. Nothing below is a commitment; see the no-SLA statement in 
 ## v0.1.1
 
 - decks pack: deck-outline, deck-render (web output, pure-Python checks).
-- memory pack: daily (auto-selected when the brain module is present).
 
 ## v0.2
 
 - engineering pack: debug, code-review, write-safety with the freeze hook.
-- memory pack growth: meeting, brief, knowledge-synthesis.
 - reports and youtube skills.
 - connectors under a connection standard (capability rows reserved in `capabilities.json`), plus focus.
 - Marketplace channel after a spike proving that a pack directory tree installs as a plugin on at least one runtime; Codex marketplace publishability still unread.

@@ -14,10 +14,6 @@ Routes an intent to the skill that owns it. One row per trigger phrase; `Target 
 | "ask another model about these options" | `brainstorm` | `review` | core | spec-only |
 | "develop a business idea" | `brainstorm` | `review` | core | spec-only |
 | "pressure-test an idea before committing" | `brainstorm` | `review` | core | spec-only |
-| "drop this in the inbox" | `capture` | `daily` | core | spec-only |
-| "park this thought" | `capture` | `daily` | core | spec-only |
-| "log this for later" | `capture` | `daily` | core | spec-only |
-| "note this down" | `capture` | `daily` | core | spec-only |
 | "explain this simply" | `eli5` | `deck-outline` | core | spec-only |
 | "explain it like I am five" | `eli5` | `deck-outline` | core | spec-only |
 | "picture explainer" | `eli5` | `deck-outline` | core | spec-only |
@@ -63,24 +59,20 @@ Routes an intent to the skill that owns it. One row per trigger phrase; `Target 
 | "run the delegated workflow" | `workflow` | `review` | delegation | spec-only |
 | "run this as a managed multi-step job" | `workflow` | `review` | delegation | spec-only |
 | "resume the workflow run" | `workflow` | `review` | delegation | spec-only |
-| "commit this" | `commit` | `verify` | maintain | spec-only |
-| "save my work" | `commit` | `verify` | maintain | spec-only |
-| "make a commit" | `commit` | `verify` | maintain | spec-only |
-| "stage and commit" | `commit` | `verify` | maintain | spec-only |
-| "test the harness" | `doctor` | `verify` | maintain | spec-only |
-| "is the harness wired correctly" | `doctor` | `verify` | maintain | spec-only |
-| "run the doctors" | `doctor` | `verify` | maintain | spec-only |
-| "diagnose the harness" | `doctor` | `verify` | maintain | spec-only |
-| "check bootstrap state" | `doctor` | `verify` | maintain | spec-only |
+| "commit this" | `commit` | none | maintain | spec-only |
+| "save my work" | `commit` | none | maintain | spec-only |
+| "make a commit" | `commit` | none | maintain | spec-only |
+| "stage and commit" | `commit` | none | maintain | spec-only |
+| "test the harness" | `doctor` | `commit` | maintain | spec-only |
+| "is the harness wired correctly" | `doctor` | `commit` | maintain | spec-only |
+| "run the doctors" | `doctor` | `commit` | maintain | spec-only |
+| "diagnose the harness" | `doctor` | `commit` | maintain | spec-only |
+| "check bootstrap state" | `doctor` | `commit` | maintain | spec-only |
+| "prove this works" | `doctor` | `commit` | maintain | spec-only |
+| "verify this change" | `doctor` | `commit` | maintain | spec-only |
+| "did this actually work" | `doctor` | `commit` | maintain | spec-only |
+| "evidence before done" | `doctor` | `commit` | maintain | spec-only |
 | "this keeps happening" | `skillify` | `review` | maintain | spec-only |
 | "fix this durably" | `skillify` | `review` | maintain | spec-only |
 | "turn this recurring failure into a rule" | `skillify` | `review` | maintain | spec-only |
 | "make this failure structurally impossible" | `skillify` | `review` | maintain | spec-only |
-| "prove this works" | `verify` | `doctor` | maintain | spec-only |
-| "verify this change" | `verify` | `doctor` | maintain | spec-only |
-| "did this actually work" | `verify` | `doctor` | maintain | spec-only |
-| "evidence before done" | `verify` | `doctor` | maintain | spec-only |
-| "log this to today" | `daily` | `capture` | memory | spec-only |
-| "add this to the journal" | `daily` | `capture` | memory | spec-only |
-| "append to today's entry" | `daily` | `capture` | memory | spec-only |
-| "show today's journal entry" | `daily` | `capture` | memory | spec-only |

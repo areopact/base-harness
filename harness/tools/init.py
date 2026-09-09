@@ -3,7 +3,7 @@
 
 Usage:
     python harness/tools/init.py                 print the current host shape
-    python harness/tools/init.py --lanes         configure the six lanes (prompted)
+    python harness/tools/init.py --lanes         configure the five lanes (prompted)
     python harness/tools/init.py --brain [--track-local]
                                                  scaffold the reference memory module
     python harness/tools/init.py --adopt <repo> [adopt.py flags]
@@ -46,11 +46,10 @@ TOOLS_DIR = Path(__file__).resolve().parent
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES = TOOLS_DIR / "templates"
 
-LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
+LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
 LANE_HELP = {
     "identity": "who the agent is and who it works with (files)",
     "knowledge": "standing and working beliefs (folders)",
-    "journal": "dated personal notes (folders)",
     "decisions": "recorded choices (folders)",
     "records": "what happened: meetings, sessions, research (folders)",
     "docs": "shared project documentation (folders)",
@@ -380,7 +379,7 @@ def run_adopt(target: str, extra: list) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Print or change the host shape.")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--lanes", action="store_true", help="configure the six lanes (prompted)")
+    mode.add_argument("--lanes", action="store_true", help="configure the five lanes (prompted)")
     mode.add_argument("--brain", action="store_true", help="scaffold the reference memory module")
     mode.add_argument("--adopt", metavar="REPO", help="install the harness into an existing repository via adopt.py")
     parser.add_argument("--track-local", action="store_true", help="with --brain: track the local lane in git (prints the consequence)")

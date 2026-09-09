@@ -24,7 +24,7 @@ HERE = Path(__file__).resolve().parent
 TOOLS_DIR = HERE.parent
 ROOT = TOOLS_DIR.parents[1]
 
-LANE_NAMES = ("identity", "knowledge", "journal", "decisions", "records", "docs")
+LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
 TIERS = ["public", "internal", "confidential", "restricted", "secret"]
 
 

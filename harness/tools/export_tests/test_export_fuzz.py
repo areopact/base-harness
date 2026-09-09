@@ -35,7 +35,7 @@ class Generated:
                 used.append(choice)
                 lanes[lane] = [choice]
         self.lanes = lanes
-        self.defaults = {lane: rng.choice(TIERS) for lane in ("identity", "knowledge", "journal", "decisions", "records", "docs")}
+        self.defaults = {lane: rng.choice(TIERS) for lane in ("identity", "knowledge", "decisions", "records", "docs")}
         self.unlisted = rng.choice(["internal", "exclude"])
         doc = structure(lanes=lanes, lane_defaults=self.defaults, unlisted=self.unlisted)
         write_structure(root, doc)

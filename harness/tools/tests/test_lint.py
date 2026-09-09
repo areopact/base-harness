@@ -204,13 +204,13 @@ def test_l4_pack_license_mix_and_runtime_provided_capability(tmp_path):
 def test_l4_requires_is_validated_on_every_skill(tmp_path):
     repo = _repo(tmp_path)
     copy_files(repo, ("harness/registry/capabilities.json",))
-    _skill(repo, "alpha", requires='"lane:journal", "web-search"')
+    _skill(repo, "alpha", requires='"lane:knowledge", "web-search"')
     assert _ids(_only(repo, "L4"), "ERROR") == []
     _skill(repo, "beta", requires='"lane:nowhere", "no-such-capability"')
     messages = [item.message for item in _only(repo, "L4") if item.level == "ERROR"]
     assert any("unknown lane 'lane:nowhere'" in message for message in messages), messages
     assert any("unknown capability 'no-such-capability'" in message for message in messages), messages
-    _skill(repo, "gamma", distribution="runtime-provided", requires='"lane:journal"')
+    _skill(repo, "gamma", distribution="runtime-provided", requires='"lane:knowledge"')
     messages = [item.message for item in _only(repo, "L4") if item.level == "ERROR"]
     assert any("must name a capability id" in message for message in messages), messages
 
@@ -317,7 +317,7 @@ def test_l6_brain_readmes_not_required_when_no_lane_uses_brain(tmp_path):
         {"path": "harness/registry/structure.json", "state": "new", "source": None},
     ]}))
     _write(repo, "harness/registry/structure.json", json.dumps({
-        "lanes": {"identity": None, "knowledge": None, "journal": None, "decisions": ["docs/decisions"], "records": None, "docs": ["docs"]},
+        "lanes": {"identity": None, "knowledge": None, "decisions": ["docs/decisions"], "records": None, "docs": ["docs"]},
     }))
     findings = _only(repo, "L6")
     assert findings == []
@@ -329,7 +329,7 @@ def test_l6_brain_readmes_still_required_when_a_lane_uses_brain(tmp_path):
         {"path": "brain/README.md", "state": "new", "source": None},
     ]}))
     _write(repo, "harness/registry/structure.json", json.dumps({
-        "lanes": {"identity": ["brain/shared/IDENTITY.md"], "knowledge": None, "journal": None, "decisions": None, "records": None, "docs": ["docs"]},
+        "lanes": {"identity": ["brain/shared/IDENTITY.md"], "knowledge": None, "decisions": None, "records": None, "docs": ["docs"]},
     }))
     findings = _only(repo, "L6")
     assert any("brain/README.md" in item.path and "absent on disk" in item.message for item in findings)
@@ -539,7 +539,7 @@ def test_l13_literal_lane_token_in_a_hook_lib_is_soft(tmp_path):
     repo = _repo(tmp_path)
     _write_default_structure(repo)
     structure = json.loads((repo / "harness/registry/structure.json").read_text(encoding="utf-8"))
-    token = structure["lanes"]["journal"][0]
+    token = structure["lanes"]["knowledge"][0]
     _write(repo, "harness/hooks/lib/some_hook.py", f'JOURNAL = "{token}"\n')
     _write(repo, "harness/hooks/lib/hook_io.py", f'DEFAULT = "{token}"\n')
     _write(repo, "harness/registry/seed.py", f'X = "{token}"\n')

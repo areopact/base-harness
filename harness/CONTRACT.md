@@ -29,7 +29,7 @@ If a T0 or T1 task reveals bigger stakes mid-flight, stop and re-tier. Full ladd
 
 A PreToolUse hook denies the literal shapes of these where the runtime supports hooks; the git pre-commit hook in `.githooks/` is the floor that fires everywhere once bootstrap has set `core.hooksPath`. The guards are seatbelts, not locks: `SECURITY.md` lists what they do not catch.
 
-**5. Memory-first through lanes.** Memory is personal; global truths become rules; shared project knowledge is docs. Before an external lookup, exhaust the configured lanes in `harness/registry/structure.json` (identity, knowledge, journal, decisions, records, docs). A lane set to `null` is not configured: do not invent a folder for it, and say "no lane configured" instead of "no record". Where information goes: `harness/rules/memory-routing.md`. Lookup order: `harness/rules/memory-first.md`.
+**5. Memory-first through lanes.** Memory is personal; global truths become rules; shared project knowledge is docs. Before an external lookup, exhaust the configured lanes in `harness/registry/structure.json` (identity, knowledge, decisions, records, docs). A lane set to `null` is not configured: do not invent a folder for it, and say "no lane configured" instead of "no record". Where information goes: `harness/rules/memory-routing.md`. Lookup order: `harness/rules/memory-first.md`.
 
 **6. Output quality.** Lead with the answer or the outcome. Cite the source of every fact that came from a file or a page. ASCII punctuation; no em-dashes or en-dashes. No preamble, no filler, no generic closing. Detail: `harness/rules/output-quality.md` and `harness/rules/cli-interaction.md`.
 

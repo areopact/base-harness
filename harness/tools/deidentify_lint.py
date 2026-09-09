@@ -363,7 +363,7 @@ def _fallback_structure(root: Path) -> dict:
     except (OSError, ValueError):
         default = {
             "schema_version": 1,
-            "lanes": {k: None for k in ("identity", "knowledge", "journal", "decisions", "records", "docs")},
+            "lanes": {k: None for k in ("identity", "knowledge", "decisions", "records", "docs")},
         }
     host_path = root / "harness" / "registry" / "structure.json"
     try:

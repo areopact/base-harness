@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "generator": "harness/bootstrap/build_codex_adapter.py",
-  "skills": 11,
-  "selected": 11,
-  "available": 15,
+  "skills": 9,
+  "selected": 9,
+  "available": 12,
   "implemented": 0,
-  "spec_only": 11,
+  "spec_only": 9,
   "implicit": 0,
-  "explicit_only": 11,
-  "source_sha256": "cd23a314015f12685c689a0003b7ddf4a1b5e1a38f49c9b988c16ff814f88df6"
+  "explicit_only": 9,
+  "source_sha256": "1e41a19c8db041e4fcffa5c1a4f3d5abed178629e420de8ec24b6086cabdaa8f"
 }

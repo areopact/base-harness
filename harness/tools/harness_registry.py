@@ -72,7 +72,7 @@ LANE_NAMES = ("identity", "knowledge", "decisions", "records", "docs")
 TIER_LABELS = ("public", "internal", "confidential", "restricted", "secret")
 GIT_MODES = {"main-only", "branches"}
 HOST_PROFILES = ("solo", "team")
-VERIFY_COMMAND_RE = re.compile(r"^(npm run|pnpm run|yarn|make) [A-Za-z0-9:_.-]+$")
+VERIFY_COMMAND_RE = re.compile(r"^(npm run|pnpm run|yarn|make) [A-Za-z0-9][A-Za-z0-9:_.-]*$")
 UNLISTED_PATH_POLICIES = {"internal", "exclude"}
 CONTRACT_MODES = {"rendered", "host-owned"}
 SELECTION_SCOPES = {"repo", "user"}
@@ -309,7 +309,14 @@ def validate_structure(registry: dict[str, Any], root: Optional[Path] = None) ->
     if not isinstance(lanes, dict):
         errors.append(f"{label}.lanes: must be an object")
     else:
-        _unknown_fields(lanes, set(LANE_NAMES), f"{label}.lanes", errors)
+        unknown_lanes = sorted(set(lanes) - set(LANE_NAMES))
+        if unknown_lanes == ["journal"]:
+            errors.append(
+                f"{label}.lanes: unknown field 'journal' (the journal lane was retired; "
+                "delete the key from lanes and from tiers.lane_defaults)"
+            )
+        elif unknown_lanes:
+            errors.append(f"{label}.lanes: unknown fields: {', '.join(unknown_lanes)}")
         missing = sorted(set(LANE_NAMES) - set(lanes))
         if missing:
             errors.append(f"{label}.lanes: missing {', '.join(missing)}")
@@ -355,7 +362,14 @@ def validate_structure(registry: dict[str, Any], root: Optional[Path] = None) ->
         _unknown_fields(tiers, {"lane_defaults", "unlisted_path"}, f"{label}.tiers", errors)
         defaults = tiers.get("lane_defaults")
         if not isinstance(defaults, dict) or set(defaults) != set(LANE_NAMES):
-            errors.append(f"{label}.tiers.lane_defaults: must name every lane exactly once")
+            extra = sorted(set(defaults) - set(LANE_NAMES)) if isinstance(defaults, dict) else []
+            if extra == ["journal"]:
+                errors.append(
+                    f"{label}.tiers.lane_defaults: must name every lane exactly once "
+                    "(the journal lane was retired; delete the key from lanes and from tiers.lane_defaults)"
+                )
+            else:
+                errors.append(f"{label}.tiers.lane_defaults: must name every lane exactly once")
         else:
             for lane, tier in defaults.items():
                 if tier not in TIER_LABELS:
@@ -1117,14 +1131,40 @@ def validate_all(root: Optional[Path] = None, notes: Optional[list[str]] = None)
 validate_all.last_check_count = 0  # type: ignore[attr-defined]
 
 
+def _host_profile_absent_on_disk(root: Path) -> bool:
+    """Return whether the raw on-disk structure.json lacks host.profile.
+
+    Reads the file exactly as written, never the merged defaults, so a
+    missing key is reported even though load_structure() fills it in.
+    """
+    path = registry_dir(root) / "structure.json"
+    if not path.is_file():
+        return False
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(raw, dict):
+        return False
+    host = raw.get("host")
+    host = host if isinstance(host, dict) else {}
+    return "profile" not in host
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Validate the harness registries; secret stores are never opened.")
     parser.add_argument("--root", type=Path, default=ROOT, help="repository root (defaults to this checkout)")
     parser.add_argument("--quiet-notes", action="store_true", help="suppress informational notes")
     args = parser.parse_args(argv)
+    root = args.root.resolve()
     notes: list[str] = []
-    errors = validate_all(args.root.resolve(), notes)
+    errors = validate_all(root, notes)
     if not args.quiet_notes:
+        if _host_profile_absent_on_disk(root):
+            print(
+                "note: host.profile absent in harness/registry/structure.json; "
+                "defaulting to solo (set it with python harness/tools/init.py --profile)"
+            )
         for note in notes:
             print(f"  note {note}")
     if errors:

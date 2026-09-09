@@ -28,7 +28,7 @@ harness/
   kernel-manifest.json         every kernel file with state ported | new and its source path
   registry/                    runtimes, structure, selection, capabilities, sources, environment, collaborators
   rules/                       always-on and path-scoped behavior law; index.json is the machine-readable list; a path-scoped rule carries `paths:` frontmatter, which only Claude Code honors (auto-loaded through the `.claude/rules` link; the rule loads only when a matching file is touched). Codex and OpenCode do not materialize harness/rules/ at all: the rendered contract's lookup section points at each rule page, and the agent reads it on demand, with `paths:` frontmatter carried along as inert text
-  skills/                      README, generated RESOLVER.md, one folder per skill (14 in this build)
+  skills/                      README, generated RESOLVER.md, one folder per skill (12 available, 9 selected in this build)
   hooks/                       lib/*.py canonical modules; <event>/*.{sh,ps1} wrappers; codex-dispatch; tests/
   adapters/                    claude/, codex/, opencode/ native configuration sources; model_map.py; tests/
   agents/                      documents the generated-role mechanism; holds no role files
@@ -58,7 +58,7 @@ Fixed points of the shape: the five lane names are fixed and every lane is eithe
 
 Three generated caches under `harness/registry/` are untracked and rebuilt on demand: `delegation-policy.json` (from `routing_policy.py compile`), `native-routing-files.json` (from `native_routing.py render`), and `skill-index.json` (from `gen_manifest.py`). Their absence is never drift.
 
-Two host facts in `structure.json` split verification and etiquette from branch discipline: `host.profile` (`solo` or `team`, optional this release, `solo` when absent) decides how the commit skill discovers verification and whether a pull request applies, and how the Stop hook composes its closing clause; `host.verify_command` (`null`, or a shape-restricted `npm run`, `pnpm run`, `yarn`, or `make` invocation) names a team host's own verification command, tried before `package.json`'s `scripts.verify`, a `Makefile` `verify` target, and the harness lint, in that order. `metadata.requires` also accepts the `fact:<key>` shape over a closed set (`host.profile`, `git.mode`, `contract.mode`, `brain.local_tracked`, `delegation.mandatory`, `selection_scope`); lint L19 requires the ship-gate repair when `host.profile` is absent and flags a skill body that names `host.profile` without declaring `fact:host.profile`.
+Two host facts in `structure.json` split verification and etiquette from branch discipline: `host.profile` (`solo` or `team`, optional this release, `solo` when absent) decides how the commit skill discovers verification and whether a pull request applies, and how the Stop hook composes its closing clause; `host.verify_command` (`null`, or a shape-restricted `npm run`, `pnpm run`, `yarn`, or `make` invocation) names a team host's own verification command, tried before `package.json`'s `scripts.verify`, a `Makefile` `verify` target, and the harness lint, in that order. `metadata.requires` also accepts the `fact:<key>` shape over a closed set (`host.profile`, `git.mode`, `contract.mode`, `brain.local_tracked`, `delegation.mandatory`, `selection_scope`); lint L19 requires the ship-gate repair when `host.profile` is absent, and lint L4 flags a skill body that names `host.profile` without declaring `fact:host.profile`.
 
 ## Contract composition
 

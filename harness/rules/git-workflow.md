@@ -17,7 +17,7 @@ Git's index and HEAD are per-repository, not per-session. When several sessions 
 
 ### Mode: main-only
 
-A single-operator repository with no review workflow. All work lands directly on the default branch as a sequence of small commits.
+Commit to the default branch, never switch off it, never create a branch or a worktree. All work lands directly there as a sequence of small commits.
 
 - Never create a branch or a worktree, and never switch off the default branch. Large work lands as many small commits, in order.
 - The one exception is a runtime-managed, temporary isolated worktree for a delegated task. It is a tool mechanism, not a workflow branch, and stays allowed where the runtime supports it. Do not emulate it by hand.
@@ -26,13 +26,14 @@ A single-operator repository with no review workflow. All work lands directly on
 
 ### Mode: branches
 
-A team repository, or a solo repository that wants review.
+Commit on a task branch cut from the default branch, never directly on the default branch, and land it through the host's own landing policy.
 
-- One feature branch per task, named for the task, cut from the default branch. Land it through the host's review path.
+- One feature branch per task, named for the task, cut from the default branch. Land it through the host's landing policy.
 - No force-push to a protected branch, ever, and no history rewrite on any shared branch. The dangerous-operations guard denies the literal shapes where hooks are supported; the rule holds regardless.
 - Where the remote enforces linear history, land branch content by rebase or cherry-pick, never by a merge commit: a local merge commit passes every local check and is then declined at push time.
 - Committed generated files carry `merge=ours` in `.gitattributes`; on conflict, regenerate and diff rather than merging by hand. The attribute is inert until the local `merge.ours` driver exists (`git config merge.ours.driver true`); check it before relying on it.
-- The personal memory lane defaults to a location outside the repository in this mode (see `docs/LANES.md`), so a branch never carries one person's working memory into review.
+
+Review etiquette (whether a pull request applies at all, and who merges it) is decided by `host.profile`, and the personal-notes lane's location is decided by `brain.local_path`; both facts are configured independently of `git.mode` in either mode (see `docs/LANES.md`, `docs/HOST-SHAPES.md`).
 
 ### Size guard (pre-commit)
 
@@ -44,4 +45,4 @@ Format: `type(scope): message` (imperative, max 50 characters).
 
 Types: `feat` | `fix` | `docs` | `refactor` | `chore`
 
-Body lines wrap at 72 characters. Include a `Co-Authored-By` footer when an agent assisted. Include a `Signed-off-by` footer only when the host's own `CONTRIBUTING.md` (never the harness's own `CONTRIBUTING.harness.md`) mentions `Signed-off-by`, `DCO`, or `sign-off`, case-insensitive; the host that requires sign-off is the one that gets to define it, and a repository that never asks for one gets no unrequested footer. Never include a session link or session URL in a commit message; that identifier belongs to the agent's own audit trail, not to a record the host's contributors will read.
+Body lines wrap at 72 characters. Include a `Co-Authored-By` footer when an agent assisted. Include a `Signed-off-by` footer only when the host's own `CONTRIBUTING.md` (never the harness's own `CONTRIBUTING.harness.md`) affirmatively states that commits carry a DCO sign-off or a `Signed-off-by` trailer. A sentence saying sign-off is not required, an absent file, or an ambiguous mention of `Signed-off-by`, `DCO`, or `sign-off` all mean no sign-off; when the text is ambiguous, say so rather than guessing. The host that requires sign-off is the one that gets to define it, and a repository that never asks for one gets no unrequested footer. Never include a session link or session URL in a commit message; that identifier belongs to the agent's own audit trail, not to a record the host's contributors will read.

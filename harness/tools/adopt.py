@@ -260,17 +260,8 @@ def build_structure(target: Path, actions: list | None = None) -> tuple:
     if mode == "branches":
         name, name_source = derive_host_name(target)
         external = EXTERNAL_LOCAL_TEMPLATE.format(name=name)
-        candidate = dict(structure)
-        candidate["brain"] = {"local_tracked": False, "local_path": external}
-        errors = structure_errors(candidate)
-        if errors:
-            local_note = (
-                f"brain.local_path stays {structure['brain']['local_path']} (repository-relative, untracked): "
-                f"the structure validator rejects the external path {external} ({errors[0]})"
-            )
-        else:
-            structure = candidate
-            local_note = f"brain.local_path {external} (outside the repository; branches mode; name from {name_source})"
+        structure["brain"] = {"local_tracked": False, "local_path": external}
+        local_note = f"brain.local_path {external} (outside the repository; branches mode; name from {name_source})"
     return structure, reason, local_note
 
 

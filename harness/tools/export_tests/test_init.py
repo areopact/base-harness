@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _helpers import TempDirCase, commit_all, init_repo, run_cli, structure, write, write_structure, load_tool  # noqa: E402
+from _helpers import LANE_NAMES, TempDirCase, commit_all, init_repo, run_cli, structure, write, write_structure, load_tool  # noqa: E402
 
 init = load_tool("init")
 
@@ -67,6 +67,19 @@ class TestLanes(TempDirCase):
         assert doc["lanes"]["identity"] is None
         assert not (self.tmp / "docs").exists()
 
+    def test_f5_lanes_write_does_not_materialize_host_profile(self):
+        """A host that never ran --profile has no host.profile key on disk.
+        --lanes touches only the lanes key; it must not gain host.profile,
+        verify_command, or any other shipped default the operator never
+        asked for (absence is a lint note, never silently repaired)."""
+        answers = ["docs", "none", "none", "none", "docs"]
+        out = io.StringIO()
+        code = init.run_lanes(self.tmp, ask=scripted(answers), out=out)
+        assert code == 0, out.getvalue()
+        raw = json.loads((self.tmp / "harness" / "registry" / "structure.json").read_text())
+        assert "host" not in raw
+        assert set(raw) == {"lanes"}
+
 
 class TestBrain(TempDirCase):
     def test_e16_scaffold_without_tracking(self):
@@ -99,6 +112,16 @@ class TestBrain(TempDirCase):
         assert doc["brain"] == {"local_tracked": True, "local_path": "brain/local"}
         assert "/brain/local/" not in (self.tmp / ".gitignore").read_text().split("\n")
 
+    def test_f5_brain_write_does_not_materialize_host_profile(self):
+        """--brain --track-local touches only the brain key; a host that
+        never ran --profile keeps host.profile absent afterward."""
+        out = io.StringIO()
+        code = init.run_brain(self.tmp, track_local=True, out=out)
+        assert code == 0, out.getvalue()
+        raw = json.loads((self.tmp / "harness" / "registry" / "structure.json").read_text())
+        assert "host" not in raw
+        assert raw["brain"] == {"local_tracked": True, "local_path": "brain/local"}
+
     def test_e16_flag_without_brain_is_usage_error(self):
         with contextlib.redirect_stderr(io.StringIO()) as err:
             code = init.main(["--track-local", "--root", str(self.tmp)])
@@ -124,6 +147,26 @@ class TestProfile(TempDirCase):
         target = init_repo(self.tmp / name)
         write(target / "README.md", "x\n")
         commit_all(target, "seed")
+        return target
+
+    def _configured_host(self, name="configured-repo"):
+        """A host whose lanes and personal-notes location were already set
+        by hand (the adopted-host shape the reproduced defect describes):
+        docs points at a custom pair, decisions is unset, identity/knowledge
+        already carry only the shared half, and the local lane lives outside
+        the repository."""
+        target = self._repo(name)
+        doc = structure(
+            lanes={
+                "identity": ["brain/shared/IDENTITY.md"],
+                "knowledge": ["brain/shared/knowledge"],
+                "decisions": None,
+                "records": None,
+                "docs": ["governance", "resources"],
+            },
+        )
+        doc["brain"] = {"local_tracked": False, "local_path": f"~/.harness-local/{name}"}
+        write_structure(target, doc)
         return target
 
     def test_team_yes_writes_team_defaults(self):
@@ -155,6 +198,190 @@ class TestProfile(TempDirCase):
         assert doc["brain"] == {"local_tracked": False, "local_path": "brain/local"}
         shipped = json.loads((init.TEMPLATES / "structure.default.json").read_text())
         assert doc["lanes"] == shipped["lanes"]
+
+    def test_yes_keeps_configured_lanes_and_local_path(self):
+        """--profile team --yes on an adopted host must not overwrite the
+        lanes, git.mode, or the personal-notes location it already
+        carries: only host.profile changes."""
+        target = self._configured_host()
+        out = io.StringIO()
+        code = init.run_profile(target, "team", True, out=out)
+        assert code == 0, out.getvalue()
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["host"]["profile"] == "team"
+        assert doc["git"]["mode"] == "main-only"
+        assert doc["lanes"] == {
+            "identity": ["brain/shared/IDENTITY.md"],
+            "knowledge": ["brain/shared/knowledge"],
+            "decisions": None,
+            "records": None,
+            "docs": ["governance", "resources"],
+        }
+        assert doc["brain"]["local_path"] == "~/.harness-local/configured-repo"
+        text = out.getvalue()
+        assert "git.mode: kept as configured (main-only)" in text
+        assert "brain.local_path: kept as configured (~/.harness-local/configured-repo)" in text
+        assert "lanes: kept as configured (answer the interview to change them)" in text
+
+    def test_yes_applies_preset_when_lanes_all_null(self):
+        """A host with every lane null but git.mode and brain.local_path
+        still the shipped defaults: the preset still applies (null counts
+        as untouched)."""
+        target = self._repo("all-null-repo")
+        doc = structure(lanes={name: None for name in LANE_NAMES})
+        write_structure(target, doc)
+        out = io.StringIO()
+        code = init.run_profile(target, "team", True, out=out)
+        assert code == 0, out.getvalue()
+        result = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert result["lanes"] == {
+            "identity": ["brain/shared/IDENTITY.md"],
+            "knowledge": ["brain/shared/knowledge"],
+            "decisions": ["docs/decisions"],
+            "records": None,
+            "docs": ["docs"],
+        }
+        assert result["git"]["mode"] == "branches"
+        assert "kept as configured" not in out.getvalue()
+
+    def test_yes_keeps_when_only_git_mode_differs(self):
+        """A host whose only deviation from the shipped defaults is
+        git.mode still counts as configured: --yes must not touch lanes or
+        brain.local_path, and git.mode itself stays as configured too."""
+        target = self._repo("git-mode-only-repo")
+        doc = structure(git_mode="branches")
+        write_structure(target, doc)
+        out = io.StringIO()
+        code = init.run_profile(target, "solo", True, out=out)
+        assert code == 0, out.getvalue()
+        result = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert result["host"]["profile"] == "solo"
+        assert result["git"]["mode"] == "branches"
+        assert result["lanes"] == doc["lanes"]
+        shipped = json.loads((init.TEMPLATES / "structure.default.json").read_text())
+        assert result["brain"]["local_path"] == shipped["brain"]["local_path"]
+        assert "git.mode: kept as configured (branches)" in out.getvalue()
+
+    def test_interactive_no_keeps_configured_lanes(self):
+        """Question 4 answered 'n' on an adopted host keeps the configured
+        lanes rather than falling back to the profile preset."""
+        target = self._configured_host("interactive-configured-repo")
+        out = io.StringIO()
+        code = init.run_profile(target, None, False, ask=scripted(["2", "2", "2", "n"]), out=out)
+        assert code == 0, out.getvalue()
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["lanes"] == {
+            "identity": ["brain/shared/IDENTITY.md"],
+            "knowledge": ["brain/shared/knowledge"],
+            "decisions": None,
+            "records": None,
+            "docs": ["governance", "resources"],
+        }
+        assert "lanes: kept as configured" in out.getvalue()
+
+    def test_f3_lane_preset_follows_local_path_not_profile(self):
+        """Answers 1,2,2,n (solo, branches, personal notes outside the
+        repository, skip the lane prompt) on a fresh clone must drop the
+        local halves of identity/knowledge: the preset follows where the
+        personal notes actually live, not the chosen profile."""
+        target = self._repo("preset-follows-local-repo")
+        out = io.StringIO()
+        code = init.run_profile(target, None, False, ask=scripted(["1", "2", "2", "n"]), out=out)
+        assert code == 0, out.getvalue()
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["host"]["profile"] == "solo"
+        assert doc["brain"]["local_path"] == f"~/.harness-local/{target.name}"
+        assert doc["lanes"] == {
+            "identity": ["brain/shared/IDENTITY.md"],
+            "knowledge": ["brain/shared/knowledge"],
+            "decisions": ["docs/decisions"],
+            "records": None,
+            "docs": ["docs"],
+        }
+
+    def test_interview_explicit_answers_override_configured_host(self):
+        """Explicit interview answers to questions 2 and 3 change git.mode
+        and brain.local_path even on a configured host (an explicit answer
+        is a decision, unlike --yes); only question 4's lanes decision
+        falls back to the keep-vs-preset gate."""
+        target = self._configured_host("interview-overrides-repo")
+        out = io.StringIO()
+        code = init.run_profile(target, None, False, ask=scripted(["2", "2", "1", "n"]), out=out)
+        assert code == 0, out.getvalue()
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["git"]["mode"] == "branches"
+        assert doc["brain"]["local_path"] == "brain/local"
+        assert doc["lanes"] == {
+            "identity": ["brain/shared/IDENTITY.md"],
+            "knowledge": ["brain/shared/knowledge"],
+            "decisions": None,
+            "records": None,
+            "docs": ["governance", "resources"],
+        }
+
+    def test_f4_contract_mode_kept_when_declared(self):
+        """A declared contract.mode survives --profile --yes even when
+        deriving it fresh from the current AGENTS.md would disagree (a
+        rendered contract whose file merely needs regeneration must not
+        flip to host-owned underneath the operator)."""
+        target = self._repo("contract-kept-repo")
+        write(target / "AGENTS.md", "custom, host-owned contract\n")
+        doc = json.loads((init.TEMPLATES / "structure.default.json").read_text())
+        doc["contract"] = {"mode": "rendered"}
+        write_structure(target, doc)
+        assert init.derive_contract_mode(target) == "host-owned"
+        out = io.StringIO()
+        code = init.run_profile(target, "solo", True, out=out)
+        assert code == 0, out.getvalue()
+        result = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert result["contract"]["mode"] == "rendered"
+
+    def test_b_journal_key_removed_and_reported(self):
+        """A retired 'journal' key left in lanes and tiers.lane_defaults by
+        a pre-profile kernel is repaired by --profile, not refused."""
+        target = self._repo("journal-repo")
+        doc = structure(lanes={"docs": ["docs"]})
+        doc["lanes"]["journal"] = None
+        doc["tiers"]["lane_defaults"]["journal"] = "internal"
+        write_structure(target, doc)
+        out = io.StringIO()
+        code = init.run_profile(target, "solo", True, out=out)
+        assert code == 0, out.getvalue()
+        assert "retired lane key removed: journal (lanes, tiers.lane_defaults)" in out.getvalue()
+        result = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert "journal" not in (result.get("lanes") or {})
+        assert "journal" not in ((result.get("tiers") or {}).get("lane_defaults") or {})
+
+    def test_b_other_paths_still_refuse_on_journal(self):
+        """--lanes (and every other init path) still refuses a raw journal
+        key instead of silently repairing it; only --profile does."""
+        target = self._repo("journal-refuse-repo")
+        doc = structure(lanes={"docs": ["docs"]})
+        doc["lanes"]["journal"] = None
+        write_structure(target, doc)
+        out = io.StringIO()
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            code = init.run_lanes(target, ask=scripted(["docs"]), out=out)
+        assert code == 1
+        assert "structure.json invalid" in err.getvalue()
+        assert "journal" in err.getvalue()
+
+    def test_c_piped_answers_run_the_interview(self):
+        """A non-tty stdin that actually carries the four answers must run
+        the interview, not exit 2 (isatty() alone is not the gate)."""
+        target = self._repo("piped-interview-repo")
+        result = run_cli("init", "--profile", "--root", str(target), stdin="1\n2\n2\nn\n")
+        assert result.returncode == 0, result.stdout + result.stderr
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["host"]["profile"] == "solo"
+        assert doc["git"]["mode"] == "branches"
+
+    def test_c_empty_stdin_still_exits_2(self):
+        target = self._repo("empty-stdin-repo")
+        result = run_cli("init", "--profile", "--root", str(target), stdin="")
+        assert result.returncode == 2
+        assert "--profile <value> --yes" in result.stderr
+        assert not (target / "harness" / "registry" / "structure.json").exists()
 
     def test_scripted_four_answers_match_flags(self):
         """A bare-profile interview answered 2/2/2/n equals `--profile team --yes`."""

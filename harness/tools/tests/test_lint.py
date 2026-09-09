@@ -359,6 +359,29 @@ def test_l6_adopted_host_owned_harness_files_are_not_unlisted(tmp_path):
     assert any("unlisted.py" in item.path and item.level == "ERROR" for item in findings)
 
 
+def test_l6_adopted_files_registry_itself_is_not_unlisted(tmp_path):
+    # adopt.py writes harness/registry/adopted-files.json on an adopted host
+    # with a rendered contract; that file is a host artifact, never a
+    # template-owned kernel file, so it must never be reported as an
+    # unlisted kernel file even though its own path lands in ctx.files via
+    # adopted_scope_paths (adopted-files.json's recorded paths include
+    # itself).
+    repo = _repo(tmp_path)
+    _write(repo, "harness/kernel-manifest.json", json.dumps({"version": "0.1.0", "files": []}))
+    _write(repo, "harness/registry/structure.json", json.dumps({
+        "host": {"adopted": True, "roots": [], "harness_owned": []},
+        "contract": {"mode": "rendered"},
+    }))
+    _write(repo, "harness/registry/adopted-files.json", json.dumps({
+        "template_version": "0.1.0",
+        "paths": ["harness/registry/adopted-files.json"],
+    }))
+    findings = _only(repo, "L6")
+    assert not any(item.path == "harness/registry/adopted-files.json" for item in findings)
+    findings = _only(repo, "L6", strict=True, all_scope=True)
+    assert not any(item.path == "harness/registry/adopted-files.json" for item in findings)
+
+
 def test_l6_brain_readmes_not_required_when_no_lane_uses_brain(tmp_path):
     repo = _repo(tmp_path)
     _write(repo, "harness/kernel-manifest.json", json.dumps({"version": "0.1.0", "files": [
@@ -852,6 +875,21 @@ def test_l19_verify_command_shape(tmp_path):
 
     _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo", "verify_command": None}}))
     assert _ids(_only(repo, "L19"), "ERROR") == []
+
+
+def test_l19_verify_command_rejects_option_only_targets(tmp_path):
+    # L19 reuses harness_registry.VERIFY_COMMAND_RE, so it inherits the
+    # option-only rejection (yarn --version, make --eval) without its own copy.
+    repo = _repo(tmp_path)
+    for bad in ("yarn --version", "make --eval", "npm run -x"):
+        _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo", "verify_command": bad}}))
+        findings = _only(repo, "L19")
+        assert "L19" in _ids(findings, "ERROR"), bad
+        assert any("verify_command" in item.message for item in findings), bad
+
+    for good in ("yarn build", "make deploy", "pnpm run test:unit"):
+        _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo", "verify_command": good}}))
+        assert _ids(_only(repo, "L19"), "ERROR") == [], good
 
 
 def test_l19_malformed_structure_json_is_skipped(tmp_path):

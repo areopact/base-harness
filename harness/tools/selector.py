@@ -428,6 +428,12 @@ def main(argv=None) -> int:
     skills = discover_skills(root)
     current = load_selection(path)
 
+    unknown_current = sorted(set((current.get("include") or []) + (current.get("exclude") or [])) - set(skills))
+    if unknown_current:
+        print(f"select: refused: unknown skill(s): {', '.join(unknown_current)}", file=sys.stderr)
+        print(f"select: valid skills: {', '.join(sorted(skills)) or '(none found under harness/skills)'}", file=sys.stderr)
+        return 2
+
     if args.list:
         print(f"selection file: {path.relative_to(root).as_posix()} (scope {scope})")
         print_catalog(skills, current)

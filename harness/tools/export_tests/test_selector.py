@@ -66,6 +66,20 @@ class TestSelect(TempDirCase):
         assert "valid skills: alpha, beta, gamma" in err
         assert not self.selection.exists()
 
+    def test_list_refuses_on_retired_skill_in_loaded_selection(self):
+        # selection.json can carry a name a later skill retirement dropped;
+        # --list must refuse rather than silently reporting a stale set.
+        write(
+            self.selection,
+            json.dumps({"schema_version": 1, "packs": [], "include": ["verify"], "exclude": []}),
+        )
+        code, out, err = run(self.base("--list"))
+        assert code == 2
+        assert "unknown skill(s): verify" in err
+        assert "valid skills: alpha, beta, gamma" in err
+        assert "effective skills:" not in out
+        assert json.loads(self.selection.read_text())["include"] == ["verify"]
+
     def test_dry_run_writes_nothing(self):
         code, out, _ = run(self.base("--pack", "core", "--dry-run"))
         assert code == 0

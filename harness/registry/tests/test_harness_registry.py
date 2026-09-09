@@ -357,6 +357,44 @@ def test_cli_exit_one_on_corrupt_copy(tmp_path):
     assert "cannot load capabilities.json" in result.stdout
 
 
+def _full_tracked_copy(tmp_path: Path) -> Path:
+    """A scratch checkout of every git-tracked file, so validate_all can pass."""
+    target = tmp_path / "repo"
+    archive = tmp_path / "repo.zip"
+    subprocess.run(["git", "archive", "-o", str(archive), "HEAD"], cwd=str(ROOT), check=True)
+    import zipfile
+
+    with zipfile.ZipFile(archive) as zf:
+        zf.extractall(target)
+    return target
+
+
+def test_cli_notes_host_profile_absent_on_disk_without_changing_exit_or_writing(tmp_path):
+    repo = _full_tracked_copy(tmp_path)
+    target = repo / "harness" / "registry" / "structure.json"
+    doc = json.loads(target.read_text(encoding="utf-8"))
+    del doc["host"]["profile"]
+    before = json.dumps(doc, indent=2) + "\n"
+    target.write_text(before, encoding="utf-8")
+
+    result = _run_cli(repo)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (
+        "note: host.profile absent in harness/registry/structure.json; defaulting to solo "
+        "(set it with python harness/tools/init.py --profile)"
+    ) in result.stdout
+    assert target.read_text(encoding="utf-8") == before
+
+    quiet = subprocess.run(
+        [sys.executable, str(TOOLS / "harness_registry.py"), "--root", str(repo), "--quiet-notes"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert quiet.returncode == 0
+    assert "host.profile absent" not in quiet.stdout
+
+
 # Byte discipline
 def test_json_files_round_trip_to_two_space_indent_with_trailing_newline():
     for path in JSON_FILES:

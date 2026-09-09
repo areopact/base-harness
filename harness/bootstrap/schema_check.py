@@ -43,6 +43,19 @@ def _resolve_ref(ref: str, root_schema: dict) -> dict:
     return node
 
 
+
+def _ecma_pattern(pattern):
+    """A JSON Schema pattern with the end-anchor semantics of the ECMAScript regex dialect JSON Schema uses.
+
+    In that dialect an unescaped trailing `$` matches only at the end of the
+    string; Python's `$` also matches before a trailing newline. `\\Z` is
+    Python's end-of-string-only anchor, so a trailing unescaped `$` becomes
+    `\\Z`. Unanchored patterns are untouched, as JSON Schema leaves them.
+    """
+    if pattern.endswith("$") and not pattern.endswith("\\$"):
+        return pattern[:-1] + "\\Z"
+    return pattern
+
 def validate(instance: object, schema: dict, root_schema: dict | None = None, path: str = "$") -> list[str]:
     """Return error strings; an empty list means the instance is valid."""
     root_schema = root_schema if root_schema is not None else schema
@@ -62,7 +75,7 @@ def validate(instance: object, schema: dict, root_schema: dict | None = None, pa
         errors.append(f"{path}: {instance!r} not in enum")
     if "const" in schema and instance != schema["const"]:
         errors.append(f"{path}: {instance!r} != const {schema['const']!r}")
-    if "pattern" in schema and isinstance(instance, str) and re.search(schema["pattern"], instance) is None:
+    if "pattern" in schema and isinstance(instance, str) and re.search(_ecma_pattern(schema["pattern"]), instance) is None:
         errors.append(f"{path}: {instance!r} does not match {schema['pattern']!r}")
     if "not" in schema and not validate(instance, schema["not"], root_schema, path):
         errors.append(f"{path}: matches a forbidden 'not' schema")

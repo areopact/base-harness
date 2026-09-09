@@ -37,7 +37,17 @@
         "delegation": {
           "mandatory": false
         },
-        "selection_scope": "repo"
+        "selection_scope": "repo",
+        "contract": {
+          "mode": "rendered"
+        },
+        "host": {
+          "adopted": false,
+          "roots": [],
+          "harness_owned": [],
+          "profile": "solo",
+          "verify_command": null
+        }
       }
     },
     "branches-host": {
@@ -80,7 +90,17 @@
         "delegation": {
           "mandatory": false
         },
-        "selection_scope": "user"
+        "selection_scope": "user",
+        "contract": {
+          "mode": "rendered"
+        },
+        "host": {
+          "adopted": false,
+          "roots": [],
+          "harness_owned": [],
+          "profile": "team",
+          "verify_command": null
+        }
       }
     },
     "solo-host": {
@@ -125,7 +145,17 @@
         "delegation": {
           "mandatory": false
         },
-        "selection_scope": "repo"
+        "selection_scope": "repo",
+        "contract": {
+          "mode": "rendered"
+        },
+        "host": {
+          "adopted": false,
+          "roots": [],
+          "harness_owned": [],
+          "profile": "solo",
+          "verify_command": null
+        }
       }
     },
     "existing-repo-host": {
@@ -166,7 +196,17 @@
         "delegation": {
           "mandatory": false
         },
-        "selection_scope": "user"
+        "selection_scope": "user",
+        "contract": {
+          "mode": "rendered"
+        },
+        "host": {
+          "adopted": false,
+          "roots": [],
+          "harness_owned": [],
+          "profile": "team",
+          "verify_command": null
+        }
       }
     },
     "private-instance-host": {
@@ -212,7 +252,17 @@
         "delegation": {
           "mandatory": true
         },
-        "selection_scope": "repo"
+        "selection_scope": "repo",
+        "contract": {
+          "mode": "rendered"
+        },
+        "host": {
+          "adopted": false,
+          "roots": [],
+          "harness_owned": [],
+          "profile": "solo",
+          "verify_command": null
+        }
       }
     }
   }

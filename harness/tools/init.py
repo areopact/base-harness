@@ -17,14 +17,20 @@ Usage:
 (host.profile), how work lands (git.mode), where personal notes live
 (brain.local_path; brain.local_tracked always stays false here), and whether
 to configure the five lanes now (chains into the unchanged --lanes prompt) or
-keep the profile's lane preset. A value ("solo" or "team") answers the first
-question up front; --yes answers every question with that profile's defaults
-and asks nothing. Bare `--profile` with no value on a non-interactive stdin
-exits 2 naming the `--profile <value> --yes` form. contract.mode is never
-asked: it is derived by the same test adopt.py uses (root AGENTS.md present
-and not written by the harness itself means host-owned, otherwise rendered).
-Nothing is materialized: the run prints the next two commands
-(harness/tools/selector.py --list, then bootstrap).
+keep the profile's lane preset, which follows where the personal notes live,
+not the chosen profile. A value ("solo" or "team") answers the first question
+up front; --yes answers every question with that profile's defaults and asks
+nothing, unless git.mode, brain.local_path, or the lanes already differ from
+the shipped defaults, in which case --yes changes host.profile only and keeps
+the rest exactly as configured. Bare `--profile` with no value runs the
+interview against any tty or non-empty piped stdin; it exits 2 naming the
+`--profile <value> --yes` form only when stdin is closed or empty.
+contract.mode is asked of no one: it keeps an already-declared value, and is
+derived by the same test adopt.py uses (root AGENTS.md present and not
+written by the harness itself means host-owned, otherwise rendered) only when
+absent. A retired `journal` key still present in lanes or tiers.lane_defaults
+is removed and reported, not refused. Nothing is materialized: the run prints
+the next two commands (harness/tools/selector.py --list, then bootstrap).
 
 --lanes shows each lane's current value and accepts a comma- or
 space-separated list of repository-relative paths, the literal "none" for an
@@ -171,14 +177,58 @@ def _external_local_path(root: Path) -> tuple:
     return adopt.EXTERNAL_LOCAL_TEMPLATE.format(name=name), source
 
 
-def _profile_lane_preset(profile: str) -> dict:
-    """The lane preset for one profile: the shipped defaults for solo; for
-    team, the same defaults with each identity/knowledge entry outside
-    TEAM_LANE_SHARED_ROOT dropped (decisions, records, and docs are the
-    shipped defaults verbatim in both profiles)."""
+def _lanes_untouched(current: dict, shipped: dict) -> bool:
+    """True when every non-null current lane is byte-equal (order-sensitive)
+    to the shipped default for that lane. A host where every lane is null
+    also counts as untouched. Any lane that differs from the shipped default
+    and is not null means the whole set is host-configured."""
+    for name in LANE_NAMES:
+        value = (current or {}).get(name)
+        if value is None:
+            continue
+        if value != shipped.get(name):
+            return False
+    return True
+
+
+def _structure_untouched(structure: dict, shipped: dict) -> bool:
+    """True when lanes, git.mode, and brain.local_path all still match the
+    shipped defaults (a missing git.mode or local_path counts as matching).
+    Any one of the three differing marks the whole structure as
+    host-configured: --yes and question 4's 'no' answer must then leave all
+    three alone rather than silently overwriting some of them."""
+    if not _lanes_untouched(structure.get("lanes") or {}, shipped["lanes"]):
+        return False
+    git_mode = (structure.get("git") or {}).get("mode")
+    if git_mode is not None and git_mode != shipped["git"]["mode"]:
+        return False
+    local_path = (structure.get("brain") or {}).get("local_path")
+    if local_path is not None and local_path != shipped["brain"]["local_path"]:
+        return False
+    return True
+
+
+def _is_external_local_path(local_path: str) -> bool:
+    """True when a personal-notes path is not repository-relative (outside
+    the repository), the same test the .gitignore step already applies."""
+    try:
+        normalize_lane_path(local_path)
+    except ValueError:
+        return True
+    return False
+
+
+def _lane_preset_for_local_path(local_path: str) -> dict:
+    """The lane preset for one personal-notes location, not one profile: the
+    shipped defaults verbatim when the local path is inside the repository;
+    the same defaults with each identity/knowledge entry outside
+    TEAM_LANE_SHARED_ROOT dropped when it is external (decisions, records,
+    and docs are the shipped defaults verbatim either way). An external local
+    path (question 3's second answer, or the team default) means the local
+    halves of identity/knowledge point at files no consumer can reach."""
     shipped = _default_structure()["lanes"]
     preset = {name: (list(shipped[name]) if isinstance(shipped.get(name), list) else shipped.get(name)) for name in LANE_NAMES}
-    if profile != "team":
+    if not _is_external_local_path(local_path):
         return preset
     for name in ("identity", "knowledge"):
         value = preset.get(name) or []
@@ -218,11 +268,92 @@ def load_structure(root: Path) -> dict:
     return registry.load_structure(root)
 
 
+def _load_raw_structure(root: Path) -> dict:
+    """The on-disk structure.json object, verbatim, or {} when the file is
+    absent. Every write path merges only the keys it changed into this
+    object; writing back the fully-merged read view (load_structure's
+    return) would materialize every shipped default the host never asked
+    for, which the ship-gate lint is supposed to keep reporting as absent
+    until an operator repairs it on purpose."""
+    path = structure_path(root)
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("structure.json is not an object")
+    return raw
+
+
+def _merged_structure(raw: dict) -> dict:
+    """The same default-merge load_structure applies on read, computed
+    in-memory over a raw object that has not (yet) been written to disk.
+    Raises ValueError on an unknown top-level key or a schema violation."""
+    registry = _registry_module()
+    if registry is None:
+        default = _default_structure()
+        merged = dict(default)
+        for key, value in raw.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                inner = dict(merged[key])
+                inner.update(value)
+                merged[key] = inner
+            else:
+                merged[key] = value
+        return merged
+    default = registry.DEFAULT_STRUCTURE
+    unknown = sorted(set(raw) - set(default))
+    if unknown:
+        raise ValueError(f"structure.json: unknown top-level keys: {', '.join(unknown)}")
+    merged = registry._merge_defaults(default, raw)
+    errors = registry.validate_structure(merged)
+    if errors:
+        raise ValueError("; ".join(errors))
+    return merged
+
+
+def _strip_retired_journal(raw: dict) -> tuple:
+    """Return (raw-without-journal, removed). A host that pulled a
+    pre-profile kernel may still carry the retired 'journal' key in lanes,
+    tiers.lane_defaults, or both; --profile repairs it and reports the
+    repair instead of refusing, since a fresh --profile run is exactly the
+    moment a stale host needs to shed it. Every other init path keeps
+    refusing on it, per the registry's own unknown-lane message."""
+    removed = False
+    raw = dict(raw)
+    lanes = raw.get("lanes")
+    if isinstance(lanes, dict) and "journal" in lanes:
+        lanes = dict(lanes)
+        del lanes["journal"]
+        raw["lanes"] = lanes
+        removed = True
+    tiers = raw.get("tiers")
+    if isinstance(tiers, dict):
+        lane_defaults = tiers.get("lane_defaults")
+        if isinstance(lane_defaults, dict) and "journal" in lane_defaults:
+            lane_defaults = dict(lane_defaults)
+            del lane_defaults["journal"]
+            tiers = dict(tiers)
+            tiers["lane_defaults"] = lane_defaults
+            raw["tiers"] = tiers
+            removed = True
+    return raw, removed
+
+
 def structure_errors(structure: dict) -> list:
+    """Validate a write candidate, which may carry only the keys a write
+    path changed, by simulating the same default merge load_structure
+    applies on read."""
     registry = _registry_module()
     if registry is None or not hasattr(registry, "validate_structure"):
         return []
-    return list(registry.validate_structure(structure))
+    default = getattr(registry, "DEFAULT_STRUCTURE", None)
+    merge = getattr(registry, "_merge_defaults", None)
+    if default is None or merge is None:
+        return list(registry.validate_structure(structure))
+    unknown = sorted(set(structure) - set(default))
+    if unknown:
+        return [f"structure.json: unknown top-level keys: {', '.join(unknown)}"]
+    return list(registry.validate_structure(merge(default, structure)))
 
 
 def structure_path(root: Path) -> Path:
@@ -303,25 +434,28 @@ def run_lanes(root: Path, ask=input, out=None) -> int:
     out = out or sys.stdout
     try:
         structure = load_structure(root)
+        raw = _load_raw_structure(root)
     except Exception as exc:  # noqa: BLE001
-        print(f"init: structure.json unreadable: {exc}", file=sys.stderr)
+        print(f"init: structure.json invalid: {exc}", file=sys.stderr)
         return 1
     try:
         lanes = configure_lanes(structure, ask, out)
     except (EOFError, KeyboardInterrupt):
         print("init: prompt ended early; nothing written", file=sys.stderr)
         return 1
-    structure["lanes"] = {lane: lanes.get(lane) for lane in LANE_NAMES}
-    errors = structure_errors(structure)
+    new_lanes = {lane: lanes.get(lane) for lane in LANE_NAMES}
+    candidate = dict(raw)
+    candidate["lanes"] = new_lanes
+    errors = structure_errors(candidate)
     if errors:
         print("init: refused to write an invalid structure.json:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         return 1
-    write_structure(root, structure)
+    write_structure(root, candidate)
     print(f"wrote {structure_path(root).relative_to(root).as_posix()}", file=out)
     for lane in LANE_NAMES:
-        value = structure["lanes"][lane]
+        value = new_lanes[lane]
         print(f"  {lane}: {'none' if value is None else ', '.join(value)}", file=out)
     print("no folders were created; lane folders are created on first write", file=out)
     return 0
@@ -361,17 +495,28 @@ def _solo_local_path() -> str:
     return _default_structure()["brain"]["local_path"]
 
 
-def _profile_defaults(root: Path, profile: str) -> dict:
-    """The full answer set for one profile with no questions asked."""
+def _profile_defaults(root: Path, structure: dict, profile: str) -> dict:
+    """The full answer set for one profile with no questions asked. On an
+    untouched structure (lanes, git.mode, and brain.local_path all still the
+    shipped defaults) the whole preset applies, exactly as before. On any
+    other structure (a configured host) --yes changes host.profile only:
+    git.mode, brain.local_path, and lanes are all left exactly as they are
+    on disk, never silently overwritten."""
+    shipped = _default_structure()
+    if not _structure_untouched(structure, shipped):
+        return {"profile": profile, "configured_kept": True}
+
     if profile == "solo":
-        brain_local_path = _solo_local_path()
+        brain_local_path = shipped["brain"]["local_path"]
     else:
         brain_local_path, _source = _external_local_path(root)
+
     return {
         "profile": profile,
+        "configured_kept": False,
         "git_mode": PROFILE_GIT_MODE[profile],
         "brain_local_path": brain_local_path,
-        "lanes": _profile_lane_preset(profile),
+        "lanes": _lane_preset_for_local_path(brain_local_path),
     }
 
 
@@ -405,24 +550,58 @@ def run_profile_interview(root: Path, structure: dict, profile, ask, out) -> dic
     )
     brain_local_path = solo_local_path if answer == "1" else external_path
 
-    if _ask_yes_no(ask, "Set the five memory lanes now? [Y/n]: ", True, out):
-        lanes = configure_lanes(structure, ask, out)
+    # The untouched/configured test looks at the structure as it was before
+    # this interview's own answers (git_mode, brain_local_path above are
+    # explicit decisions and always apply, unlike --yes); it decides only
+    # whether question 4's "no" falls back to the preset or keeps the
+    # current lanes.
+    untouched = _structure_untouched(structure, _default_structure())
+    if untouched:
+        question4 = "Set the five memory lanes now? [Y/n]: "
     else:
-        lanes = _profile_lane_preset(profile)
+        question4 = "Set the five memory lanes now? [Y/n] (no keeps them as configured): "
+    if _ask_yes_no(ask, question4, True, out):
+        lanes = configure_lanes(structure, ask, out)
+        lanes_kept = False
+    elif untouched:
+        lanes = _lane_preset_for_local_path(brain_local_path)
+        lanes_kept = False
+    else:
+        lanes = {name: (structure.get("lanes") or {}).get(name) for name in LANE_NAMES}
+        lanes_kept = True
 
-    return {"profile": profile, "git_mode": git_mode, "brain_local_path": brain_local_path, "lanes": lanes}
+    return {
+        "profile": profile,
+        "configured_kept": False,
+        "git_mode": git_mode,
+        "brain_local_path": brain_local_path,
+        "lanes": lanes,
+        "lanes_kept": lanes_kept,
+    }
 
 
 def run_profile(root: Path, profile, yes: bool, ask=input, out=None) -> int:
     out = out or sys.stdout
     try:
-        structure = load_structure(root)
+        raw = _load_raw_structure(root)
     except Exception as exc:  # noqa: BLE001
-        print(f"init: structure.json unreadable: {exc}", file=sys.stderr)
+        print(f"init: structure.json invalid: {exc}", file=sys.stderr)
         return 1
 
+    # A host that pulled a pre-profile kernel may still carry the retired
+    # journal key; --profile repairs it here instead of refusing (every
+    # other init path keeps refusing on it, per the registry's message).
+    raw, removed_journal = _strip_retired_journal(raw)
+    try:
+        structure = _merged_structure(raw)
+    except ValueError as exc:
+        print(f"init: structure.json invalid: {exc}", file=sys.stderr)
+        return 1
+    if removed_journal:
+        print("retired lane key removed: journal (lanes, tiers.lane_defaults)", file=out)
+
     if yes:
-        answers = _profile_defaults(root, profile or "solo")
+        answers = _profile_defaults(root, structure, profile or "solo")
     else:
         try:
             answers = run_profile_interview(root, structure, profile, ask, out)
@@ -430,13 +609,30 @@ def run_profile(root: Path, profile, yes: bool, ask=input, out=None) -> int:
             print("init: prompt ended early; nothing written", file=sys.stderr)
             return 1
 
-    new_structure = dict(structure)
-    new_structure["host"] = dict(structure.get("host") or {})
+    # contract.mode sits alongside host profile, git mode, brain, and lanes
+    # here: this question is asked and answered on purpose every run, so it
+    # is exempt from the raw-preserving rule the same way host profile is.
+    # It still keeps an already-declared value rather than re-deriving it,
+    # so a contract whose rendered AGENTS.md merely needs regeneration is
+    # not flipped to host-owned underneath the operator.
+    current_contract = raw.get("contract") or {}
+    if "mode" in current_contract and current_contract["mode"] is not None:
+        contract_mode = current_contract["mode"]
+    else:
+        contract_mode = derive_contract_mode(root)
+
+    new_structure = dict(raw)
+    new_structure["host"] = dict(raw.get("host") or {})
     new_structure["host"]["profile"] = answers["profile"]
-    new_structure["git"] = {"mode": answers["git_mode"]}
-    new_structure["brain"] = {"local_tracked": False, "local_path": answers["brain_local_path"]}
-    new_structure["lanes"] = {lane: answers["lanes"].get(lane) for lane in LANE_NAMES}
-    new_structure["contract"] = {"mode": derive_contract_mode(root)}
+    new_structure["contract"] = {"mode": contract_mode}
+    configured_kept = answers.get("configured_kept", False)
+    if not configured_kept:
+        new_structure["git"] = {"mode": answers["git_mode"]}
+        new_structure["brain"] = {"local_tracked": False, "local_path": answers["brain_local_path"]}
+        if not answers.get("lanes_kept"):
+            new_structure["lanes"] = {lane: answers["lanes"].get(lane) for lane in LANE_NAMES}
+    # configured_kept: git, brain, and lanes are left exactly as they are in
+    # raw (not even re-written with their own current value).
 
     errors = structure_errors(new_structure)
     if errors:
@@ -448,19 +644,33 @@ def run_profile(root: Path, profile, yes: bool, ask=input, out=None) -> int:
     write_structure(root, new_structure)
     print(f"wrote {structure_path(root).relative_to(root).as_posix()}", file=out)
     print(f"  host.profile: {answers['profile']}", file=out)
-    print(f"  git.mode: {answers['git_mode']}", file=out)
-    print(f"  brain.local_path: {answers['brain_local_path']}", file=out)
-    for lane in LANE_NAMES:
-        value = new_structure["lanes"][lane]
-        print(f"  lanes.{lane}: {'none' if value is None else ', '.join(value)}", file=out)
+    if configured_kept:
+        git_mode_display = (structure.get("git") or {}).get("mode")
+        local_path_display = (structure.get("brain") or {}).get("local_path")
+        print(f"  git.mode: kept as configured ({git_mode_display})", file=out)
+        print(f"  brain.local_path: kept as configured ({local_path_display})", file=out)
+        print("  lanes: kept as configured (answer the interview to change them)", file=out)
+        for lane in LANE_NAMES:
+            value = (structure.get("lanes") or {}).get(lane)
+            print(f"  lanes.{lane}: {'none' if value is None else ', '.join(value)}", file=out)
+    else:
+        print(f"  git.mode: {answers['git_mode']}", file=out)
+        print(f"  brain.local_path: {answers['brain_local_path']}", file=out)
+        if answers.get("lanes_kept"):
+            print("  lanes: kept as configured (answer yes to question 4, or run init.py --lanes, to change them)", file=out)
+        for lane in LANE_NAMES:
+            value = new_structure["lanes"][lane]
+            print(f"  lanes.{lane}: {'none' if value is None else ', '.join(value)}", file=out)
     print(f"  contract.mode: {new_structure['contract']['mode']}", file=out)
 
+    effective_brain = new_structure.get("brain") or structure.get("brain") or {}
+    local_path_for_gitignore = effective_brain.get("local_path")
     try:
-        normalize_lane_path(answers["brain_local_path"])
+        normalize_lane_path(local_path_for_gitignore)
     except ValueError:
-        print(f"  no .gitignore entry needed: {answers['brain_local_path']} is outside the repository", file=out)
+        print(f"  no .gitignore entry needed: {local_path_for_gitignore} is outside the repository", file=out)
     else:
-        ensure_ignored(root, answers["brain_local_path"], out)
+        ensure_ignored(root, local_path_for_gitignore, out)
 
     print("next: python harness/tools/selector.py --list", file=out)
     print(
@@ -524,8 +734,9 @@ def run_brain(root: Path, track_local: bool, out=None) -> int:
     out = out or sys.stdout
     try:
         structure = load_structure(root)
+        raw = _load_raw_structure(root)
     except Exception as exc:  # noqa: BLE001
-        print(f"init: structure.json unreadable: {exc}", file=sys.stderr)
+        print(f"init: structure.json invalid: {exc}", file=sys.stderr)
         return 1
     brain = structure.get("brain") or {}
     local_path = str(brain.get("local_path") or _default_structure()["brain"]["local_path"]).strip("/")
@@ -552,14 +763,15 @@ def run_brain(root: Path, track_local: bool, out=None) -> int:
 
     if track_local and not tracked:
         print(f"  consequence: {TRACK_CONSEQUENCE}", file=out)
-        structure["brain"] = {"local_tracked": True, "local_path": local_path}
-        errors = structure_errors(structure)
+        candidate = dict(raw)
+        candidate["brain"] = {"local_tracked": True, "local_path": local_path}
+        errors = structure_errors(candidate)
         if errors:
             print("init: refused to write an invalid structure.json:", file=sys.stderr)
             for error in errors:
                 print(f"  {error}", file=sys.stderr)
             return 1
-        write_structure(root, structure)
+        write_structure(root, candidate)
         print("  structure.json: brain.local_tracked = true", file=out)
         if local_dir is not None:
             ensure_not_ignored(root, local_path, out)
@@ -588,7 +800,7 @@ def print_shape(root: Path, out=None) -> int:
     try:
         structure = load_structure(root)
     except Exception as exc:  # noqa: BLE001
-        print(f"init: structure.json unreadable: {exc}", file=sys.stderr)
+        print(f"init: structure.json invalid: {exc}", file=sys.stderr)
         return 1
     path = structure_path(root)
     print(f"host shape ({path.relative_to(root).as_posix()}{'' if path.is_file() else ', defaults; file absent'})", file=out)
@@ -693,13 +905,30 @@ def main(argv=None) -> int:
             parser.print_usage(sys.stderr)
             print(f"init: --profile must be 'solo' or 'team', not {value!r}", file=sys.stderr)
             return 2
+        ask = input
         if value is None and not args.yes and not sys.stdin.isatty():
-            print(
-                "init: --profile needs a value on a non-interactive session; use `--profile <value> --yes`",
-                file=sys.stderr,
-            )
-            return 2
-        return run_profile(root, value, args.yes)
+            # A closed or empty pipe (piping nothing, or </dev/null) is the
+            # only case that needs the --yes guidance: a real tty, or a
+            # pipe that actually carries the four answers, must run the
+            # interview. isatty() alone is not enough (a Windows redirect
+            # from NUL still reports a tty), so this reads whatever is
+            # already queued on the pipe instead of gating on the terminal
+            # check alone.
+            piped = sys.stdin.read()
+            if not piped:
+                print(
+                    "init: --profile needs a value on a non-interactive session; use `--profile <value> --yes`",
+                    file=sys.stderr,
+                )
+                return 2
+            queue = piped.splitlines()
+
+            def ask(_prompt: str, _queue=queue) -> str:
+                if not _queue:
+                    raise EOFError
+                return _queue.pop(0)
+
+        return run_profile(root, value, args.yes, ask=ask)
     if args.lanes:
         return run_lanes(root)
     if args.brain:

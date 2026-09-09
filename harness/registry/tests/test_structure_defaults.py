@@ -109,9 +109,20 @@ def test_journal_lane_is_now_an_unknown_field(tmp_path):
     try:
         registry.load_structure(tmp_path)
     except registry.StructureError as exc:
-        assert "lanes" in str(exc) and "journal" in str(exc)
+        message = str(exc)
+        assert "lanes" in message and "journal" in message
+        assert "retired" in message and "tiers.lane_defaults" in message
     else:
         raise AssertionError("a journal lane must raise StructureError")
+
+
+def test_journal_lane_defaults_gets_the_same_retirement_hint():
+    candidate = copy.deepcopy(registry.DEFAULT_STRUCTURE)
+    candidate["tiers"]["lane_defaults"]["journal"] = "internal"
+    errors = registry.validate_structure(candidate)
+    matching = [item for item in errors if "tiers.lane_defaults" in item]
+    assert len(matching) == 1
+    assert "retired" in matching[0] and "journal" in matching[0]
 
 
 # T3
@@ -185,7 +196,7 @@ def _check(schema_root, schema, value, path, errors):
     if isinstance(value, str):
         if "minLength" in schema and len(value) < schema["minLength"]:
             errors.append(path + ": minLength")
-        if "pattern" in schema and not re.search(schema["pattern"], value):
+        if "pattern" in schema and not re.fullmatch(schema["pattern"], value):
             errors.append(path + ": pattern")
     if isinstance(value, list):
         if "minItems" in schema and len(value) < schema["minItems"]:
@@ -330,6 +341,31 @@ def test_host_verify_command_rejects_shell_and_chained_commands():
         assert _schema_errors(candidate) != [], bad
 
 
+# Probe table: harness_registry.VERIFY_COMMAND_RE and the schema pattern must
+# agree on every row. lint.py's L19 imports VERIFY_COMMAND_RE directly rather
+# than carrying its own copy, so no separate probe against lint.py is needed.
+VERIFY_COMMAND_PROBES = (
+    ("make deploy", True),
+    ("npm run verify", True),
+    ("pnpm run test:unit", True),
+    ("yarn build", True),
+    ("yarn --version", False),
+    ("make --eval", False),
+    ("npm run -x", False),
+)
+
+
+def test_verify_command_regex_and_schema_pattern_agree_on_probe_table():
+    schema = json.loads((REGISTRY / "structure.schema.json").read_text(encoding="utf-8"))
+    schema_pattern = schema["properties"]["host"]["properties"]["verify_command"]["oneOf"][1]["pattern"]
+    for command, accepted in VERIFY_COMMAND_PROBES:
+        registry_result = registry.VERIFY_COMMAND_RE.fullmatch(command) is not None
+        schema_result = re.fullmatch(schema_pattern, command) is not None
+        assert registry_result == accepted, command
+        assert schema_result == accepted, command
+        assert registry_result == schema_result, command
+
+
 def test_load_structure_defaults_host_profile_when_absent(tmp_path):
     _write_structure(tmp_path, {"host": {"adopted": False, "roots": [], "harness_owned": []}})
     loaded = registry.load_structure(tmp_path)
@@ -341,6 +377,14 @@ def test_load_structure_defaults_when_host_key_absent(tmp_path):
     _write_structure(tmp_path, {"git": {"mode": "branches"}})
     loaded = registry.load_structure(tmp_path)
     assert loaded["host"] == registry.DEFAULT_STRUCTURE["host"]
+
+
+# lanes.example.json
+def test_lanes_example_entries_validate_clean():
+    template_path = ROOT / "harness" / "tools" / "templates" / "lanes.example.json"
+    template = json.loads(template_path.read_text(encoding="utf-8"))
+    for name, entry in template["examples"].items():
+        assert registry.validate_structure(entry["structure"]) == [], name
 
 
 def test_hook_loader_defaults_host_profile_when_absent(tmp_path):

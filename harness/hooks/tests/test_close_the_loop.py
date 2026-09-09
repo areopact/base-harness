@@ -39,7 +39,7 @@ class ClosingClauseTests(unittest.TestCase):
 
     def test_branches_team(self):
         clause = close_the_loop.closing_clause(structure_for("branches", "team"))
-        assert clause == "commit on a task branch (never the default branch) and open a PR only when asked"
+        assert clause == "commit on a task branch (never the default branch), and open a PR only when asked"
 
     def test_branches_solo(self):
         clause = close_the_loop.closing_clause(structure_for("branches", "solo"))
@@ -47,7 +47,7 @@ class ClosingClauseTests(unittest.TestCase):
 
     def test_main_only_team(self):
         clause = close_the_loop.closing_clause(structure_for("main-only", "team"))
-        assert clause == "commit to the default branch or park it and open a PR only when asked"
+        assert clause == "commit to the default branch or park it, and open a PR only when asked"
 
     def test_missing_host_key_does_not_raise_and_reads_as_solo(self):
         structure = {"git": {"mode": "branches"}}
@@ -59,7 +59,7 @@ class ClosingClauseTests(unittest.TestCase):
         structure = {"host": {"profile": "team"}}
         assert "git" not in structure
         clause = close_the_loop.closing_clause(structure)
-        assert clause == "commit to the default branch or park it and open a PR only when asked"
+        assert clause == "commit to the default branch or park it, and open a PR only when asked"
 
     def test_non_dict_structure_does_not_raise_and_reads_as_solo_main_only(self):
         assert close_the_loop.closing_clause(None) == "commit to the default branch or park it"
@@ -84,7 +84,7 @@ class DecideEndToEndTests(unittest.TestCase):
 
     def test_branches_team_message_names_the_task_branch_and_pr_clause(self):
         message = self._run("branches", "team")
-        assert "commit on a task branch (never the default branch) and open a PR only when asked" in message
+        assert "commit on a task branch (never the default branch), and open a PR only when asked" in message
 
     def test_branches_solo_message_names_the_task_branch_clause_without_pr(self):
         message = self._run("branches", "solo")
@@ -93,7 +93,7 @@ class DecideEndToEndTests(unittest.TestCase):
 
     def test_main_only_team_message_names_the_default_branch_and_pr_clause(self):
         message = self._run("main-only", "team")
-        assert "commit to the default branch or park it and open a PR only when asked" in message
+        assert "commit to the default branch or park it, and open a PR only when asked" in message
 
     def test_structure_missing_host_key_still_produces_a_message(self):
         with tempfile.TemporaryDirectory() as temp:

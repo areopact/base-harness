@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "harness/registry/structure.schema.json",
   "title": "Harness host structure",
-  "description": "Host facts read by every kernel file through harness_registry.load_structure or hook_io.load_structure. Five fixed lanes; a lane is a non-empty list of repo-relative POSIX paths or null when not configured.",
+  "description": "Host facts read by every kernel file through harness_registry.load_structure or hook_io.load_structure. Five fixed lanes; a lane is a non-empty list of repo-relative POSIX paths or null when not configured. brain.local_path may also be a home-relative path under ~/ instead of a repository-relative one.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -19,6 +19,7 @@
   ],
   "definitions": {
     "repoRelativePath": {
+      "description": "A safe relative path: no leading slash, no drive letter, no .. escape, no backslash. brain.local_path is the one field that uses this definition for a path that may be home-relative under ~/ rather than repository-relative.",
       "type": "string",
       "minLength": 1,
       "pattern": "^(?!/)(?![A-Za-z]:)(?!\\.\\.(?:/|$))(?!.*/\\.\\.(?:/|$))[^\\\\]+$"
@@ -238,7 +239,7 @@
             },
             {
               "type": "string",
-              "pattern": "^(npm run|pnpm run|yarn|make) [A-Za-z0-9:_.-]+$"
+              "pattern": "^(npm run|pnpm run|yarn|make) [A-Za-z0-9][A-Za-z0-9:_.-]*$"
             }
           ]
         }

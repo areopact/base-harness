@@ -21,11 +21,13 @@ Initial public template.
 - The Stop hook's closing clause is composed from `git.mode` and `host.profile` together.
 - Docs: ARCHITECTURE, VERIFICATION, PACKS, LANES, HOST-SHAPES, ADDING-A-SKILL, ROUTING-TASKS.
 - CI: offline conformance on ubuntu, windows, and macos; fresh-template job; permission-posture assertion; de-identification lint.
+- `commit` skill and `git-workflow.md`: a commit message never includes a session link or session URL; that identifier stays in the agent's own audit trail, never in a record the host's contributors will read.
 
 ### Removed
 
 - Skills: the verify skill; its prove-before-done mode lives in doctor.
 - Skills: the daily and capture skills; the template ships no triage cadence, so a journal and an inbox have no reader, memory stays pages, and the journal lane is removed with them.
+- Migration: hosts that pulled a pre-profile kernel run `python harness/tools/init.py --profile <solo|team> --yes`, which removes the retired `journal` key from `lanes` and `tiers.lane_defaults` and prints that it does; every other command refuses the file and names the keys to delete.
 
 ### Deprecated
 
@@ -40,10 +42,13 @@ Initial public template.
 - `verify` folds into `doctor` as its "prove before done" mode, carrying the four trigger phrases and the evidence ladder that used to live in the standalone skill.
 - `adopt.py` writes `host.profile: team` on every new adoption, regardless of the detected `git.mode`, and prints the command a solo adopter runs to switch.
 - The `commit` skill reads `git.mode` and `host.profile` apart: `git.mode` decides branch discipline; `host.profile` decides verification discovery (a team host's own `host.verify_command`, then `package.json`'s `scripts.verify`, then a `Makefile` `verify` target, then the harness lint, said plainly) and pull request etiquette.
+- `commit` skill and `git-workflow.md`: a `Signed-off-by` footer is added only when the host's own `CONTRIBUTING.md` affirmatively states that commits carry a DCO sign-off or a `Signed-off-by` trailer; a sentence saying sign-off is not required, an absent file, or an ambiguous mention no longer trigger the footer, and an ambiguous case is named in the summary rather than guessed.
 - Publication history: the pre-publication working history on the private remote was squashed into one signed, signed-off initial commit before the visibility flip, so the public history starts from a tree that passes the release gate (structural and private-vocabulary de-identification over the full history, both clean).
+- On a configured host, `init.py --profile <solo|team> --yes` changes `host.profile` only and prints what it kept.
 
 ### Fixed
 
+- `init.py --adopt <target> --yes`: `--yes` is a global flag on `init.py`'s own parser, so it never reached `adopt.py`, which has no `--yes` flag (only `-y`/`--apply`), and the adoption silently ran as a dry run; `init.py` now translates `--yes` to `--apply` before forwarding to `adopt.py`.
 - `dangerous_ops_guard`: widened caught shapes (bundled short force flags, `--mirror` and `--all --force`, command substitution and backtick reads including nested substitution, `..`-relative recursive-delete targets including `./../` and PowerShell's `..\` form, unquoted Windows-style paths, quoted refs and unquoted list joins on a push, remote branch deletion, a bare force push under main-only git mode, and the `.npmrc`/`.netrc`/`.pgpass`/`.pypirc`/`.git-credentials`/`*.ppk`/`*.keystore`/`*.tfvars` credential shapes plus a `$HOME/`-prefixed credential path, the AWS credentials file and `credentials*` wildcard inside `.aws`, gcloud's application-default-credentials file, and SSH private key filenames), with `--dry-run` and quoted-prose passes preserved and a recorded-pass fixture for every named gap including aliases, functions, `eval`, and other shells.
 - OpenCode: `.opencode/lib` now materializes alongside `.opencode/plugins` in both link and copy mode, so the plugin bridge's `../lib/harness-bridge-internal.js` import resolves under `--copy` instead of failing `ERR_MODULE_NOT_FOUND` with every guard silently absent; `doctor_opencode.py` now checks the materialized plugin's resolved imports, not just its source; the copy-mode CI job runs the plugin export/import test.
 - `native_routing.py`: the "Bash is still granted" permission caveat now also renders for the `shell-readonly` class (previously `shell` only), with runtime-aware wording (Claude Code and OpenCode name Bash directly; Codex names `sandbox_mode` read-only).

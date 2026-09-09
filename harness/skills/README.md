@@ -26,7 +26,7 @@ metadata:
     - "explore options"
     - "think through alternatives"
   neighbor: review               # optional; a skill name or none; overrides the neighbor derived from WHEN NOT
-  requires: []                   # capability ids from capabilities.json and lane:<name> lanes from structure.json, if any
+  requires: []                   # capability ids from capabilities.json, lane:<name> lanes from structure.json, and fact:<key> host facts, if any
   distribution: native           # native | vendored | runtime-provided
   status: spec-only              # implemented | spec-only | stub
   license: MIT                   # MIT | Apache-2.0 | BSD-3-Clause | source-available | none

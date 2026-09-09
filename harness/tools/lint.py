@@ -522,6 +522,8 @@ def is_kernel_file(relative: str) -> bool:
         return False
     if relative in GENERATED_UNTRACKED or relative.startswith("harness/.selected/"):
         return False
+    if relative == ADOPTED_FILES_REGISTRY:
+        return False
     if relative.startswith("harness/skills/"):
         return relative in {"harness/skills/README.md", "harness/skills/RESOLVER.md"}
     if re.match(r"^harness/adapters/[a-z0-9-]+/agents/", relative):
@@ -938,6 +940,19 @@ def _resolve_ref(ref: str, root_schema: dict) -> dict:
     return node
 
 
+
+def _ecma_pattern(pattern):
+    """A JSON Schema pattern with the end-anchor semantics of the ECMAScript regex dialect JSON Schema uses.
+
+    In that dialect an unescaped trailing `$` matches only at the end of the
+    string; Python's `$` also matches before a trailing newline. `\\Z` is
+    Python's end-of-string-only anchor, so a trailing unescaped `$` becomes
+    `\\Z`. Unanchored patterns are untouched, as JSON Schema leaves them.
+    """
+    if pattern.endswith("$") and not pattern.endswith("\\$"):
+        return pattern[:-1] + "\\Z"
+    return pattern
+
 def validate_schema(instance, schema: dict, root_schema: dict | None = None, path: str = "$") -> list[str]:
     """Draft-07 subset: type, properties, required, additionalProperties, propertyNames,
     items, minItems, enum, const, pattern, not, anyOf, allOf, local $ref."""
@@ -953,7 +968,7 @@ def validate_schema(instance, schema: dict, root_schema: dict | None = None, pat
         errors.append(f"{path}: {instance!r} not in enum")
     if "const" in schema and instance != schema["const"]:
         errors.append(f"{path}: {instance!r} != const {schema['const']!r}")
-    if "pattern" in schema and isinstance(instance, str) and re.search(schema["pattern"], instance) is None:
+    if "pattern" in schema and isinstance(instance, str) and re.search(_ecma_pattern(schema["pattern"]), instance) is None:
         errors.append(f"{path}: {instance!r} does not match {schema['pattern']!r}")
     if "not" in schema and not validate_schema(instance, schema["not"], root_schema, path):
         errors.append(f"{path}: matches a forbidden 'not' schema")

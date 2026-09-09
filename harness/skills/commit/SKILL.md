@@ -32,25 +32,24 @@ One logical change per commit, staged deliberately, verified before staging, and
 
 ## Steps
 
-1. **Verify, before staging anything.** Run this before `git add` touches a single path.
-   - `host.profile: solo` -> run the close-the-loop checklist (`harness/rules/close-the-loop.md`) and the doctor's prove-before-done ladder (`harness/skills/doctor/SKILL.md`, "Mode: prove before done") as they already apply to the change.
+1. **Review what is being committed.** Run `git status` and `git diff`. Other sessions or tools may share the working tree, so read the whole status, not just the files you remember touching. Stage explicit paths only; never `git add -A` or `git add .` when unrelated changes are present. Changes you do not recognize stay unstaged, and the concurrent activity is noted in the commit body. If the diff touches the verify command's own definition, `package.json`'s scripts, a Makefile, or the harness hooks, read those changes before running anything.
+
+2. **Verify, before staging anything.** Run this after the review above and before `git add` touches a single path.
+   - `host.profile: solo` -> run the doctor's prove-before-done ladder (`harness/skills/doctor/SKILL.md`, "Mode: prove before done") as it already applies to the change.
    - `host.profile: team` -> discover and run the host's own verification first, in this order, first hit wins, and state on the record which source was used and why:
      1. `host.verify_command` in `harness/registry/structure.json`, when it is not `null`. It must match the registry's command shape (`npm run`, `pnpm run`, `yarn`, or `make`, plus a target); anything else is refused with the reason and never run.
      2. `package.json`'s `scripts.verify`, run as `npm run verify`.
      3. A `Makefile` target literally named `verify`, run as `make verify`.
      4. `python harness/tools/lint.py --strict`, when none of the above exist. Say plainly that verification fell to this default; never report a host verification that did not actually run, and never invent a command not found in the host's own files.
-     Then run the close-the-loop checklist as well.
-   In both profiles the checklist writes decisions taken this session to the decisions lane and cross-session learnings to the knowledge lane, both resolved through `harness/registry/structure.json` at run time; when a lane is `null` that step is skipped and reported as skipped in your summary, never improvised into a folder. No orphan TODOs.
+   Then, in both profiles, run the close-the-loop checklist's (`harness/rules/close-the-loop.md`) decisions and knowledge lane steps only: decisions taken this session go to the decisions lane, cross-session learnings to the knowledge lane, both resolved through `harness/registry/structure.json` at run time; when a lane is `null` that step is skipped and reported as skipped in your summary, never improvised into a folder. No orphan TODOs. The checklist's own "commit or park" step is fulfilled by this skill and is not re-entered.
    The dangerous-operations guard still applies to whichever command runs.
-
-2. **Review what is being committed.** Run `git status` and `git diff`. Other sessions or tools may share the working tree, so read the whole status, not just the files you remember touching. Stage explicit paths only; never `git add -A` or `git add .` when unrelated changes are present. Changes you do not recognize stay unstaged, and the concurrent activity is noted in the commit body.
 
 3. **Branch discipline, from `git.mode`.**
    - `main-only` -> commit on the repository's default branch; never switch branches or create one. Run `git branch --show-current` immediately before committing: if the current branch is not the default branch, stop and surface it (another session switched it, or a stray branch exists) rather than committing anywhere or creating a worktree to route around it.
    - `branches` -> commit on a task branch only; never commit directly on the default branch. Run `git branch --show-current` immediately before committing: if the current branch is the default branch, refuse and state the branch-creation command for the task at hand (`git checkout -b <task-branch>` cut from the default branch) instead of committing.
    Do not hardcode a branch name; the default branch is whatever the repository declares.
 
-4. **Write the message.** Subject `type(scope): message`, imperative mood, at most 50 characters. Types: `feat` | `fix` | `docs` | `refactor` | `chore` | `test`. Body only when the diff does not explain the why; wrap body lines at 72 characters, in the host's own conventional-commit style where one is evident from recent history. Always include a `Co-Authored-By` footer for agent-assisted work. Include a `Signed-off-by` footer only when the host's own `CONTRIBUTING.md` (never the harness's own `CONTRIBUTING.harness.md`) mentions `Signed-off-by`, `DCO`, or `sign-off`, case-insensitive; otherwise omit it. Never include a session link or session URL.
+4. **Write the message.** Subject `type(scope): message`, imperative mood, at most 50 characters. Types: `feat` | `fix` | `docs` | `refactor` | `chore` | `test`. Body only when the diff does not explain the why; wrap body lines at 72 characters, in the host's own conventional-commit style where one is evident from recent history. Always include a `Co-Authored-By` footer for agent-assisted work. Include a `Signed-off-by` footer only when the host's own `CONTRIBUTING.md` (never the harness's own `CONTRIBUTING.harness.md`) affirmatively states that commits carry a DCO sign-off or a `Signed-off-by` trailer. A sentence saying sign-off is not required, an absent file, or an ambiguous mention of `Signed-off-by`, `DCO`, or `sign-off` all mean no sign-off; when the text is ambiguous, say so in the summary and omit the trailer rather than guessing. Never include a session link or session URL.
 
 5. **Stage and commit atomically.** `git add <explicit paths>` immediately followed by `git commit` in the same step. Never leave changes staged across turns. The pre-commit scan in `.githooks/pre-commit` runs automatically; if it blocks, treat the finding as real until proven otherwise (a committed secret is a compromised secret). Fix the cause and re-stage; do not bypass the hook.
 

@@ -102,7 +102,7 @@ def closing_clause(structure):
     else:
         branch_part = "commit to the default branch or park it"
     profile = (structure.get("host") or {}).get("profile", "solo")
-    social_part = " and open a PR only when asked" if profile == "team" else ""
+    social_part = ", and open a PR only when asked" if profile == "team" else ""
     return branch_part + social_part
 
 

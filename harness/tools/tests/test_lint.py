@@ -215,6 +215,58 @@ def test_l4_requires_is_validated_on_every_skill(tmp_path):
     assert any("must name a capability id" in message for message in messages), messages
 
 
+def test_l4_requires_accepts_a_known_fact_and_rejects_an_unknown_one(tmp_path):
+    repo = _repo(tmp_path)
+    copy_files(repo, ("harness/registry/capabilities.json",))
+    _skill(repo, "alpha", requires='"fact:host.profile"')
+    assert _ids(_only(repo, "L4"), "ERROR") == []
+    _skill(repo, "beta", requires='"fact:no-such-fact"')
+    messages = [item.message for item in _only(repo, "L4") if item.level == "ERROR"]
+    assert any("unknown fact 'fact:no-such-fact'" in message for message in messages), messages
+
+
+def test_l4_body_mentioning_host_profile_must_declare_the_fact(tmp_path):
+    repo = _repo(tmp_path)
+    copy_files(repo, ("harness/registry/capabilities.json",))
+    _write(
+        repo,
+        "harness/skills/alpha/SKILL.md",
+        "---\n"
+        "name: alpha\n"
+        "description: Does alpha. WHEN: asked for alpha.\n"
+        "metadata:\n"
+        "  packs: [core]\n"
+        '  triggers: ["run alpha"]\n'
+        "  distribution: native\n"
+        "  status: spec-only\n"
+        "  license: MIT\n"
+        "---\n"
+        "\n"
+        "Reads host.profile from structure.json before it runs.\n",
+    )
+    messages = [item.message for item in _only(repo, "L4") if item.level == "ERROR"]
+    assert any("lacks 'fact:host.profile'" in message for message in messages), messages
+
+    _write(
+        repo,
+        "harness/skills/alpha/SKILL.md",
+        "---\n"
+        "name: alpha\n"
+        "description: Does alpha. WHEN: asked for alpha.\n"
+        "metadata:\n"
+        "  packs: [core]\n"
+        '  triggers: ["run alpha"]\n'
+        '  requires: ["fact:host.profile"]\n'
+        "  distribution: native\n"
+        "  status: spec-only\n"
+        "  license: MIT\n"
+        "---\n"
+        "\n"
+        "Reads host.profile from structure.json before it runs.\n",
+    )
+    assert _ids(_only(repo, "L4"), "ERROR") == []
+
+
 def test_l4_absent_skills_tree_is_skipped_and_zero_skills_is_a_note(tmp_path):
     repo = _repo(tmp_path)
     assert _ids(_only(repo, "L4"), "SKIPPED") == ["L4"]
@@ -753,6 +805,69 @@ def test_l18_parses_nul_delimited_records_including_a_non_ascii_name(tmp_path):
     assert other not in errored
 
 
+# L19 -------------------------------------------------------------------------
+
+def test_l19_host_profile_absent_is_a_ship_gate_note(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "harness/registry/structure.json", json.dumps({"host": {"adopted": False}}))
+    default = _only(repo, "L19")
+    assert [item.level for item in default] == ["INFO"]
+    assert "set it with python harness/tools/init.py --profile" in default[0].message
+    strict = _only(repo, "L19", strict=True)
+    assert [item.level for item in strict] == ["WARN"]
+    release = _only(repo, "L19", release=True)
+    assert [item.level for item in release] == ["ERROR"]
+
+
+def test_l19_host_profile_missing_structure_json_is_also_absent(tmp_path):
+    repo = _repo(tmp_path)
+    assert [item.level for item in _only(repo, "L19", release=True)] == ["ERROR"]
+
+
+def test_l19_host_profile_invalid_values_are_errors(tmp_path):
+    repo = _repo(tmp_path)
+    for bad_profile in ("Team", "", None, 3, ["team"]):
+        _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": bad_profile}}))
+        findings = _only(repo, "L19")
+        assert "L19" in _ids(findings, "ERROR"), (bad_profile, [item.render() for item in findings])
+        assert any("host.profile" in item.message for item in findings)
+
+
+def test_l19_host_profile_solo_and_team_are_accepted(tmp_path):
+    repo = _repo(tmp_path)
+    for good_profile in ("solo", "team"):
+        _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": good_profile}}))
+        assert _ids(_only(repo, "L19"), "ERROR") == []
+
+
+def test_l19_verify_command_shape(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo", "verify_command": "rm -rf x"}}))
+    findings = _only(repo, "L19")
+    assert "L19" in _ids(findings, "ERROR")
+    assert any("verify_command" in item.message for item in findings)
+
+    _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo", "verify_command": "npm run verify"}}))
+    assert _ids(_only(repo, "L19"), "ERROR") == []
+
+    _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo", "verify_command": None}}))
+    assert _ids(_only(repo, "L19"), "ERROR") == []
+
+
+def test_l19_malformed_structure_json_is_skipped(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "harness/registry/structure.json", "{not json")
+    assert _ids(_only(repo, "L19"), "SKIPPED") == ["L19"]
+
+
+def test_cli_only_l19_runs(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "harness/registry/structure.json", json.dumps({"host": {"profile": "solo"}}))
+    code, out = _cli(["--root", str(repo), "--only", "L19"])
+    assert code == 0
+    assert "L19" not in out or "0 error(s)" in out
+
+
 # Adopted-host scope -----------------------------------------------------------
 
 def test_adopted_host_default_scope_excludes_host_file_and_includes_template_file(tmp_path):
@@ -832,7 +947,7 @@ def test_cli_release_flag_promotes_ship_gate_conditions(tmp_path):
 
 def test_soft_checks_are_the_declared_set():
     assert lint.SOFT_CHECKS == {"L6", "L9", "L11", "L13", "L14"}
-    assert [check_id for check_id, _, _ in lint.CHECKS] == [f"L{n}" for n in range(1, 19)]
+    assert [check_id for check_id, _, _ in lint.CHECKS] == [f"L{n}" for n in range(1, 20)]
 
 
 def test_schema_validator_rejects_a_comment_key(tmp_path):

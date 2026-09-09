@@ -110,8 +110,15 @@ class TestApply(TempDirCase):
         assert code == 0
         assert "dry run" in out and "nothing written" in out
         assert "post-adoption checklist:" in out
+        assert "host profile: team (adopted default)" in out
         assert walk_files(target) == before
         assert git(target, "status", "--porcelain").stdout.strip() == ""
+
+    def test_checklist_names_the_solo_switch_command(self):
+        target = self.seed_target("switch")
+        code, out, _ = run([str(target)])
+        assert code == 0, out
+        assert "python harness/tools/init.py --profile solo --yes" in out
 
     def test_apply_never_overwrites_and_detects_shape(self):
         target = self.seed_target("apply", codeowners=True)
@@ -129,6 +136,9 @@ class TestApply(TempDirCase):
         assert doc["git"] == {"mode": "branches"}
         assert doc["lanes"] == {"identity": None, "knowledge": None, "decisions": ["docs/decisions"], "records": None, "docs": ["docs"]}
         assert doc["brain"]["local_tracked"] is False
+        assert doc["host"]["profile"] == "team"
+        assert doc["host"]["verify_command"] is None
+        assert "host profile: team (adopted default)" in out
         registry = adopt._registry_module()
         if registry is not None:
             assert registry.validate_structure(doc) == []
@@ -144,6 +154,20 @@ class TestApply(TempDirCase):
         structure, reason, _ = adopt.build_structure(target)
         assert structure["git"]["mode"] == "main-only", reason
         assert structure["lanes"]["docs"] == ["docs"] and structure["lanes"]["decisions"] is None
+        assert structure["host"]["profile"] == "team"
+        assert structure["host"]["verify_command"] is None
+
+    def test_apply_writes_team_profile_on_main_only_target(self):
+        target = init_repo(self.tmp / "main-only-apply")
+        write(target / "docs" / "index.md", "x\n")
+        commit_all(target, "seed")
+        code, out, _ = run([str(target), "-y"])
+        assert code == 0, out
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["git"] == {"mode": "main-only"}
+        assert doc["host"]["profile"] == "team"
+        assert doc["host"]["verify_command"] is None
+        assert "host profile: team (adopted default)" in out
 
     def test_d1_pre_existing_agents_md_sets_contract_host_owned(self):
         target = init_repo(self.tmp / "hostowned")
@@ -165,6 +189,8 @@ class TestApply(TempDirCase):
         assert "courses" in doc["host"]["roots"]
         assert "harness" not in doc["host"]["roots"]
         assert "harness/rules/git-workflow.md" in doc["host"]["harness_owned"]
+        assert doc["host"]["profile"] == "team"
+        assert doc["host"]["verify_command"] is None
         registry = adopt._registry_module()
         if registry is not None:
             assert registry.validate_structure(doc) == []
@@ -193,7 +219,13 @@ class TestApply(TempDirCase):
         assert "contract: rendered" in out
         doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
         assert doc["contract"] == {"mode": "rendered"}
-        assert doc["host"] == {"adopted": False, "roots": [], "harness_owned": []}
+        assert doc["host"] == {
+            "adopted": False,
+            "roots": [],
+            "harness_owned": [],
+            "profile": "team",
+            "verify_command": None,
+        }
 
     def test_branches_with_two_remote_branches(self):
         remote = self.tmp / "remote.git"
@@ -212,6 +244,8 @@ class TestApply(TempDirCase):
         assert "remote branches" in reason
         assert structure["lanes"]["decisions"] == ["decisions"]
         assert "brain.local_path" in note
+        assert structure["host"]["profile"] == "team"
+        assert structure["host"]["verify_command"] is None
 
     def test_adopted_files_dry_run_prints_count_and_writes_nothing(self):
         target = self.seed_target("adopted-dry")

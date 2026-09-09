@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Configure the host shape: lanes, the memory module, or adoption.
+"""Configure the host shape: lanes, the memory module, adoption, or the profile.
 
 Usage:
     python harness/tools/init.py                 print the current host shape
@@ -8,6 +8,23 @@ Usage:
                                                  scaffold the reference memory module
     python harness/tools/init.py --adopt <repo> [adopt.py flags]
                                                  delegate to adopt.py
+    python harness/tools/init.py --profile [solo|team] [--yes]
+                                                 configure host.profile, git.mode,
+                                                 the local memory lane, and (optionally)
+                                                 the five lanes, in one interview
+
+--profile asks four questions in order: who works in the repository
+(host.profile), how work lands (git.mode), where personal notes live
+(brain.local_path; brain.local_tracked always stays false here), and whether
+to configure the five lanes now (chains into the unchanged --lanes prompt) or
+keep the profile's lane preset. A value ("solo" or "team") answers the first
+question up front; --yes answers every question with that profile's defaults
+and asks nothing. Bare `--profile` with no value on a non-interactive stdin
+exits 2 naming the `--profile <value> --yes` form. contract.mode is never
+asked: it is derived by the same test adopt.py uses (root AGENTS.md present
+and not written by the harness itself means host-owned, otherwise rendered).
+Nothing is materialized: the run prints the next two commands
+(harness/tools/selector.py --list, then bootstrap).
 
 --lanes shows each lane's current value and accepts a comma- or
 space-separated list of repository-relative paths, the literal "none" for an
@@ -60,6 +77,13 @@ TRACK_CONSEQUENCE = (
     "with read access, and reversing it later requires a history rewrite."
 )
 
+HOST_PROFILES = ("solo", "team")
+PROFILE_GIT_MODE = {"solo": "main-only", "team": "branches"}
+# The shared-only root every team lane entry must keep; anything else in the
+# shipped identity/knowledge lists is the local half, which team drops (Q3's
+# team default moves personal notes outside the repository).
+TEAM_LANE_SHARED_ROOT = ("brain", "shared")
+
 
 # --------------------------------------------------------------------------
 # host facts
@@ -80,6 +104,87 @@ def _registry_module():
     except Exception:  # noqa: BLE001 - a broken registry module means "absent"
         return None
     return module
+
+
+def _adopt_module():
+    """Load adopt.py from its file without touching sys.path, so its own
+    derive_host_name and EXTERNAL_LOCAL_TEMPLATE are reused, never copied."""
+    path = TOOLS_DIR / "adopt.py"
+    if not path.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("adopt", path)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:  # noqa: BLE001 - a broken adopt module means "absent"
+        return None
+    return module
+
+
+def _contract_files_module():
+    """Load harness/bootstrap/contract_files.py without touching sys.path."""
+    path = ROOT / "harness" / "bootstrap" / "contract_files.py"
+    if not path.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("contract_files", path)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:  # noqa: BLE001 - a broken contract module means "absent"
+        return None
+    return module
+
+
+def derive_contract_mode(root: Path) -> str:
+    """The same test adopt.py's own contract-mode detection applies,
+    generalized for a host that already has a materialized AGENTS.md:
+    rendered when no root AGENTS.md exists that the harness did not write
+    (absent, or byte-identical to the harness's own render of
+    harness/CONTRACT.md + harness/CONTRACT.host.md); host-owned otherwise."""
+    agents = root / "AGENTS.md"
+    if not agents.is_file():
+        return "rendered"
+    contract = _contract_files_module()
+    if contract is not None:
+        try:
+            expected = contract.render(root)
+            actual = agents.read_bytes()
+        except (OSError, ValueError, UnicodeDecodeError):
+            pass
+        else:
+            if actual == expected:
+                return "rendered"
+    return "host-owned"
+
+
+def _external_local_path(root: Path) -> tuple:
+    """(path, name-source) for the external local lane; delegates to
+    adopt.py's derive_host_name and EXTERNAL_LOCAL_TEMPLATE by import."""
+    adopt = _adopt_module()
+    if adopt is None:
+        return "~/.harness-local/host", "adopt.py unavailable; falling back to 'host'"
+    name, source = adopt.derive_host_name(root)
+    return adopt.EXTERNAL_LOCAL_TEMPLATE.format(name=name), source
+
+
+def _profile_lane_preset(profile: str) -> dict:
+    """The lane preset for one profile: the shipped defaults for solo; for
+    team, the same defaults with each identity/knowledge entry outside
+    TEAM_LANE_SHARED_ROOT dropped (decisions, records, and docs are the
+    shipped defaults verbatim in both profiles)."""
+    shipped = _default_structure()["lanes"]
+    preset = {name: (list(shipped[name]) if isinstance(shipped.get(name), list) else shipped.get(name)) for name in LANE_NAMES}
+    if profile != "team":
+        return preset
+    for name in ("identity", "knowledge"):
+        value = preset.get(name) or []
+        kept = [item for item in value if tuple(item.split("/")[: len(TEAM_LANE_SHARED_ROOT)]) == TEAM_LANE_SHARED_ROOT]
+        preset[name] = kept or None
+    return preset
 
 
 def _default_structure() -> dict:
@@ -223,6 +328,150 @@ def run_lanes(root: Path, ask=input, out=None) -> int:
 
 
 # --------------------------------------------------------------------------
+# profile
+# --------------------------------------------------------------------------
+
+
+def _ask_numbered(ask, prompt: str, default: str, out) -> str:
+    """Ask a 1/2 question; blank keeps default; a rejected answer repeats."""
+    while True:
+        answer = ask(prompt).strip()
+        if not answer:
+            return default
+        if answer in ("1", "2"):
+            return answer
+        print("  rejected: answer 1 or 2, or press Enter for the default", file=out)
+
+
+def _ask_yes_no(ask, prompt: str, default_yes: bool, out) -> bool:
+    """Ask a Y/n question; blank keeps default; a rejected answer repeats."""
+    while True:
+        answer = ask(prompt).strip().lower()
+        if not answer:
+            return default_yes
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("n", "no"):
+            return False
+        print("  rejected: answer y or n, or press Enter for the default", file=out)
+
+
+def _solo_local_path() -> str:
+    """The shipped default local lane path, read from structure.default.json."""
+    return _default_structure()["brain"]["local_path"]
+
+
+def _profile_defaults(root: Path, profile: str) -> dict:
+    """The full answer set for one profile with no questions asked."""
+    if profile == "solo":
+        brain_local_path = _solo_local_path()
+    else:
+        brain_local_path, _source = _external_local_path(root)
+    return {
+        "profile": profile,
+        "git_mode": PROFILE_GIT_MODE[profile],
+        "brain_local_path": brain_local_path,
+        "lanes": _profile_lane_preset(profile),
+    }
+
+
+def run_profile_interview(root: Path, structure: dict, profile, ask, out) -> dict:
+    """Ask the profile questions (Q1 only when profile is not already known)
+    and return the new answer set. Raises EOFError or KeyboardInterrupt on an
+    early end; the caller writes nothing in that case."""
+    if profile is None:
+        answer = _ask_numbered(ask, "Who works in this repository? 1) just me 2) a team [1]: ", "1", out)
+        profile = "team" if answer == "2" else "solo"
+
+    git_default = "1" if profile == "solo" else "2"
+    answer = _ask_numbered(
+        ask,
+        "How does work land? 1) straight onto the default branch 2) on task branches, "
+        "reviewed before merge [solo 1 / team 2]: ",
+        git_default,
+        out,
+    )
+    git_mode = "main-only" if answer == "1" else "branches"
+
+    external_path, _source = _external_local_path(root)
+    solo_local_path = _solo_local_path()
+    local_default = "1" if profile == "solo" else "2"
+    answer = _ask_numbered(
+        ask,
+        f"Where do personal notes live? 1) inside the repository, untracked ({solo_local_path}) "
+        f"2) outside it ({external_path}) [solo 1 / team 2]: ",
+        local_default,
+        out,
+    )
+    brain_local_path = solo_local_path if answer == "1" else external_path
+
+    if _ask_yes_no(ask, "Set the five memory lanes now? [Y/n]: ", True, out):
+        lanes = configure_lanes(structure, ask, out)
+    else:
+        lanes = _profile_lane_preset(profile)
+
+    return {"profile": profile, "git_mode": git_mode, "brain_local_path": brain_local_path, "lanes": lanes}
+
+
+def run_profile(root: Path, profile, yes: bool, ask=input, out=None) -> int:
+    out = out or sys.stdout
+    try:
+        structure = load_structure(root)
+    except Exception as exc:  # noqa: BLE001
+        print(f"init: structure.json unreadable: {exc}", file=sys.stderr)
+        return 1
+
+    if yes:
+        answers = _profile_defaults(root, profile or "solo")
+    else:
+        try:
+            answers = run_profile_interview(root, structure, profile, ask, out)
+        except (EOFError, KeyboardInterrupt):
+            print("init: prompt ended early; nothing written", file=sys.stderr)
+            return 1
+
+    new_structure = dict(structure)
+    new_structure["host"] = dict(structure.get("host") or {})
+    new_structure["host"]["profile"] = answers["profile"]
+    new_structure["git"] = {"mode": answers["git_mode"]}
+    new_structure["brain"] = {"local_tracked": False, "local_path": answers["brain_local_path"]}
+    new_structure["lanes"] = {lane: answers["lanes"].get(lane) for lane in LANE_NAMES}
+    new_structure["contract"] = {"mode": derive_contract_mode(root)}
+
+    errors = structure_errors(new_structure)
+    if errors:
+        print("init: refused to write an invalid structure.json:", file=sys.stderr)
+        for error in errors:
+            print(f"  {error}", file=sys.stderr)
+        return 1
+
+    write_structure(root, new_structure)
+    print(f"wrote {structure_path(root).relative_to(root).as_posix()}", file=out)
+    print(f"  host.profile: {answers['profile']}", file=out)
+    print(f"  git.mode: {answers['git_mode']}", file=out)
+    print(f"  brain.local_path: {answers['brain_local_path']}", file=out)
+    for lane in LANE_NAMES:
+        value = new_structure["lanes"][lane]
+        print(f"  lanes.{lane}: {'none' if value is None else ', '.join(value)}", file=out)
+    print(f"  contract.mode: {new_structure['contract']['mode']}", file=out)
+
+    try:
+        normalize_lane_path(answers["brain_local_path"])
+    except ValueError:
+        print(f"  no .gitignore entry needed: {answers['brain_local_path']} is outside the repository", file=out)
+    else:
+        ensure_ignored(root, answers["brain_local_path"], out)
+
+    print("next: python harness/tools/selector.py --list", file=out)
+    print(
+        "then: bash harness/bootstrap/bootstrap.sh (POSIX) or "
+        "powershell -NoProfile -ExecutionPolicy Bypass -File harness/bootstrap/bootstrap.ps1 (Windows)",
+        file=out,
+    )
+    return 0
+
+
+# --------------------------------------------------------------------------
 # brain
 # --------------------------------------------------------------------------
 
@@ -343,6 +592,7 @@ def print_shape(root: Path, out=None) -> int:
         return 1
     path = structure_path(root)
     print(f"host shape ({path.relative_to(root).as_posix()}{'' if path.is_file() else ', defaults; file absent'})", file=out)
+    print(f"host profile: {_host_profile_status(root, structure)}", file=out)
     print("lanes:", file=out)
     for lane in LANE_NAMES:
         value = (structure.get("lanes") or {}).get(lane)
@@ -359,7 +609,24 @@ def print_shape(root: Path, out=None) -> int:
     print("  python harness/tools/init.py --lanes", file=out)
     print("  python harness/tools/init.py --brain [--track-local]", file=out)
     print("  python harness/tools/init.py --adopt <repo> [-y]", file=out)
+    print("  python harness/tools/init.py --profile [solo|team] [--yes]", file=out)
     return 0
+
+
+def _host_profile_status(root: Path, structure: dict) -> str:
+    """The status line's value: the merged profile, or an absence note when
+    the on-disk structure.json (if any) carries no host.profile key."""
+    profile = (structure.get("host") or {}).get("profile") or "solo"
+    path = structure_path(root)
+    if not path.is_file():
+        return "solo (absent; set it with python harness/tools/init.py --profile)"
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raw = {}
+    if not isinstance(raw, dict) or "profile" not in (raw.get("host") or {}):
+        return "solo (absent; set it with python harness/tools/init.py --profile)"
+    return str(profile)
 
 
 def run_adopt(target: str, extra: list) -> int:
@@ -382,13 +649,26 @@ def main(argv=None) -> int:
     mode.add_argument("--lanes", action="store_true", help="configure the five lanes (prompted)")
     mode.add_argument("--brain", action="store_true", help="scaffold the reference memory module")
     mode.add_argument("--adopt", metavar="REPO", help="install the harness into an existing repository via adopt.py")
+    mode.add_argument(
+        "--profile",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="{solo,team}",
+        help="configure host.profile, git.mode, the local lane, and (optionally) the lanes; bare flag asks interactively",
+    )
     parser.add_argument("--track-local", action="store_true", help="with --brain: track the local lane in git (prints the consequence)")
+    parser.add_argument("--yes", action="store_true", help="answer every question with defaults; only meaningful with --profile or --adopt (long-form only)")
     parser.add_argument("--root", default=str(ROOT), help="repository root (default: this repository)")
     args, extra = parser.parse_known_args(argv)
 
     if args.track_local and not args.brain:
         parser.print_usage(sys.stderr)
         print("init: --track-local is only meaningful with --brain", file=sys.stderr)
+        return 2
+    if args.yes and args.profile is None and not args.adopt:
+        parser.print_usage(sys.stderr)
+        print("init: --yes is only meaningful with --profile or --adopt", file=sys.stderr)
         return 2
     if extra and not args.adopt:
         parser.print_usage(sys.stderr)
@@ -397,7 +677,29 @@ def main(argv=None) -> int:
 
     root = Path(args.root).resolve()
     if args.adopt:
-        return run_adopt(args.adopt, extra)
+        forwarded = list(extra)
+        if args.yes:
+            # F10 guard: --yes is a global flag on this parser, so
+            # parse_known_args already stripped it out of `extra` before it
+            # could reach adopt.py, and adopt.py itself has no --yes flag
+            # (only -y/--apply). Without this, `init.py --adopt <target>
+            # --yes` would silently dry-run. Translate to the flag adopt.py
+            # actually understands so it applies.
+            forwarded = forwarded + ["--apply"]
+        return run_adopt(args.adopt, forwarded)
+    if args.profile is not None:
+        value = args.profile or None
+        if value is not None and value not in HOST_PROFILES:
+            parser.print_usage(sys.stderr)
+            print(f"init: --profile must be 'solo' or 'team', not {value!r}", file=sys.stderr)
+            return 2
+        if value is None and not args.yes and not sys.stdin.isatty():
+            print(
+                "init: --profile needs a value on a non-interactive session; use `--profile <value> --yes`",
+                file=sys.stderr,
+            )
+            return 2
+        return run_profile(root, value, args.yes)
     if args.lanes:
         return run_lanes(root)
     if args.brain:

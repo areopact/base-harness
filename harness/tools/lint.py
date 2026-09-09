@@ -28,8 +28,10 @@ Checks:
     L2  byte-budget            AGENTS.md <= 32768 bytes; identity lane files within the smallest tier-1 context limit
     L3  ascii-and-eol          no em/en dash, smart quote, BOM, CR, trailing whitespace, or tab-indented .py
     L4  skill-frontmatter      required keys and closed vocabularies in every SKILL.md; packs never mix licenses;
-                               every metadata.requires entry is a capabilities.json id or lane:<structure.json lane>;
-                               zero skills is a WARN under --strict, an ERROR under --release (ship-gate-only)
+                               every metadata.requires entry is a capabilities.json id, lane:<structure.json lane>,
+                               or fact:<closed fact key>; a SKILL.md body that says "host.profile" must declare
+                               fact:host.profile in metadata.requires; zero skills is a WARN under --strict, an
+                               ERROR under --release (ship-gate-only)
     L5  resolver               resolver_lint passes; stub targets warn; targets outside the selection are notes
     L6  kernel-manifest (S)    every kernel file listed, every listed path exists, state/source consistent
     L7  registries             harness_registry.validate_all() returns no errors
@@ -48,6 +50,10 @@ Checks:
                                Markdown outside test/fixture trees
     L18 executable-bit         every tracked *.sh file and .githooks/pre-commit carries git mode
                                100755, so core.hooksPath is not silently ignored on POSIX
+    L19 host-profile           the raw on-disk harness/registry/structure.json (never the merged
+                               object): host.profile absent is a ship-gate note, present but outside
+                               HOST_PROFILES is an ERROR, host.verify_command present but neither null
+                               nor a package-manager/make command is an ERROR
 """
 
 from __future__ import annotations
@@ -83,8 +89,20 @@ TOOLS_DIR = Path(__file__).resolve().parent
 ERROR, WARN, SKIPPED, INFO = "ERROR", "WARN", "SKIPPED", "INFO"
 SOFT_CHECKS = {"L6", "L9", "L11", "L13", "L14"}
 # A metadata.requires entry with this prefix names a structure.json lane the
-# skill reads or writes; every other entry names a capabilities.json row.
+# skill reads or writes; a fact:<key> entry names a closed-vocabulary host
+# fact the skill's body relies on; every other entry names a capabilities.json
+# row.
 LANE_PREFIX = "lane:"
+FACT_PREFIX = "fact:"
+FACT_KEYS = {
+    "host.profile",
+    "git.mode",
+    "contract.mode",
+    "brain.local_tracked",
+    "delegation.mandatory",
+    "selection_scope",
+}
+HOST_PROFILE_FACT = f"{FACT_PREFIX}host.profile"
 CONTRACT_BUDGET = 32768
 EOL_SUFFIXES = {".md", ".py", ".sh", ".ps1", ".json", ".toml"}
 EOL_ROOTS = ("harness/", "docs/", "brain/")
@@ -394,6 +412,24 @@ def check_ascii_eol(ctx: Context) -> list[Finding]:
 # L4 skill frontmatter
 # ---------------------------------------------------------------------------
 
+def _skill_body_text(root: Path, skill_relative: str) -> str:
+    """The SKILL.md body below its frontmatter block, or the whole file when
+    no closing '---' is found. Mirrors gen_manifest.parse_frontmatter's
+    closing-line detection without importing it, so a malformed frontmatter
+    block never hides the body from this scan."""
+    try:
+        text = (root / skill_relative / "SKILL.md").read_text(encoding="utf-8-sig")
+    except OSError:
+        return ""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return text
+    for index, line in enumerate(lines[1:], 1):
+        if line.strip() == "---":
+            return "\n".join(lines[index + 1:])
+    return text
+
+
 def check_skill_frontmatter(ctx: Context) -> list[Finding]:
     import gen_manifest
 
@@ -417,7 +453,10 @@ def check_skill_frontmatter(ctx: Context) -> list[Finding]:
         path = f"{skill.path}/SKILL.md"
         for problem in skill.problems:
             findings.append(Finding("L4", ERROR, path, None, problem))
-        capability_ids = [entry for entry in skill.requires if not entry.startswith(LANE_PREFIX)]
+        capability_ids = [
+            entry for entry in skill.requires
+            if not entry.startswith(LANE_PREFIX) and not entry.startswith(FACT_PREFIX)
+        ]
         if skill.distribution == "runtime-provided" and not capability_ids:
             findings.append(Finding("L4", ERROR, path, None, "runtime-provided skill must name a capability id in metadata.requires"))
         for entry in skill.requires:
@@ -427,8 +466,19 @@ def check_skill_frontmatter(ctx: Context) -> list[Finding]:
                         "L4", ERROR, path, None,
                         f"metadata.requires names unknown lane {entry!r} (structure.json lanes: {', '.join(sorted(lanes)) or 'none'})",
                     ))
+            elif entry.startswith(FACT_PREFIX):
+                if entry[len(FACT_PREFIX):] not in FACT_KEYS:
+                    findings.append(Finding(
+                        "L4", ERROR, path, None,
+                        f"metadata.requires names unknown fact {entry!r} (valid facts: {', '.join(sorted(FACT_KEYS))})",
+                    ))
             elif entry not in capabilities:
                 findings.append(Finding("L4", ERROR, path, None, f"metadata.requires names unknown capability {entry!r}"))
+        if HOST_PROFILE_FACT not in skill.requires and "host.profile" in _skill_body_text(ctx.root, skill.path):
+            findings.append(Finding(
+                "L4", ERROR, path, None,
+                f"body mentions host.profile but metadata.requires lacks {HOST_PROFILE_FACT!r}",
+            ))
         for pack in skill.packs:
             licenses_by_pack.setdefault(pack, {}).setdefault(skill.license or "unset", []).append(skill.name)
     for pack, by_license in sorted(licenses_by_pack.items()):
@@ -1140,6 +1190,60 @@ def check_executable_bit(ctx: Context) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# L19 host profile
+# ---------------------------------------------------------------------------
+
+STRUCTURE_JSON = Path("harness/registry/structure.json")
+HOST_PROFILE_ABSENT_MESSAGE = "host.profile absent; defaulting to solo; set it with python harness/tools/init.py --profile"
+VERIFY_COMMAND_SHAPE = "null or one of: 'npm run <script>', 'pnpm run <script>', 'yarn <script>', 'make <target>'"
+
+
+def _raw_structure_json(ctx: Context):
+    """The on-disk structure.json exactly as written, never merged with
+    harness_registry's defaults: L19 judges what the host actually wrote,
+    not what load_structure() fills in for an absent field. Returns {} for
+    a missing file (nothing written yet), or None when the file cannot be
+    read as a JSON object (L7 reports that failure in detail)."""
+    path = ctx.root / STRUCTURE_JSON
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def check_host_profile(ctx: Context) -> list[Finding]:
+    path = STRUCTURE_JSON.as_posix()
+    raw = _raw_structure_json(ctx)
+    if raw is None:
+        return [Finding("L19", SKIPPED, path, None, "structure.json unreadable or not an object; see L7")]
+    import harness_registry
+
+    host = raw.get("host")
+    host = host if isinstance(host, dict) else {}
+    findings: list[Finding] = []
+    if "profile" not in host:
+        findings.append(Finding("L19", ctx.ship_gate_level, path, None, HOST_PROFILE_ABSENT_MESSAGE))
+    elif host["profile"] not in harness_registry.HOST_PROFILES:
+        findings.append(Finding(
+            "L19", ERROR, path, None,
+            f"host.profile {host['profile']!r} not in {sorted(harness_registry.HOST_PROFILES)}",
+        ))
+    if "verify_command" in host:
+        verify_command = host["verify_command"]
+        if verify_command is not None and not (
+            isinstance(verify_command, str) and harness_registry.VERIFY_COMMAND_RE.fullmatch(verify_command)
+        ):
+            findings.append(Finding(
+                "L19", ERROR, path, None,
+                f"host.verify_command {verify_command!r} must be {VERIFY_COMMAND_SHAPE}",
+            ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # registry and entry point
 # ---------------------------------------------------------------------------
 
@@ -1162,6 +1266,7 @@ CHECKS: list[tuple[str, str, Callable[[Context], list[Finding]]]] = [
     ("L16", "security-fixtures", check_security_fixtures),
     ("L17", "no-placeholder-text", check_no_placeholders),
     ("L18", "executable-bit", check_executable_bit),
+    ("L19", "host-profile", check_host_profile),
 ]
 
 

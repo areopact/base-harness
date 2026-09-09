@@ -51,7 +51,9 @@ def validate_source(root: Path) -> tuple[int, list[str]]:
             errors.append(f"{rel}: metadata.packs is empty (a skill belongs to at least one pack)")
         if skill.license not in VALID_LICENSES:
             errors.append(f"{rel}: metadata.license {skill.license!r} is not one of {', '.join(VALID_LICENSES)}")
-        if skill.distribution == "runtime-provided" and not [entry for entry in skill.requires if not entry.startswith("lane:")]:
+        if skill.distribution == "runtime-provided" and not [
+            entry for entry in skill.requires if not (entry.startswith("lane:") or entry.startswith("fact:"))
+        ]:
             errors.append(f"{rel}: runtime-provided skills must name a capability id in metadata.requires")
         if skill.distribution == "vendored" and not skill.notice and skill.license != "MIT":
             errors.append(f"{rel}: vendored skills carry metadata.notice unless the license needs none")

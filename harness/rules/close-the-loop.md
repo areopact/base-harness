@@ -10,7 +10,7 @@ Work that ends without a closing pass leaves three kinds of debt. Context drifts
 
 1. **Verify.** The change was exercised end to end (test run, build, manual invocation). Evidence over assertion; if verification was skipped, say so explicitly. See [agent-discipline](agent-discipline.md).
 
-2. **Commit or park.** Work is committed with a conventional message per [git-workflow](git-workflow.md), or explicitly parked with a note on where it stands. No silent dirty trees.
+2. **Commit or park, on the branch and etiquette the host declares.** Work is committed with a conventional message per [git-workflow](git-workflow.md), or explicitly parked with a note on where it stands. No silent dirty trees. `git.mode` decides the branch: `main-only` commits to the default branch or parks the work; `branches` commits on a task branch, never the default branch. `host.profile` decides the social part on top of that: `team` opens a pull request only when asked, on top of whichever branch discipline `git.mode` set; `solo` adds nothing, since no pull request applies.
 
 3. **Docs lane: update the nearest context document.** If the session changed the state of something the docs lane describes (a status page, a plan, a current-priorities section), update the nearest such document: its current section and its updated date. If the docs lane is null, state that no context document exists to update.
 

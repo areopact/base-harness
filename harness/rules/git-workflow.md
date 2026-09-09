@@ -44,4 +44,4 @@ Format: `type(scope): message` (imperative, max 50 characters).
 
 Types: `feat` | `fix` | `docs` | `refactor` | `chore`
 
-Body lines wrap at 72 characters. Include a `Co-Authored-By` footer when an agent assisted.
+Body lines wrap at 72 characters. Include a `Co-Authored-By` footer when an agent assisted. Include a `Signed-off-by` footer only when the host's own `CONTRIBUTING.md` (never the harness's own `CONTRIBUTING.harness.md`) mentions `Signed-off-by`, `DCO`, or `sign-off`, case-insensitive; the host that requires sign-off is the one that gets to define it, and a repository that never asks for one gets no unrequested footer. Never include a session link or session URL in a commit message; that identifier belongs to the agent's own audit trail, not to a record the host's contributors will read.

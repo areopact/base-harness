@@ -88,7 +88,25 @@ def lane_of(path, lanes):
     return None
 
 
-def build_message(paths, lanes, root, today):
+def closing_clause(structure):
+    """The final clause's advice, composed from git.mode and host.profile.
+
+    Both reads use .get chains so an injected structure missing the host key,
+    or missing git.mode entirely, cannot raise; a missing host.profile reads
+    as solo, the shipped default.
+    """
+    structure = structure if isinstance(structure, dict) else {}
+    mode = (structure.get("git") or {}).get("mode")
+    if mode == "branches":
+        branch_part = "commit on a task branch (never the default branch)"
+    else:
+        branch_part = "commit to the default branch or park it"
+    profile = (structure.get("host") or {}).get("profile", "solo")
+    social_part = " and open a PR only when asked" if profile == "team" else ""
+    return branch_part + social_part
+
+
+def build_message(paths, lanes, root, today, structure=None):
     if not paths or not lanes:
         return None
     touched = {}
@@ -121,7 +139,7 @@ def build_message(paths, lanes, root, today):
     if stale:
         shown = ", ".join(stale[:3]) + (f" +{len(stale) - 3} more" if len(stale) > 3 else "")
         parts.append(f"{len(stale)} file(s) carry a stale updated: date ({shown})")
-    parts.append("verify the change ran, commit or park it, then see harness/rules/close-the-loop.md")
+    parts.append(f"verify the change ran, then {closing_clause(structure)}, then see harness/rules/close-the-loop.md")
     return "; ".join(parts) + "."
 
 
@@ -132,7 +150,7 @@ def decide(root=None, structure=None, today=None):
     lanes = lane_map(structure)
     if not lanes:
         return None
-    message = build_message(dirty_paths(base), lanes, base, today or date.today().isoformat())
+    message = build_message(dirty_paths(base), lanes, base, today or date.today().isoformat(), structure)
     if message is None:
         return None
     return json.dumps({"systemMessage": message})

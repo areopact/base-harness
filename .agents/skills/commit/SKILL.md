@@ -1,6 +1,6 @@
 ---
 name: commit
-description: "Create a conventional commit that respects the repository's declared git mode, stages explicit... WHEN: user invokes /commit, says \"commit this\"..."
+description: "Create a conventional commit that respects the repository's declared git mode and host profile... WHEN: user invokes /commit, says \"commit this\"..."
 ---
 
 # Codex adapter for `commit`

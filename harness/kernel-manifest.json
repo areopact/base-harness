@@ -2757,6 +2757,11 @@
       "source": "upstream-harness:harness/hooks/tests/run.sh"
     },
     {
+      "path": "harness/hooks/tests/test_close_the_loop.py",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/hooks/tests/test_dispatch.py",
       "state": "ported",
       "source": "upstream-harness:harness/hooks/tests/test_dispatch.py"

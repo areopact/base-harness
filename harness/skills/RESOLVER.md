@@ -59,10 +59,10 @@ Routes an intent to the skill that owns it. One row per trigger phrase; `Target 
 | "run the delegated workflow" | `workflow` | `review` | delegation | spec-only |
 | "run this as a managed multi-step job" | `workflow` | `review` | delegation | spec-only |
 | "resume the workflow run" | `workflow` | `review` | delegation | spec-only |
-| "commit this" | `commit` | none | maintain | spec-only |
-| "save my work" | `commit` | none | maintain | spec-only |
-| "make a commit" | `commit` | none | maintain | spec-only |
-| "stage and commit" | `commit` | none | maintain | spec-only |
+| "commit this" | `commit` | `doctor` | maintain | spec-only |
+| "save my work" | `commit` | `doctor` | maintain | spec-only |
+| "make a commit" | `commit` | `doctor` | maintain | spec-only |
+| "stage and commit" | `commit` | `doctor` | maintain | spec-only |
 | "test the harness" | `doctor` | `commit` | maintain | spec-only |
 | "is the harness wired correctly" | `doctor` | `commit` | maintain | spec-only |
 | "run the doctors" | `doctor` | `commit` | maintain | spec-only |

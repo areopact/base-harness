@@ -28,7 +28,12 @@ Actions:
     (CODEOWNERS, .github/rulesets/), otherwise "main-only". In branches mode
     the local memory lane is placed outside the repository when the structure
     validator admits an external path; until it does, the lane stays
-    repository-relative and untracked, and the checklist says so.
+    repository-relative and untracked, and the checklist says so. host.profile
+    is always written as "team", regardless of the detected git mode: an
+    adopted repository is by definition someone else's shared repository.
+    host.verify_command stays null; the commit skill discovers the host's
+    verify command at run time. The checklist tells a solo adopter how to
+    switch the profile back with init.py.
   * harness/registry/adopted-files.json records the exact repository-relative
     paths this run created or wrote (copies, the structure.json write, every
     landed .harness sibling). An apply merges (unions) into a file left by an
@@ -248,6 +253,8 @@ def build_structure(target: Path, actions: list | None = None) -> tuple:
         "adopted": adopted_agents,
         "roots": detect_host_roots(target) if adopted_agents else [],
         "harness_owned": detect_harness_owned(target, actions) if adopted_agents else [],
+        "profile": "team",
+        "verify_command": None,
     }
     local_note = f"brain.local_path {structure['brain']['local_path']} (repository-relative, untracked)"
     if mode == "branches":
@@ -482,6 +489,7 @@ def checklist(target: Path, structure: dict, local_note: str) -> list:
         "Read every *.harness.md sibling and merge it into the file it sits beside, or delete it.",
         "Edit harness/CONTRACT.host.md with the host facts (what this repository is, where things live).",
         "Check harness/registry/structure.json: lanes detected from the tree, the rest null; set the ones you use.",
+        "host.profile is written as team (an adopted repository is by definition someone else's shared repository). Solo adopter: switch it with python harness/tools/init.py --profile solo --yes",
     ]
     if mode == "branches":
         items.append(f"Branches mode detected: {local_note}. Keep personal notes out of pull requests: the local lane is untracked and, once the validator admits it, lives outside the repository.")
@@ -530,6 +538,7 @@ def main(argv=None) -> int:
         )
     else:
         print("  contract: rendered (no pre-existing AGENTS.md; bootstrap renders the root file)")
+    print("  host profile: team (adopted default)")
     for verb, src_rel, dst_rel in actions:
         if verb == "copy":
             print(f"  copy      {dst_rel}")

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _helpers import TempDirCase, run_cli, structure, write, write_structure, load_tool  # noqa: E402
+from _helpers import TempDirCase, commit_all, init_repo, run_cli, structure, write, write_structure, load_tool  # noqa: E402
 
 init = load_tool("init")
 
@@ -117,3 +117,125 @@ class TestShape(TempDirCase):
         text = out.getvalue()
         assert "lanes:" in text and "git mode:        branches" in text
         assert "init.py --lanes" in text and "init.py --brain" in text and "init.py --adopt" in text
+
+
+class TestProfile(TempDirCase):
+    def _repo(self, name="host-repo"):
+        target = init_repo(self.tmp / name)
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+        return target
+
+    def test_team_yes_writes_team_defaults(self):
+        target = self._repo()
+        out = io.StringIO()
+        code = init.run_profile(target, "team", True, out=out)
+        assert code == 0, out.getvalue()
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["host"]["profile"] == "team"
+        assert doc["git"]["mode"] == "branches"
+        assert doc["brain"] == {"local_tracked": False, "local_path": f"~/.harness-local/{target.name}"}
+        assert doc["lanes"] == {
+            "identity": ["brain/shared/IDENTITY.md"],
+            "knowledge": ["brain/shared/knowledge"],
+            "decisions": ["docs/decisions"],
+            "records": None,
+            "docs": ["docs"],
+        }
+        assert doc["contract"]["mode"] == "rendered"
+
+    def test_solo_yes_writes_solo_defaults(self):
+        target = self._repo("solo-repo")
+        out = io.StringIO()
+        code = init.run_profile(target, "solo", True, out=out)
+        assert code == 0, out.getvalue()
+        doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
+        assert doc["host"]["profile"] == "solo"
+        assert doc["git"]["mode"] == "main-only"
+        assert doc["brain"] == {"local_tracked": False, "local_path": "brain/local"}
+        shipped = json.loads((init.TEMPLATES / "structure.default.json").read_text())
+        assert doc["lanes"] == shipped["lanes"]
+
+    def test_scripted_four_answers_match_flags(self):
+        """A bare-profile interview answered 2/2/2/n equals `--profile team --yes`."""
+        flagged = self._repo("flagged-repo")
+        init.run_profile(flagged, "team", True, out=io.StringIO())
+        flagged_doc = json.loads((flagged / "harness" / "registry" / "structure.json").read_text())
+
+        scripted_target = self._repo("scripted-repo")
+        out = io.StringIO()
+        answers = ["2", "2", "2", "n"]
+        asked = []
+
+        def counting_ask(prompt):
+            asked.append(prompt)
+            if not answers:
+                raise EOFError
+            return answers.pop(0)
+
+        code = init.run_profile(scripted_target, None, False, ask=counting_ask, out=out)
+        assert code == 0, out.getvalue()
+        assert len(asked) == 4, asked
+        scripted_doc = json.loads((scripted_target / "harness" / "registry" / "structure.json").read_text())
+        for key in ("git", "lanes", "contract"):
+            assert scripted_doc[key] == flagged_doc[key], key
+        assert scripted_doc["host"]["profile"] == flagged_doc["host"]["profile"]
+
+    def test_eof_at_question_three_writes_nothing(self):
+        target = self._repo("eof-repo")
+        seed = json.loads((init.TEMPLATES / "structure.default.json").read_text())
+        write_structure(target, seed)
+        before = (target / "harness" / "registry" / "structure.json").read_bytes()
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            code = init.run_profile(target, None, False, ask=scripted(["2", "2"]), out=io.StringIO())
+        assert code == 1
+        assert "nothing written" in err.getvalue()
+        after = (target / "harness" / "registry" / "structure.json").read_bytes()
+        assert before == after
+
+    def test_f10_adopt_yes_still_applies(self):
+        """`--adopt <target> --yes` applies: --yes is a global flag consumed
+        by init's own parser, so it never reaches adopt.py's argv unless
+        main() re-forwards it as the flag adopt.py understands (-y/--apply)."""
+        target = init_repo(self.tmp / "adopt-target")
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+
+        dry_run = run_cli("init", "--adopt", str(target))
+        assert dry_run.returncode == 0, dry_run.stdout + dry_run.stderr
+        assert "adopt: applied" not in dry_run.stdout
+        assert "adopt: dry run" in dry_run.stdout
+
+        applied = run_cli("init", "--adopt", str(target), "--yes")
+        assert applied.returncode == 0, applied.stdout + applied.stderr
+        assert "adopt: applied" in applied.stdout
+
+    def test_bare_status_line_present_and_absent(self):
+        target = self._repo("status-repo")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            init.main(["--root", str(target)])
+        assert "host profile: solo (absent; set it with python harness/tools/init.py --profile)" in out.getvalue()
+
+        init.run_profile(target, "team", True, out=io.StringIO())
+        out2 = io.StringIO()
+        with contextlib.redirect_stdout(out2):
+            init.main(["--root", str(target)])
+        assert "host profile: team" in out2.getvalue()
+
+    def test_idempotent_team_yes_run_twice(self):
+        target = self._repo("idem-repo")
+        init.run_profile(target, "team", True, out=io.StringIO())
+        first = (target / "harness" / "registry" / "structure.json").read_bytes()
+        gitignore_first = (target / ".gitignore").read_text() if (target / ".gitignore").is_file() else ""
+        init.run_profile(target, "team", True, out=io.StringIO())
+        second = (target / "harness" / "registry" / "structure.json").read_bytes()
+        gitignore_second = (target / ".gitignore").read_text() if (target / ".gitignore").is_file() else ""
+        assert first == second
+        assert gitignore_first == gitignore_second
+
+    def test_profile_bare_requires_value_on_non_tty(self):
+        target = self._repo("nontty-repo")
+        result = run_cli("init", "--profile", "--root", str(target), stdin="")
+        assert result.returncode == 2
+        assert "--profile <value> --yes" in result.stderr

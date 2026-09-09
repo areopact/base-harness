@@ -20,10 +20,11 @@ Wording is deliberate. "Configured" means the files have the shape the runtime d
 ## Quickstart: new repository
 
 1. Click **Use this template** on GitHub (clean history), or clone your copy. Then `cd` into it.
-2. Run the bootstrap for your platform (below). It creates the runtime-facing links and generated trees, renders `AGENTS.md`, and points `core.hooksPath` at `.githooks/`.
-3. Run the doctor for the runtime you use (below). It prints per-layer evidence: `configured`, `loaded`, `trusted`, `fired`, `enforced`, `outcome-proven`. A layer with no evidence prints `UNKNOWN`, never green.
-4. Or run the `doctor` skill from inside a session once bootstrap has materialized the `maintain` pack: `/doctor` in Claude Code, `$doctor` in Codex CLI, or the generated `/doctor` command in OpenCode. It runs the same three doctors and reports per runtime. On a clone that has not been bootstrapped, nothing is materialized yet, so run the commands directly: `bash harness/bootstrap/doctor.sh`, `python harness/bootstrap/doctor_codex.py --offline`, `python harness/bootstrap/doctor_opencode.py --offline`.
-5. Optional: `python harness/tools/init.py --lanes` to configure memory lanes, `python harness/tools/init.py --brain` to add the reference memory module, `python harness/tools/selector.py` to change which skill packs are materialized.
+2. Run `python harness/tools/init.py --profile` and answer who works in the repository, how work lands, where personal notes live, and whether to set the five lanes now; one pass sets `host.profile` (`solo` or `team`), `git.mode`, the personal notes placement, the lanes, and the derived contract mode. Non-interactive form: `python harness/tools/init.py --profile team --yes` (or `solo`).
+3. Run the bootstrap for your platform (below). It creates the runtime-facing links and generated trees, renders `AGENTS.md`, and points `core.hooksPath` at `.githooks/`.
+4. Run the doctor for the runtime you use (below). It prints per-layer evidence: `configured`, `loaded`, `trusted`, `fired`, `enforced`, `outcome-proven`. A layer with no evidence prints `UNKNOWN`, never green.
+5. Or run the `doctor` skill from inside a session once bootstrap has materialized the `maintain` pack: `/doctor` in Claude Code, `$doctor` in Codex CLI, or the generated `/doctor` command in OpenCode. It runs the same three doctors and reports per runtime. On a clone that has not been bootstrapped, nothing is materialized yet, so run the commands directly: `bash harness/bootstrap/doctor.sh`, `python harness/bootstrap/doctor_codex.py --offline`, `python harness/bootstrap/doctor_opencode.py --offline`.
+6. Optional: `python harness/tools/init.py --lanes` to configure memory lanes, `python harness/tools/init.py --brain` to add the reference memory module, `python harness/tools/selector.py` to change which skill packs are materialized.
 
 ## Quickstart: existing repository (adopt)
 

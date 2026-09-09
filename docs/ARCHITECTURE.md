@@ -47,7 +47,7 @@ Fixed points of the shape: the five lane names are fixed and every lane is eithe
 
 | File | Declares | Read by |
 |---|---|---|
-| `structure.json` | host facts: the five lanes, `git.mode`, `outbound_globs`, `brain.local_path` and `brain.local_tracked`, `tiers.lane_defaults` and `tiers.unlisted_path`, `delegation.mandatory`, `selection_scope` | every kernel file that needs a host fact, through `harness_registry.load_structure()` (validating, raises) or `hook_io.load_structure()` (standalone, fails open); the two must agree |
+| `structure.json` | host facts: the five lanes, `git.mode`, `outbound_globs`, `brain.local_path` and `brain.local_tracked`, `tiers.lane_defaults` and `tiers.unlisted_path`, `delegation.mandatory`, `selection_scope`, `host.profile`, `host.verify_command` | every kernel file that needs a host fact, through `harness_registry.load_structure()` (validating, raises) or `hook_io.load_structure()` (standalone, fails open); the two must agree |
 | `structure.schema.json` | JSON Schema for `structure.json`, closed at every level | CI, the doctors, `tests/test_structure_defaults.py` |
 | `selection.json` | `packs`, `include`, `exclude` | bootstrap materialization, the two adapter generators, the doctors |
 | `runtimes.json` | per runtime: tier, status, adapter and doctor paths, capabilities, `identity_context_limit`, materializations; retired materializations; `hook_events` with support, delivery, context limit, and the degradation rung per runtime | bootstrap, `contract_files.py`, `dispatch.py`, `load_identity.py`, the doctors, lint L2 and L8 |
@@ -57,6 +57,8 @@ Fixed points of the shape: the five lane names are fixed and every lane is eithe
 | `collaborators.yaml` | ids and tier ceilings for the `restricted` label; shipped empty | `export.py --tier restricted`, the frontmatter guard |
 
 Three generated caches under `harness/registry/` are untracked and rebuilt on demand: `delegation-policy.json` (from `routing_policy.py compile`), `native-routing-files.json` (from `native_routing.py render`), and `skill-index.json` (from `gen_manifest.py`). Their absence is never drift.
+
+Two host facts in `structure.json` split verification and etiquette from branch discipline: `host.profile` (`solo` or `team`, optional this release, `solo` when absent) decides how the commit skill discovers verification and whether a pull request applies, and how the Stop hook composes its closing clause; `host.verify_command` (`null`, or a shape-restricted `npm run`, `pnpm run`, `yarn`, or `make` invocation) names a team host's own verification command, tried before `package.json`'s `scripts.verify`, a `Makefile` `verify` target, and the harness lint, in that order. `metadata.requires` also accepts the `fact:<key>` shape over a closed set (`host.profile`, `git.mode`, `contract.mode`, `brain.local_tracked`, `delegation.mandatory`, `selection_scope`); lint L19 requires the ship-gate repair when `host.profile` is absent and flags a skill body that names `host.profile` without declaring `fact:host.profile`.
 
 ## Contract composition
 

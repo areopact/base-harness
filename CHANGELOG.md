@@ -9,12 +9,16 @@ Initial public template.
 ### Added
 
 - Kernel: registry-driven bootstrap (`--check`, `--copy`, `--force`), contract composition (`harness/CONTRACT.md` + `harness/CONTRACT.host.md` rendered to `AGENTS.md`), offline doctors for Claude Code, Codex CLI, and OpenCode with six evidence layers, hook library with one Python implementation per hook and per-runtime wrappers, `.githooks/pre-commit` floor, strict runtime JSON schemas, kernel manifest.
-- Registries: `runtimes.json`, `structure.json` (lanes, git mode, tiers, brain, delegation flag), `selection.json`, `capabilities.json`, `sources.json`, `environment.json`.
+- Registries: `runtimes.json`, `structure.json` (five lanes, git mode, tiers, brain, delegation flag, `host.profile` and `host.verify_command`), `selection.json`, `capabilities.json`, `sources.json`, `environment.json`.
+- `init.py --profile`: a four-question interview (who works here, how work lands, where personal notes live, whether to set the five lanes now) behind a `solo` or `team` preset, or `--profile <solo|team> --yes` for the non-interactive form; sets `host.profile`, `git.mode`, `brain.local_path`, and the derived `contract.mode` in one pass.
 - Selector: `selector.py` with materialize-and-prune; packs declared in skill `metadata.packs`; shipped default `core` plus `maintain`.
-- Skills, v0.1.0 catalog: core (brainstorm, prompt, capture, eli5, research, review, humanize), maintain (doctor, commit, skillify), delegation module (workflow, opt-in). Shipped on disk but not selected by default: decks (deck-outline, deck-render --web) and memory (daily); `--pack` replaces the current pack list rather than adding to it, so select them on top of the shipped default with `selector.py --pack core --pack maintain --pack decks` or `--pack core --pack maintain --pack memory`.
+- Skills, v0.1.0 catalog: core (brainstorm, prompt, eli5, research, review, humanize), maintain (doctor, commit, skillify), delegation module (workflow, opt-in). Shipped on disk but not selected by default: decks (deck-outline, deck-render --web); `--pack` replaces the current pack list rather than adding to it, so select it on top of the shipped default with `selector.py --pack core --pack maintain --pack decks`.
 - Memory lanes and the optional reference memory module (`brain/shared`, `brain/local`).
 - Classification and export: five labels, `export.py` copy mode with its own fuzz suite, `frontmatter_guard`.
 - `adopt.py` and `init.py` for existing repositories.
+- lint L19: `host.profile` absent is a ship-gate note with the repair command; a value outside `solo`/`team`, or a `host.verify_command` that is not `null` and does not match the `npm run`, `pnpm run`, `yarn`, or `make` shape, is an error.
+- `metadata.requires` gains the `fact:<key>` shape over a closed set (`host.profile`, `git.mode`, `contract.mode`, `brain.local_tracked`, `delegation.mandatory`, `selection_scope`); a `SKILL.md` body that names `host.profile` must declare `fact:host.profile`.
+- The Stop hook's closing clause is composed from `git.mode` and `host.profile` together.
 - Docs: ARCHITECTURE, VERIFICATION, PACKS, LANES, HOST-SHAPES, ADDING-A-SKILL, ROUTING-TASKS.
 - CI: offline conformance on ubuntu, windows, and macos; fresh-template job; permission-posture assertion; de-identification lint.
 
@@ -23,12 +27,19 @@ Initial public template.
 - Skills: the verify skill; its prove-before-done mode lives in doctor.
 - Skills: the daily and capture skills; the template ships no triage cadence, so a journal and an inbox have no reader, memory stays pages, and the journal lane is removed with them.
 
+### Deprecated
+
+- `host.profile` is optional in this release's schema (absent defaults to `solo`); it becomes required in the next minor release.
+
 ### Security
 
 - Guards documented as seatbelts, not locks, with named bypass fixtures (see `SECURITY.md`).
 
 ### Changed
 
+- `verify` folds into `doctor` as its "prove before done" mode, carrying the four trigger phrases and the evidence ladder that used to live in the standalone skill.
+- `adopt.py` writes `host.profile: team` on every new adoption, regardless of the detected `git.mode`, and prints the command a solo adopter runs to switch.
+- The `commit` skill reads `git.mode` and `host.profile` apart: `git.mode` decides branch discipline; `host.profile` decides verification discovery (a team host's own `host.verify_command`, then `package.json`'s `scripts.verify`, then a `Makefile` `verify` target, then the harness lint, said plainly) and pull request etiquette.
 - Publication history: the pre-publication working history on the private remote was squashed into one signed, signed-off initial commit before the visibility flip, so the public history starts from a tree that passes the release gate (structural and private-vocabulary de-identification over the full history, both clean).
 
 ### Fixed

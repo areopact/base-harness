@@ -3412,7 +3412,7 @@
       "source": null
     },
     {
-      "path": "harness/tools/tests/test_adopt.py",
+      "path": "harness/tools/tests/test_adopt_structure.py",
       "state": "new",
       "source": null
     },

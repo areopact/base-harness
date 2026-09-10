@@ -219,13 +219,13 @@ class TestApply(TempDirCase):
         assert "contract: rendered" in out
         doc = json.loads((target / "harness" / "registry" / "structure.json").read_text())
         assert doc["contract"] == {"mode": "rendered"}
-        assert doc["host"] == {
-            "adopted": False,
-            "roots": [],
-            "harness_owned": [],
-            "profile": "team",
-            "verify_command": None,
-        }
+        # Every adoption is adopted (0.1.2): the flag scopes the lint to the template's files;
+        # contract.mode alone records that the target had no AGENTS.md.
+        assert doc["host"]["adopted"] is True
+        assert doc["host"]["harness_owned"] == []
+        assert isinstance(doc["host"]["roots"], list) and "harness" not in doc["host"]["roots"]
+        assert doc["host"]["profile"] == "team"
+        assert doc["host"]["verify_command"] is None
 
     def test_branches_with_two_remote_branches(self):
         remote = self.tmp / "remote.git"

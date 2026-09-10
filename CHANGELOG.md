@@ -2,7 +2,7 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-09-10
 
 Initial public template.
 

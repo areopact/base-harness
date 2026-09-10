@@ -257,7 +257,7 @@ def test_selection_validates_and_rejects_overlap():
 def test_kernel_manifest_shape():
     manifest = registry.load_kernel_manifest(ROOT)
     assert registry.validate_kernel_manifest(manifest) == []
-    assert manifest["version"] == "0.1.1"
+    assert manifest["version"] == "0.1.2"
     paths = [item["path"] for item in manifest["files"]]
     assert len(paths) == len(set(paths))
     for item in manifest["files"]:

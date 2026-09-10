@@ -1,5 +1,5 @@
 {
-  "version": "0.1.1",
+  "version": "0.1.2",
   "files": [
     {
       "path": ".githooks/pre-commit",
@@ -2867,6 +2867,11 @@
       "source": null
     },
     {
+      "path": "harness/hooks/tests/test_precommit_exclude.py",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/hooks/tests/test_precommit_gaps.py",
       "state": "new",
       "source": null
@@ -3403,6 +3408,11 @@
     },
     {
       "path": "harness/tools/tests/_repo.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/tests/test_adopt.py",
       "state": "new",
       "source": null
     },

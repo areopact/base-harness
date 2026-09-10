@@ -31,6 +31,10 @@ Actions:
     repository-relative and untracked, and the checklist says so. host.profile
     is always written as "team", regardless of the detected git mode: an
     adopted repository is by definition someone else's shared repository.
+    host.adopted is always true and host.roots lists the target's own top-level
+    directories, so lint.py and deidentify_lint.py scope themselves to the
+    template's files on every adopted host; contract.mode alone records whether
+    the target already had an AGENTS.md.
     host.verify_command stays null; the commit skill discovers the host's
     verify command at run time. The checklist tells a solo adopter how to
     switch the profile back with init.py.
@@ -247,12 +251,15 @@ def build_structure(target: Path, actions: list | None = None) -> tuple:
     structure["lanes"] = detect_lanes(target)
     mode, reason = detect_git_mode(target)
     structure["git"] = {"mode": mode}
-    adopted_agents = (target / "AGENTS.md").is_file()
-    structure["contract"] = {"mode": "host-owned" if adopted_agents else "rendered"}
+    host_owned_contract = (target / "AGENTS.md").is_file()
+    structure["contract"] = {"mode": "host-owned" if host_owned_contract else "rendered"}
+    # Every adoption is an adoption: host.adopted scopes the lint and the
+    # de-identification check to the template's own files, whether or not
+    # the target already had an AGENTS.md (that is contract.mode's job).
     structure["host"] = {
-        "adopted": adopted_agents,
-        "roots": detect_host_roots(target) if adopted_agents else [],
-        "harness_owned": detect_harness_owned(target, actions) if adopted_agents else [],
+        "adopted": True,
+        "roots": detect_host_roots(target),
+        "harness_owned": detect_harness_owned(target, actions),
         "profile": "team",
         "verify_command": None,
     }
@@ -484,7 +491,7 @@ def checklist(target: Path, structure: dict, local_note: str) -> list:
     ]
     if mode == "branches":
         items.append(f"Branches mode detected: {local_note}. Keep personal notes out of pull requests: the local lane is untracked and, once the validator admits it, lives outside the repository.")
-    if structure["host"]["adopted"]:
+    if structure["contract"]["mode"] == "host-owned":
         items.append(
             "Contract is host-owned (harness/registry/structure.json contract.mode=host-owned): AGENTS.md "
             "stays yours; add a line pointing at AGENTS.harness.md so runtimes load the harness block, or "
@@ -521,7 +528,7 @@ def main(argv=None) -> int:
     lanes = ", ".join(f"{k}={v}" for k, v in structure["lanes"].items())
     print(f"  lanes: {lanes}")
     print(f"  local lane: {local_note}")
-    if structure["host"]["adopted"]:
+    if structure["contract"]["mode"] == "host-owned":
         print(
             f"  contract: host-owned (target already has AGENTS.md; the template contract lands as "
             f"AGENTS.harness.md, {len(structure['host']['harness_owned'])} pre-existing harness/ path(s) "

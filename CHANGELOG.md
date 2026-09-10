@@ -2,6 +2,17 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.1.2] - 2026-09-11
+
+### Fixed
+
+- `adopt.py` wrote `host.adopted: false` and an empty `host.roots` for a target without an `AGENTS.md`, so the lint and the de-identification check scanned the host's whole tree instead of the template's files; every adoption now records `adopted: true` and the detected roots, and `contract.mode` alone records the host-owned contract.
+- The de-identification check flagged attribution strings in `harness/CONTRACT.host.md`, the host's own contract notes; that file now speaks in the host's voice.
+
+### Added
+
+- `.githooks/secret-scan-exclude.txt`: a host-declared list of repository-relative paths or globs (one per line, `#` comments) that the pre-commit content and filename scans skip, for evidence trees a host tracks on purpose and never edits. Never shipped; documented in the hook header, `SECURITY.md` and `docs/HOST-SHAPES.md`.
+
 ## [0.1.1] - 2026-09-11
 
 ### Added

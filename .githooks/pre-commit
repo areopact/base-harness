@@ -29,6 +29,12 @@
 #     scanned rather than skipped.
 #   - Failures accumulate in the main shell (no subshell sentinel files), so
 #     the hook behaves the same in a linked worktree where .git is a file.
+#   - A host that tracks an evidence tree on purpose (a client's code
+#     snapshot, a document corpus pinned byte for byte) declares it in
+#     secret-scan-exclude.txt beside this file: one repository-relative path
+#     or glob per line, # comments and blank lines ignored. Those paths leave
+#     the content and filename scans, nothing else; the exclusion is for
+#     material the host received and never edits, never for its own writing.
 #
 # Escape hatches for a knowing false positive on a single local commit:
 #   SKIP_SECRET_SCAN=1 git commit ...     (content and filename scans)
@@ -53,7 +59,18 @@ else
   # Content scan: whole staged index, one process, file names only. The exit
   # status is captured (not discarded): 0/1 mean matches/no-matches, anything
   # higher is a scan failure (e.g. a malformed pattern) and fails closed.
-  hits=$(git grep -l -Ef "$patfile" --cached -- . 2>/dev/null)
+  # Host-declared exclusions become pathspec magic on both scans below.
+  excludefile="$hookdir/secret-scan-exclude.txt"
+  set --
+  if [ -f "$excludefile" ]; then
+    cr=$(printf '\r')
+    while IFS= read -r line || [ -n "$line" ]; do
+      line=${line%"$cr"}
+      case "$line" in ''|\#*) continue ;; esac
+      set -- "$@" ":(exclude)$line"
+    done < "$excludefile"
+  fi
+  hits=$(git grep -l -Ef "$patfile" --cached -- . "$@" 2>/dev/null)
   scanrc=$?
   if [ "$scanrc" -gt 1 ]; then
     echo "pre-commit: BLOCKED - secret pattern scan failed (git grep exit $scanrc); check $patfile for a malformed regex" >&2
@@ -66,7 +83,7 @@ else
 
   # Filename scan: staged names that mark a file secret-bearing regardless of
   # content. Template files (.env.example and siblings) are allowed.
-  names=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR |
+  names=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR -- . "$@" |
     grep -iE '(^|/)\.(env(\.[^/]*)?|envrc|npmrc|netrc|pgpass|pypirc|mcp\.json|git-credentials)$|\.(pem|key|pfx|ppk|p12|keystore|tfvars|jks)$|(^|/)\.aws/credentials(\.[^/]*)?$|(^|/)\.ssh/id_(rsa|dsa|ecdsa|ed25519|ecdsa_sk|ed25519_sk)$|(^|/)application_default_credentials\.json$' |
     grep -ivE '\.env\.(example|sample|template)$')
   if [ -n "$names" ]; then

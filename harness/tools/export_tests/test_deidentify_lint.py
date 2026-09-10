@@ -90,6 +90,15 @@ class TestStructural(TempDirCase):
         code, out, _ = run([str(repo), "--structural"])
         assert code == 0, out
 
+    def test_attribution_allowed_in_the_host_contract_notes(self):
+        repo = self.tmp / "r-host-notes"
+        write(repo / "harness" / "CONTRACT.host.md", f"# Host notes\n\nThe {ATTRIBUTION} lead reviews every package.\n")
+        code, out, _ = run([str(repo), "--structural"])
+        assert code == 0, out
+        write(repo / "harness" / "CONTRACT.md", f"{ATTRIBUTION}\n")
+        code, out, _ = run([str(repo), "--structural"])
+        assert code == 1 and "D5 harness/CONTRACT.md:1" in out
+
     def test_clean_tree_is_silent(self):
         repo = self.tmp / "clean"
         write(repo / "README.md", "# Title\n\nA clean file with an email at user@example.com and docs/guide.md.\n")

@@ -20,7 +20,7 @@ with --structural:
         such as $DIR/x and a relative reference such as ./x or ../x are not
         repository paths and are not flagged.)
     D4  absolute path that names a user directory
-    D5  attribution strings outside README.md, LICENSE, and NOTICE
+    D5  attribution strings outside README.md, LICENSE, NOTICE and the host's own harness/CONTRACT.host.md
     D6  em-dash, en-dash, smart quote, byte-order mark, or carriage return
     D7  absolute host path in prose or config: a drive-letter path (drive
         colon then one or more segments; a segment may carry internal
@@ -539,7 +539,8 @@ def scan_content(rel: str, data: bytes, terms: list, allowed: set, structural_on
     text = data.decode("utf-8", errors="replace")
     prefix = comment_prefix(rel)
     basename = Path(rel).name
-    attribution_allowed = basename in ATTRIBUTION_FILES and "/" not in rel
+    # The host's own contract notes are the host's voice, not template text.
+    attribution_allowed = (basename in ATTRIBUTION_FILES and "/" not in rel) or rel == "harness/CONTRACT.host.md"
     d7_scanned = _is_d7_scanned_file(rel)
     for index, line in enumerate(text.split("\n"), start=1):
         if d7_scanned:

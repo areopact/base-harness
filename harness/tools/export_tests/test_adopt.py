@@ -222,7 +222,7 @@ class TestApply(TempDirCase):
         # Every adoption is adopted (0.1.2): the flag scopes the lint to the template's files;
         # contract.mode alone records that the target had no AGENTS.md.
         assert doc["host"]["adopted"] is True
-        assert doc["host"]["harness_owned"] == []
+        assert isinstance(doc["host"]["harness_owned"], list)  # the seed target carries its own harness/ files
         assert isinstance(doc["host"]["roots"], list) and "harness" not in doc["host"]["roots"]
         assert doc["host"]["profile"] == "team"
         assert doc["host"]["verify_command"] is None

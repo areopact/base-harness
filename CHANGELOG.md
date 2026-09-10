@@ -2,6 +2,14 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.1.1] - 2026-09-11
+
+### Added
+
+- `write-deny`: a PreToolUse guard that denies an agent write (Write, Edit, NotebookEdit, apply_patch) to any path matched by `structure.json` `write_deny.globs` and not by `write_deny.except`. Shipped off (empty globs); a host switches it on by naming the paths it reserves for human authors. Registered under `Write|Edit|NotebookEdit` on Claude Code; Codex and OpenCode reach it through the dispatcher. Fixture group `write-deny`, unit tests in `test_write_deny.py`.
+- `structure.json` gains `write_deny` (`globs`, `except`) in both loaders, the schema, and the shipped defaults. The key is additive and forward-only: a 0.1.0 structure without it validates, a structure that sets it fails the validating loader on a 0.1.0 kernel.
+- Upgrading an adopted host: re-run the bootstrap (or its `--check`) after taking the kernel, so the new `Write|Edit|NotebookEdit` registration lands in `.claude/settings.json`; without it the wrapper is present and Claude Code never calls it.
+
 ## [0.1.0] - 2026-09-10
 
 Initial public template.

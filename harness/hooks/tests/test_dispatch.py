@@ -24,6 +24,7 @@ import openpyxl_guard  # noqa: E402
 import pre_bootstrap_detector  # noqa: E402
 import prose_lint  # noqa: E402
 import read_deny  # noqa: E402
+import write_deny  # noqa: E402
 
 DENY_FIXTURE = TESTS / "fixtures" / "guard" / "bypass-force-push-main.json"
 
@@ -78,6 +79,7 @@ class RoutingTests(unittest.TestCase):
             assert dispatch.modules_for("PostToolUse", {"tool_name": agent}) == [delegation_guard]
         for edit in ("Edit", "Write", "NotebookEdit", "apply_patch"):
             assert dispatch.modules_for("PostToolUse", {"tool_name": edit}) == [frontmatter_guard, prose_lint]
+            assert dispatch.modules_for("PreToolUse", {"tool_name": edit}) == [write_deny]
         assert dispatch.modules_for("Stop", {}) == [close_the_loop]
         assert dispatch.modules_for("UserPromptSubmit", {"prompt": "x"}) == []
         assert dispatch.modules_for("PreToolUse", {"tool_name": "Glob"}) == []

@@ -105,6 +105,26 @@
         "minLength": 1
       }
     },
+    "write_deny": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "globs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "except": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "brain": {
       "type": "object",
       "additionalProperties": false,

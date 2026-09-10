@@ -28,6 +28,7 @@ WRAPPERS = {
     "pre-tool-use/openpyxl-guard": FIXTURES / "openpyxl" / "deny-inline-save.json",
     "pre-tool-use/delegation-guard": None,
     "pre-tool-use/read-deny": FIXTURES / "read-deny" / "deny-secret-label.json",
+    "pre-tool-use/write-deny": FIXTURES / "write-deny" / "deny-write-in-scope.json",
     "post-tool-use/frontmatter-guard": FIXTURES / "frontmatter" / "advise-invalid-access.json",
     "post-tool-use/prose-lint": None,
     "post-tool-use/delegation-guard": None,
@@ -132,6 +133,9 @@ def cases(language):
     flag_on = {"HARNESS_READ_DENY": "1"}
     for relative, fixture in WRAPPERS.items():
         env = flag_on if relative.endswith("read-deny") else None
+        if relative.endswith("write-deny"):
+            # shipped off: the decision case needs the group's own structure file
+            env = {"HARNESS_STRUCTURE_FILE": str((FIXTURES / "write-deny-structure.json").resolve())}
         if fixture is not None:
             yield relative + " decision", build(relative), fixture.read_text(encoding="utf-8"), env, None, "decision"
         for name, stdin in STDIN_CASES.items():

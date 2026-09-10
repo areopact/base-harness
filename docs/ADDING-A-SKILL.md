@@ -68,7 +68,7 @@ On an adopted host, `lint.py --strict` (and `deidentify_lint.py --structural`) d
 
 ## Tests, neighbors, and recovery
 
-A skill has no fixture harness of its own; its evidence is a VERIFICATION row. A hook does: every new or changed hook ships with a fixture that fails without the change, a legitimate-neighbor fixture that still passes, and a recovery sentence in any deny reason. Fixtures live under `harness/hooks/tests/fixtures/<group>/` with the verdict in the name (`bypass-` or `deny-` for a deny, `advise-` for an advisory, `allow-` for silence) and their expected stdout under `tests/expected/<group>/`. `bash harness/hooks/tests/run.sh` (or `run.ps1`) pipes every fixture through the native wrapper and diffs byte for byte; in this build that is 54 fixtures plus a dispatcher smoke.
+A skill has no fixture harness of its own; its evidence is a VERIFICATION row. A hook does: every new or changed hook ships with a fixture that fails without the change, a legitimate-neighbor fixture that still passes, and a recovery sentence in any deny reason. Fixtures live under `harness/hooks/tests/fixtures/<group>/` with the verdict in the name (`bypass-` or `deny-` for a deny, `advise-` for an advisory, `allow-` for silence) and their expected stdout under `tests/expected/<group>/`. `bash harness/hooks/tests/run.sh` (or `run.ps1`) pipes every fixture through the native wrapper and diffs byte for byte; in this build that is 214 fixtures plus a dispatcher smoke.
 
 For a skill, the equivalent discipline is: name the neighbor it must not steal from (in `WHEN NOT` and in the pull request), and add the neighbor's own trigger phrases to the resolver check by running `resolver_lint.py` after regeneration.
 

@@ -21,6 +21,10 @@
     "mode": "main-only"
   },
   "outbound_globs": [],
+  "write_deny": {
+    "globs": [],
+    "except": []
+  },
   "brain": {
     "local_tracked": false,
     "local_path": "brain/local"

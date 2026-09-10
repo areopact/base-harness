@@ -18,6 +18,7 @@ import dispatch  # noqa: E402
 import memory_first  # noqa: E402
 import openpyxl_guard  # noqa: E402
 import read_deny  # noqa: E402
+import write_deny  # noqa: E402
 
 CEILING_SECONDS = 0.25
 BASH = {"tool_name": "Bash", "tool_input": {"command": "echo ok && git status --short"}}
@@ -25,6 +26,8 @@ DANGEROUS = {"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}}
 WEB = {"tool_name": "WebSearch", "tool_input": {"query": "harness hooks latency budget"}}
 AGENT = {"tool_name": "Agent", "tool_input": {"description": "fixture"}}
 READ = {"tool_name": "Read", "tool_input": {"file_path": str(TESTS / "fixtures" / "read-deny" / "secret-page.md")}}
+WRITE = {"tool_name": "Write", "tool_input": {"file_path": str(TESTS / "fixtures" / "write-deny" / "scope" / "page.md"), "content": "x"}}
+WRITE_STRUCTURE = {"write_deny": {"globs": ["harness/hooks/tests/fixtures/write-deny/scope/**"], "except": []}}
 
 
 def fastest(callable_, runs=3):
@@ -43,6 +46,7 @@ class LatencyTests(unittest.TestCase):
             "dangerous_ops_guard allow": lambda: dangerous_ops_guard.decide(BASH),
             "dangerous_ops_guard deny": lambda: dangerous_ops_guard.decide(DANGEROUS),
             "openpyxl_guard": lambda: openpyxl_guard.decide(BASH),
+            "write_deny deny": lambda: write_deny.decide(WRITE, TESTS.parents[2], WRITE_STRUCTURE),
             "memory_first": lambda: memory_first.decide(WEB),
             "delegation_guard": lambda: delegation_guard.decide(AGENT, "PreToolUse"),
             "read_deny": lambda: read_deny.decide(READ, {"HARNESS_READ_DENY": "1"}),

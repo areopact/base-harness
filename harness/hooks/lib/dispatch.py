@@ -33,6 +33,7 @@ import openpyxl_guard
 import pre_bootstrap_detector
 import prose_lint
 import read_deny
+import write_deny
 from hook_io import REPO_ROOT, canonical_tool_name, lane_paths
 
 EVENTS = {"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"}
@@ -173,6 +174,8 @@ def modules_for(event: str, data: dict, environ=None) -> list[object]:
             return [dangerous_ops_guard, openpyxl_guard]
         if tool == "Read":
             return [read_deny] if read_deny_enabled(environ) else []
+        if tool in EDIT_TOOLS:
+            return [write_deny]
         if tool in ("Agent", "Workflow"):
             return [delegation_guard]
     if event == "PostToolUse":

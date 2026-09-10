@@ -1,0 +1,10 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "harness/hooks/tests/fixtures/write-deny/scope/page.md",
+    "content": "# page"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

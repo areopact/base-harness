@@ -236,7 +236,8 @@
         "pre-tool-use/dangerous-ops-guard",
         "pre-tool-use/openpyxl-guard",
         "pre-tool-use/delegation-guard",
-        "pre-tool-use/read-deny"
+        "pre-tool-use/read-deny",
+        "pre-tool-use/write-deny"
       ],
       "runtimes": {
         "claude": {
@@ -252,6 +253,10 @@
             "pre-tool-use/read-deny": {
               "support": "native",
               "default_registered": false
+            },
+            "pre-tool-use/write-deny": {
+              "support": "native",
+              "default_registered": true
             }
           }
         },
@@ -268,7 +273,8 @@
             "pre-tool-use/read-deny": {
               "support": "unsupported",
               "default_registered": false
-            }
+            },
+            "pre-tool-use/write-deny": "configured-beta"
           }
         },
         "opencode": {
@@ -284,7 +290,8 @@
             "pre-tool-use/read-deny": {
               "support": "unsupported",
               "default_registered": false
-            }
+            },
+            "pre-tool-use/write-deny": "configured-alpha"
           }
         }
       }

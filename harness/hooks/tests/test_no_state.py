@@ -34,6 +34,7 @@ import openpyxl_guard  # noqa: E402
 import pre_bootstrap_detector  # noqa: E402
 import prose_lint  # noqa: E402
 import read_deny  # noqa: E402
+import write_deny  # noqa: E402
 
 REAL_OPEN = builtins.open
 WRITE_MODES = ("w", "a", "x", "+")
@@ -82,6 +83,7 @@ def seeded_root(temp):
         "lanes": {"identity": ["examples/IDENTITY.md"], "knowledge": ["examples/knowledge"], "docs": ["docs"]},
         "outbound_globs": ["docs/**"],
         "delegation": {"mandatory": True},
+        "write_deny": {"globs": ["docs/**"], "except": []},
     }), encoding="utf-8")
     (registry / "runtimes.json").write_text(json.dumps({"runtimes": {"claude": {"tier": "tier-1", "identity_context_limit": 9000}}}), encoding="utf-8")
     (root / "examples" / "knowledge").mkdir(parents=True)
@@ -105,6 +107,7 @@ class NoStateTests(unittest.TestCase):
                 assert dangerous_ops_guard.decide(bash) is not None
                 assert openpyxl_guard.decide(bash) is None
                 assert frontmatter_guard.decide(write, root) is None
+                assert write_deny.decide(write, root) is not None
                 prose_lint.decide(write, root, structure)
                 memory_first.decide({"tool_name": "WebSearch", "tool_input": {"query": "guard notes"}}, root)
                 assert read_deny.decide({"tool_name": "Read", "tool_input": {"file_path": str(root / "docs" / "page.md")}}, {"HARNESS_READ_DENY": "1"}, root) is None

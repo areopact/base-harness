@@ -168,6 +168,7 @@ def test_runtimes_validate_and_implementations_match_pattern():
     assert read_deny["claude"]["implementation_support"]["pre-tool-use/read-deny"] == {"support": "native", "default_registered": False}
     assert read_deny["codex"]["implementation_support"]["pre-tool-use/read-deny"]["support"] == "unsupported"
     assert read_deny["opencode"]["implementation_support"]["pre-tool-use/read-deny"]["support"] == "unsupported"
+    assert read_deny["claude"]["implementation_support"]["pre-tool-use/write-deny"] == {"support": "native", "default_registered": True}
 
 
 def test_user_prompt_submit_has_no_implementations_and_no_native_hook_rung():
@@ -256,7 +257,7 @@ def test_selection_validates_and_rejects_overlap():
 def test_kernel_manifest_shape():
     manifest = registry.load_kernel_manifest(ROOT)
     assert registry.validate_kernel_manifest(manifest) == []
-    assert manifest["version"] == "0.1.0"
+    assert manifest["version"] == "0.1.1"
     paths = [item["path"] for item in manifest["files"]]
     assert len(paths) == len(set(paths))
     for item in manifest["files"]:

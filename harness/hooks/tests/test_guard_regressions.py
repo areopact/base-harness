@@ -23,6 +23,7 @@ import dispatch  # noqa: E402
 import frontmatter_guard  # noqa: E402
 import openpyxl_guard  # noqa: E402
 import read_deny  # noqa: E402
+import write_deny  # noqa: E402
 
 # Every fixture's expected verdict is written against the template's shipped
 # structure (main-only git mode, default lanes). The libs under test default
@@ -124,6 +125,10 @@ def run_group(group, name, payload):
     if group == "read-deny":
         environ = {} if name.endswith("-flag-off") else {"HARNESS_READ_DENY": "1"}
         return read_deny.decide(payload, environ)
+    if group == "write-deny":
+        # shipped off: the group replays against its own structure file, not the pinned default
+        structure = json.loads((FIXTURES / "write-deny-structure.json").read_text(encoding="utf-8"))
+        return write_deny.decide(payload, TESTS.parents[2], structure)
     raise AssertionError("unknown fixture group " + group)
 
 

@@ -88,6 +88,7 @@ DEFAULT_STRUCTURE: dict[str, Any] = {
     },
     "git": {"mode": "main-only"},
     "outbound_globs": [],
+    "write_deny": {"globs": [], "except": []},
     "brain": {"local_tracked": False, "local_path": "brain/local"},
     "tiers": {
         "lane_defaults": {
@@ -343,6 +344,20 @@ def validate_structure(registry: dict[str, Any], root: Optional[Path] = None) ->
     globs = registry.get("outbound_globs")
     if not isinstance(globs, list) or any(not isinstance(item, str) or not item for item in globs):
         errors.append(f"{label}.outbound_globs: must be a list of non-empty strings")
+
+    write_deny = registry.get("write_deny", DEFAULT_STRUCTURE["write_deny"])
+    if not isinstance(write_deny, dict):
+        errors.append(f"{label}.write_deny: must be an object")
+    else:
+        _unknown_fields(write_deny, {"globs", "except"}, f"{label}.write_deny", errors)
+        for field in ("globs", "except"):
+            value = write_deny.get(field, [])
+            if not isinstance(value, list) or any(
+                not isinstance(item, str) or not item or item.startswith("/") or ".." in item.split("/")
+                or (len(item) > 1 and item[1] == ":")
+                for item in value
+            ):
+                errors.append(f"{label}.write_deny.{field}: must be a list of non-empty repository-relative glob patterns")
 
     brain = registry.get("brain")
     if not isinstance(brain, dict):

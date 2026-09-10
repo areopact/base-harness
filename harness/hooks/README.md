@@ -43,6 +43,7 @@ footer naming trimmed and omitted sources; it is never tail-truncated.
 | `PreToolUse` | `Bash` | `pre-tool-use/openpyxl-guard` | `openpyxl_guard` | hard-block | deny: openpyxl write to an existing workbook |
 | `PreToolUse` | `Agent\|Workflow` | `pre-tool-use/delegation-guard` | `delegation_guard` | advisory | only when `structure.json` `delegation.mandatory` is true |
 | `PreToolUse` | `Read` (Claude only, not registered by default) | `pre-tool-use/read-deny` | `read_deny` | hard-block, shipped off | deny when the file carries `access: secret`; active only with `HARNESS_READ_DENY=1` |
+| `PreToolUse` | `Write\|Edit\|NotebookEdit` | `pre-tool-use/write-deny` | `write_deny` | hard-block by host declaration, shipped off (empty globs) | deny when the target path matches `write_deny.globs` and not `write_deny.except` in `structure.json`; costs one Python start per edit call on every runtime even while off |
 | `PostToolUse` | `Write\|Edit` | `post-tool-use/frontmatter-guard` | `frontmatter_guard` | advisory | tier label, collaborator list, closed block, ISO dates under any lane |
 | `PostToolUse` | `Write\|Edit` | `post-tool-use/prose-lint` | `prose_lint` | advisory | mechanical writing tells in files matched by `outbound_globs` (empty by default) |
 | `PostToolUse` | `Agent\|Workflow` | `post-tool-use/delegation-guard` | `delegation_guard` | advisory | as above, result-side |
@@ -80,7 +81,10 @@ classes with their fixtures.
 
 New checks enter at **advisory** and move one rung at a time, only after
 running long enough to show a near-zero false-positive rate. **Hard-block** is
-reserved for actions that cannot be undone next turn. To add a hook:
+reserved for actions that cannot be undone next turn. One exception is
+declared rather than earned: `write-deny` ships inert and becomes a
+hard-block only when a host fills `write_deny.globs`, so the host, not the
+template, makes that decision for its own reserved paths. To add a hook:
 
 1. Put the behavior in `harness/hooks/lib/<name>.py` with a `decide(data, ...)` function
    that returns the JSON string or `None`, and a `main()` that reads stdin,
@@ -96,6 +100,11 @@ reserved for actions that cannot be undone next turn. To add a hook:
    (`bypass-`/`deny-` for a deny, `advise-` for an advisory, `allow-` for
    silence) and their expected stdout under `tests/expected/<group>/`.
 5. Run both drivers below until green.
+6. List every new file in `harness/kernel-manifest.json`, add the hook's row
+   to `docs/VERIFICATION.md` and its gap row to `SECURITY.md`, and register
+   it in `test_exit_codes.py`, `test_no_state.py`, `test_latency.py`, and
+   `test_guard_regressions.py`; `lint.py --strict` catches the manifest and
+   the security fixtures, the tests catch the rest.
 
 ## Tests
 
@@ -108,7 +117,7 @@ python -m pytest harness/hooks/tests -q -p no:cacheprovider
 Each driver runs the Python suite, then pipes every fixture through the
 native wrapper for its group and diffs stdout against the expected bytes,
 then smokes the dispatcher with one deny fixture. Fixture groups: `guard`
-(dangerous-ops), `openpyxl`, `frontmatter`, `read-deny`. The expected file
+(dangerous-ops), `openpyxl`, `frontmatter`, `read-deny`, `write-deny` (replayed against its own `harness/hooks/tests/fixtures/write-deny-structure.json`, since the shipped default leaves it off; its fixtures carry repository-relative targets because a static fixture cannot carry a portable absolute path, so the absolute-path shape Claude Code sends is covered by `test_write_deny.py` on temporary roots, not by the replay). The expected file
 for a fixture is the exact stdout of its lib with a trailing newline, or an
 empty file for silence; regenerate one by piping the fixture into the wrapper
 and confirming the verdict by hand before saving it.

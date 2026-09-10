@@ -33,7 +33,7 @@ A PreToolUse hook denies the literal shapes of these where the runtime supports 
 
 **6. Output quality.** Lead with the answer or the outcome. Cite the source of every fact that came from a file or a page. ASCII punctuation; no em-dashes or en-dashes. No preamble, no filler, no generic closing. Detail: `harness/rules/output-quality.md` and `harness/rules/cli-interaction.md`.
 
-**7. Data classification.** Files may carry `access:` with one of `public`, `internal`, `confidential`, `restricted`, `secret`. The labels govern export (`harness/tools/export.py`) and, on Claude Code only, an optional read-deny hook for `secret`. On other runtimes they are documentation. Respect them as if they were enforced. Detail: `harness/rules/access-policy.md`.
+**7. Data classification.** Files may carry `access:` with one of `public`, `internal`, `confidential`, `restricted`, `secret`. The labels govern export (`harness/tools/export.py`) and, on Claude Code only, an optional read-deny hook for `secret`. On other runtimes they are documentation. Respect them as if they were enforced. A host may also reserve paths for its human authors (`write_deny` in `harness/registry/structure.json`); an agent write there is denied on every runtime that routes edit tools through the hooks, and the recovery is to read, quote and check the file and hand the text to the writer. Detail: `harness/rules/access-policy.md`.
 
 ## Skills
 

@@ -47,7 +47,7 @@ Fixed points of the shape: the five lane names are fixed and every lane is eithe
 
 | File | Declares | Read by |
 |---|---|---|
-| `structure.json` | host facts: the five lanes, `git.mode`, `outbound_globs`, `brain.local_path` and `brain.local_tracked`, `tiers.lane_defaults` and `tiers.unlisted_path`, `delegation.mandatory`, `selection_scope`, `host.profile`, `host.verify_command` | every kernel file that needs a host fact, through `harness_registry.load_structure()` (validating, raises) or `hook_io.load_structure()` (standalone, fails open); the two must agree |
+| `structure.json` | host facts: the five lanes, `git.mode`, `outbound_globs`, `write_deny.globs` and `write_deny.except`, `brain.local_path` and `brain.local_tracked`, `tiers.lane_defaults` and `tiers.unlisted_path`, `delegation.mandatory`, `selection_scope`, `host.profile`, `host.verify_command` | every kernel file that needs a host fact, through `harness_registry.load_structure()` (validating, raises) or `hook_io.load_structure()` (standalone, fails open); the two must agree |
 | `structure.schema.json` | JSON Schema for `structure.json`, closed at every level | CI, the doctors, `tests/test_structure_defaults.py` |
 | `selection.json` | `packs`, `include`, `exclude` | bootstrap materialization, the two adapter generators, the doctors |
 | `runtimes.json` | per runtime: tier, status, adapter and doctor paths, capabilities, `identity_context_limit`, materializations; retired materializations; `hook_events` with support, delivery, context limit, and the degradation rung per runtime | bootstrap, `contract_files.py`, `dispatch.py`, `load_identity.py`, the doctors, lint L2 and L8 |
@@ -98,12 +98,13 @@ Shipped hooks and their rungs on the enforcement ladder (advisory, soft-block, h
 | PreToolUse | `openpyxl-guard` | hard-block | none |
 | PreToolUse | `delegation-guard` | advisory, inert unless `delegation.mandatory` | `delegation.mandatory` |
 | PreToolUse | `read-deny` | hard-block, shipped off, Claude Code only, needs `HARNESS_READ_DENY=1` | none |
+| PreToolUse | `write-deny` | hard-block by host declaration, shipped off (empty globs) | `write_deny.globs`, `write_deny.except` |
 | PostToolUse | `frontmatter-guard` | advisory | every configured lane; `collaborators.yaml` |
 | PostToolUse | `prose-lint` | advisory | `outbound_globs` (empty by default, so silent) |
 | PostToolUse | `delegation-guard` | advisory, inert unless `delegation.mandatory` | `delegation.mandatory` |
 | Stop | `close-the-loop` | advisory | every configured lane; decisions as the evidence lane |
 
-`dispatch.py` caps `additionalContext` at the `context_limit` declared per runtime and event in `runtimes.json` and appends a visible note when it truncates. SessionStart is budgeted per lane by weight (identity 40, knowledge 20, other 5) with a footer naming trimmed and omitted sources; it is never tail-truncated. The regression suite has 54 fixtures across the `guard`, `frontmatter`, `openpyxl`, and `read-deny` groups, each piped through the native wrapper and diffed byte for byte against an expected file.
+`dispatch.py` caps `additionalContext` at the `context_limit` declared per runtime and event in `runtimes.json` and appends a visible note when it truncates. SessionStart is budgeted per lane by weight (identity 40, knowledge 20, other 5) with a footer naming trimmed and omitted sources; it is never tail-truncated. The regression suite has 214 fixtures across the `guard`, `frontmatter`, `openpyxl`, `read-deny`, and `write-deny` groups, each piped through the native wrapper and diffed byte for byte against an expected file.
 
 ## The degradation ladder
 
@@ -121,7 +122,7 @@ The rungs declared in this build:
 |---|---|---|---|
 | SessionStart | native-hook (individual wrappers, limit 9000) | native-hook (dispatcher, limit 3200, configured-beta) | native-hook (plugin system-prompt transform, limit 3200, experimental) |
 | UserPromptSubmit | contract-text | contract-text | contract-text |
-| PreToolUse | native-hook | native-hook (dispatcher, limit 600) | native-hook (plugin `tool.execute.before`; partial: only the two guards are configured, `memory-first`, `delegation-guard`, and `read-deny` unsupported) |
+| PreToolUse | native-hook | native-hook (dispatcher, limit 600) | native-hook (plugin `tool.execute.before`; partial: the two guards and `write-deny` are configured, `memory-first`, `delegation-guard`, and `read-deny` unsupported) |
 | PostToolUse | native-hook | native-hook (dispatcher, limit 1200) | contract-text |
 | Stop | native-hook | native-hook (dispatcher) | contract-text |
 

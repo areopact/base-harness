@@ -48,6 +48,7 @@ DEFAULT_STRUCTURE = {
     },
     "git": {"mode": "main-only"},
     "outbound_globs": [],
+    "write_deny": {"globs": [], "except": []},
     "brain": {"local_tracked": False, "local_path": "brain/local"},
     "tiers": {
         "lane_defaults": {

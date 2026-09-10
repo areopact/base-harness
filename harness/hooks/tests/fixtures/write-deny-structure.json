@@ -1,0 +1,6 @@
+{
+  "write_deny": {
+    "globs": ["harness/hooks/tests/fixtures/write-deny/scope/**"],
+    "except": ["harness/hooks/tests/fixtures/write-deny/scope/records/**"]
+  }
+}

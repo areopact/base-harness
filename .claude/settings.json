@@ -90,6 +90,15 @@
             "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/pre-tool-use/delegation-guard.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/harness/hooks/pre-tool-use/write-deny.sh\""
+          }
+        ]
       }
     ],
     "PostToolUse": [

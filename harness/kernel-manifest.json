@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "files": [
     {
       "path": ".githooks/pre-commit",
@@ -482,6 +482,11 @@
       "source": null
     },
     {
+      "path": "harness/hooks/lib/write_deny.py",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/hooks/post-tool-use/delegation-guard.ps1",
       "state": "ported",
       "source": "upstream-harness:harness/hooks/post-tool-use/delegation-guard.ps1"
@@ -558,6 +563,16 @@
     },
     {
       "path": "harness/hooks/pre-tool-use/read-deny.sh",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/write-deny.ps1",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/pre-tool-use/write-deny.sh",
       "state": "new",
       "source": null
     },
@@ -1643,6 +1658,26 @@
     },
     {
       "path": "harness/hooks/tests/expected/read-deny/deny-secret-label.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/write-deny/allow-write-excepted.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/write-deny/allow-write-outside-scope.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/write-deny/deny-patch-in-scope.expected",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/expected/write-deny/deny-write-in-scope.expected",
       "state": "new",
       "source": null
     },
@@ -2747,6 +2782,31 @@
       "source": null
     },
     {
+      "path": "harness/hooks/tests/fixtures/write-deny-structure.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/write-deny/allow-write-excepted.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/write-deny/allow-write-outside-scope.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/write-deny/deny-patch-in-scope.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/fixtures/write-deny/deny-write-in-scope.json",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/hooks/tests/run.ps1",
       "state": "ported",
       "source": "upstream-harness:harness/hooks/tests/run.ps1"
@@ -2818,6 +2878,11 @@
     },
     {
       "path": "harness/hooks/tests/test_structure_parameterization.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/hooks/tests/test_write_deny.py",
       "state": "new",
       "source": null
     },

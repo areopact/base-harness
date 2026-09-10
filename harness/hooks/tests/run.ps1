@@ -60,7 +60,8 @@ $groups = @(
     @{ Group = "guard"; Wrapper = (Join-Path $Hooks "pre-tool-use\dangerous-ops-guard.ps1") },
     @{ Group = "openpyxl"; Wrapper = (Join-Path $Hooks "pre-tool-use\openpyxl-guard.ps1") },
     @{ Group = "frontmatter"; Wrapper = (Join-Path $Hooks "post-tool-use\frontmatter-guard.ps1") },
-    @{ Group = "read-deny"; Wrapper = (Join-Path $Hooks "pre-tool-use\read-deny.ps1") }
+    @{ Group = "read-deny"; Wrapper = (Join-Path $Hooks "pre-tool-use\read-deny.ps1") },
+    @{ Group = "write-deny"; Wrapper = (Join-Path $Hooks "pre-tool-use\write-deny.ps1") }
 )
 foreach ($entry in $groups) {
     $fixtures = Get-ChildItem -LiteralPath (Join-Path $ScriptDir ("fixtures\" + $entry.Group)) -Filter *.json | Sort-Object Name
@@ -73,6 +74,8 @@ foreach ($entry in $groups) {
             if ($null -eq $expected) { $expected = "" }
         }
         $previous = $env:HARNESS_READ_DENY
+        $previousStructure = $env:HARNESS_STRUCTURE_FILE
+        if ($entry.Group -eq "write-deny") { $env:HARNESS_STRUCTURE_FILE = Join-Path $ScriptDir "fixtures\write-deny-structure.json" }
         if ($entry.Group -eq "read-deny" -and -not $name.EndsWith("-flag-off")) {
             $env:HARNESS_READ_DENY = "1"
         } else {
@@ -82,6 +85,7 @@ foreach ($entry in $groups) {
             $result = Invoke-Wrapper -Wrapper $entry.Wrapper -StdinFile $fixture.FullName
         } finally {
             if ($null -ne $previous) { $env:HARNESS_READ_DENY = $previous } else { Remove-Item Env:HARNESS_READ_DENY -ErrorAction SilentlyContinue }
+            $env:HARNESS_STRUCTURE_FILE = $previousStructure
         }
         $count += 1
         $actualText = $result.Stdout.TrimEnd("`r", "`n")

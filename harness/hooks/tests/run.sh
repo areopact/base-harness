@@ -78,6 +78,11 @@ run_group guard "$HOOKS/pre-tool-use/dangerous-ops-guard.sh"
 run_group openpyxl "$HOOKS/pre-tool-use/openpyxl-guard.sh"
 run_group frontmatter "$HOOKS/post-tool-use/frontmatter-guard.sh"
 run_group read-deny "$HOOKS/pre-tool-use/read-deny.sh"
+# write-deny is shipped off; its group replays against its own structure file.
+PINNED_STRUCTURE=$HARNESS_STRUCTURE_FILE
+export HARNESS_STRUCTURE_FILE="$SCRIPT_DIR/fixtures/write-deny-structure.json"
+run_group write-deny "$HOOKS/pre-tool-use/write-deny.sh"
+if [ -n "$PINNED_STRUCTURE" ]; then export HARNESS_STRUCTURE_FILE=$PINNED_STRUCTURE; else unset HARNESS_STRUCTURE_FILE; fi
 
 [ "$fail" -eq 0 ] || exit 1
 echo "wrapper fixture diff: $count fixtures PASS"

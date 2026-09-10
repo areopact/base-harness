@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "apply_patch",
+  "tool_input": {
+    "patch": "*** Begin Patch\n*** Update File: harness/hooks/tests/fixtures/write-deny/elsewhere.md\n+x\n*** Update File: harness/hooks/tests/fixtures/write-deny/scope/page.md\n+y\n*** End Patch\n"
+  },
+  "cwd": "",
+  "session_id": "fixture"
+}

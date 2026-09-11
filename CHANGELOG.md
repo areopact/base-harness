@@ -2,6 +2,12 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.1.3] - 2026-09-12
+
+### Changed
+
+- The commit skill commits in proportion. A routine commit is a bounded local git operation: no planning agents, no fresh review cycle, no whole-repository lint, and no external call of its own. The review starts from `git status --short` and `git diff --cached --name-status`, selects paths before reading content, and reads diffs for the selection only; a verification that already ran in the session after the last edit to a selected path is cited rather than rerun, and a failed check is rerun alone; the close-the-loop lane steps cover only what the session created, and an unfiled learning is reported as outstanding instead of blocking the commit; the final race check, explicit staging, the staged-diff drift check, and the commit run as one operation (`git commit -F` with a message file on PowerShell, a quoted heredoc in Bash), verified once afterwards. Branch discipline, verification discovery, the sign-off rule, and the stop-after-commit rule are unchanged.
+
 ## [0.1.2] - 2026-09-11
 
 ### Fixed

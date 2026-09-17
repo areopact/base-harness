@@ -22,6 +22,14 @@ Invariants (each has a test under harness/bootstrap/tests):
 - A junction row whose destination is a per-skill directory is fulfilled by
   per-skill materialization (one link per selected skill), never by a link
   to the whole skill tree, so selection stays enforcing.
+- A junction this process cannot traverse because Windows Redirection Guard
+  distrusts it (the junction was created non-elevated and this process is
+  elevated; Win32 448, "untrusted mount point") is reported as drift in check
+  mode and recreated in apply mode. Recreation from the elevated process
+  carries a trusted stamp, and junctions created by a non-elevated bootstrap
+  stay valid for non-elevated tools. When the registry preflight itself is
+  blocked by such a junction, the link rows are repaired first and the
+  preflight runs again; no other change precedes a passing preflight.
 
 Exit codes: 0 clean, 1 drift or unresolved conflict, 2 missing prerequisite,
 3 manifest parse failure.
@@ -60,6 +68,11 @@ MARKER_BYTES = b"harness/bootstrap/materialize.py\n"
 IGNORED_NAMES = {"__pycache__"}
 IGNORED_SUFFIXES = {".pyc"}
 EXIT_CLEAN, EXIT_DRIFT, EXIT_PREREQ, EXIT_MANIFEST = 0, 1, 2, 3
+UNTRUSTED_MOUNT_POINT = 448  # Win32 ERROR_UNTRUSTED_MOUNT_POINT (Redirection Guard)
+UNTRUSTED_LINK_DRIFT = (
+    "cannot be traversed by this elevated process (Windows Redirection Guard: the junction "
+    "was created non-elevated); run bootstrap from an elevated shell"
+)
 
 
 class ManifestError(Exception):
@@ -250,6 +263,23 @@ def is_link(path: Path) -> bool:
     return path.is_symlink() or _is_junction(path)
 
 
+def is_untrusted_mount_point(exc: BaseException) -> bool:
+    """True for the Windows Redirection Guard refusal (Win32 448)."""
+    return getattr(exc, "winerror", None) == UNTRUSTED_MOUNT_POINT
+
+
+def link_blocked(path: Path) -> bool:
+    """One read through a link: True only when Windows Redirection Guard
+    refuses the traversal. Any other error is left to the caller's normal
+    handling. Reads at most one entry and never follows further."""
+    try:
+        with os.scandir(path) as entries:
+            next(entries, None)
+    except OSError as exc:
+        return is_untrusted_mount_point(exc)
+    return False
+
+
 def remove_link(path: Path) -> None:
     """Unlink a symlink or junction without touching what it points at."""
     try:
@@ -356,6 +386,7 @@ class Engine:
         self.copy = copy
         self.result = Result()
         self.refused: set[str] = set()
+        self.preflight_blocked_path: str | None = None
 
     # -- helpers ---------------------------------------------------------
 
@@ -388,7 +419,10 @@ class Engine:
         for relative in candidates:
             self.destination(relative)
 
-    def registry_preflight(self) -> bool:
+    def registry_preflight(self) -> bool | str:
+        """True when the registries validate, False when they do not, and
+        "blocked" when the validator could not even read a materialized link
+        (see repair_untrusted_links)."""
         tools = self.root / "harness" / "tools"
         validator = tools / "harness_registry.py"
         if not validator.is_file():
@@ -411,6 +445,15 @@ class Engine:
                 errors = validate_all(self.root)
             except TypeError:
                 errors = validate_all()
+        except OSError as exc:
+            if is_untrusted_mount_point(exc):
+                # run() decides whether this is drift (check mode) or a note
+                # followed by repair and retry (apply mode).
+                blocked = getattr(exc, "filename", None)
+                self.preflight_blocked_path = self.rel(Path(blocked)) if blocked else None
+                return "blocked"
+            self.result.drifted(f"registry preflight raised ({exc})")
+            return False
         except Exception as exc:  # noqa: BLE001
             self.result.drifted(f"registry preflight raised ({exc})")
             return False
@@ -420,6 +463,37 @@ class Engine:
             return False
         self.result.ok("registry preflight passed")
         return True
+
+    def repair_untrusted_links(self, manifest: dict) -> None:
+        """Repair, or in check mode report, every materialized link this
+        process cannot traverse: the whole-tree link rows and the selected
+        per-skill links. Nothing is pruned, copied, or generated here, so a
+        blocked preflight can be retried without any other change."""
+        owned = per_skill_destinations(manifest)
+        for entry in manifest["junctions"]:
+            if entry["mode"] != "link" or entry["dst"] in owned:
+                continue
+            dst = self.destination(entry["dst"])
+            if dst is not None and is_link(dst) and link_blocked(dst):
+                self.link_entry(entry["src"], entry["dst"])
+        try:
+            skills, selected, _ = selected_skills(self.root)
+        except (SkillError, json.JSONDecodeError, OSError):
+            return
+        for block in manifest.get("per_skill", {}).values():
+            if block["mode"] != "link" and not block.get("link_as"):
+                continue
+            dst_dir = self.destination(block["dst_dir"])
+            if dst_dir is None:
+                continue
+            for name in selected:
+                dst = dst_dir / name
+                if is_link(dst) and link_blocked(dst):
+                    self.skill_dir_entry(block["dst_dir"], name, skills[name].relative)
+            if block.get("link_as"):
+                link_as = self.destination(block["link_as"])
+                if link_as is not None and is_link(link_as) and link_blocked(link_as):
+                    self.link_entry(block["dst_dir"], block["link_as"])
 
     # -- contract --------------------------------------------------------
 
@@ -485,7 +559,9 @@ class Engine:
         if not src.is_dir():
             self.result.drifted(f"{dst_rel}: canonical source {src_rel} missing or not a directory")
             return
-        if not dst.exists() and not dst.is_symlink():
+        # is_link first: it is an lstat, while exists() follows the link and
+        # raises under Redirection Guard before the link could be classified.
+        if not is_link(dst) and not dst.exists():
             if self.check:
                 self.result.drifted(f"{dst_rel} missing (run bootstrap)")
                 return
@@ -502,6 +578,14 @@ class Engine:
             self.result.made(f"{dst_rel} -> {src_rel} ({kind})")
             return
         if is_link(dst):
+            if link_blocked(dst):
+                if self.check:
+                    self.result.drifted(f"{dst_rel} {UNTRUSTED_LINK_DRIFT}")
+                    return
+                remove_link(dst)
+                kind = make_link(src, dst)
+                self.result.synced(f"{dst_rel} -> {src_rel} (untrusted junction recreated, {kind})")
+                return
             if link_matches(dst, src):
                 self.result.ok(f"{dst_rel} -> {src_rel}")
                 return
@@ -638,7 +722,7 @@ class Engine:
         dst = self.destination(dst_rel)
         if dst is None:
             return
-        if not dst.exists() and not dst.is_symlink():
+        if not is_link(dst) and not dst.exists():
             return
         if is_link(dst):
             if self.check:
@@ -660,7 +744,7 @@ class Engine:
         if not src.is_dir():
             self.result.drifted(f"{dst_rel}: skill source {src_rel} missing")
             return
-        if not dst.exists() and not dst.is_symlink():
+        if not is_link(dst) and not dst.exists():
             if self.check:
                 self.result.drifted(f"{dst_rel} missing (selected skill not materialized)")
                 return
@@ -674,6 +758,14 @@ class Engine:
                 self.result.made(f"{dst_rel} -> {src_rel} ({kind})")
             return
         if is_link(dst):
+            if link_blocked(dst):
+                if self.check:
+                    self.result.drifted(f"{dst_rel} {UNTRUSTED_LINK_DRIFT}")
+                    return
+                remove_link(dst)
+                kind = make_link(src, dst)
+                self.result.synced(f"{dst_rel} (untrusted junction recreated, {kind})")
+                return
             if link_matches(dst, src):
                 self.result.ok(f"{dst_rel} -> {src_rel}")
                 return
@@ -924,7 +1016,20 @@ class Engine:
         if not manifest["junctions"]:
             self.result.warn("junctions.json declares zero entries")
         self.validate_manifest_destinations(manifest)
-        if not self.registry_preflight():
+        preflight = self.registry_preflight()
+        if preflight == "blocked":
+            # The validator could not read a materialized link. The only change
+            # allowed before a passing preflight is to repair those links
+            # (check mode reports them instead); then the preflight runs again
+            # over the same registries. Only what stays unresolved counts.
+            blocked = self.preflight_blocked_path or "a materialized link"
+            if self.check:
+                self.result.drifted(f"registry preflight: {blocked} {UNTRUSTED_LINK_DRIFT}")
+            else:
+                self.result.note(f"registry preflight blocked by {blocked} (untrusted junction); repairing the links, then retrying")
+            self.repair_untrusted_links(manifest)
+            preflight = False if self.check else self.registry_preflight()
+        if not preflight:
             self.result.drifted("registry preflight failed; bootstrap made no changes")
             return self.result
         owned = per_skill_destinations(manifest)

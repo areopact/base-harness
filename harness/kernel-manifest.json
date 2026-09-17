@@ -1,5 +1,5 @@
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "files": [
     {
       "path": ".githooks/pre-commit",
@@ -370,6 +370,11 @@
       "path": "harness/bootstrap/tests/test_materialize_safety.py",
       "state": "ported",
       "source": "upstream-harness:harness/bootstrap/tests/test_windows_bootstrap_safety.py"
+    },
+    {
+      "path": "harness/bootstrap/tests/test_materialize_untrusted_links.py",
+      "state": "new",
+      "source": null
     },
     {
       "path": "harness/bootstrap/tests/test_skill_catalog.py",

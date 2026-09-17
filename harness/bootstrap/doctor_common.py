@@ -206,10 +206,15 @@ def check_link_target(root: Path, audit: Audit, src_rel: str, dst_rel: str) -> b
     if not src.is_dir():
         audit.fail("configured", f"{dst_rel}: canonical source {src_rel} is missing")
         return False
-    if not dst.exists() and not dst.is_symlink():
+    # is_link first: it is an lstat, while exists() follows the link and raises
+    # under Redirection Guard before the link could be classified.
+    if not materialize.is_link(dst) and not dst.exists():
         audit.fail("configured", f"{dst_rel} is missing; run bootstrap")
         return False
     if materialize.is_link(dst):
+        if materialize.link_blocked(dst):
+            audit.fail("configured", f"{dst_rel} {materialize.UNTRUSTED_LINK_DRIFT}")
+            return False
         if same_target(dst, src):
             audit.ok("configured", f"{dst_rel} resolves to {src_rel}")
             return True
@@ -255,7 +260,7 @@ def check_junction_rows(root: Path, audit: Audit, runtime: str) -> dict | None:
             check_link_target(root, audit, src_rel, dst_rel)
     for entry in manifest.get("retired_destinations", []):
         dst = Path(root) / entry["dst"]
-        if dst.exists() or dst.is_symlink():
+        if materialize.is_link(dst) or dst.exists():
             audit.fail("configured", f"retired {entry['dst']} still exists (replacement {entry.get('replacement', '')}); run bootstrap")
         else:
             audit.ok("configured", f"retired {entry['dst']} is absent")
@@ -313,6 +318,11 @@ def materialized_skills(root: Path, dst_dir_rel: str, kind: str) -> set[str]:
                 names.add(entry.name)
             continue
         if materialize.is_link(entry):
+            if materialize.link_blocked(entry):
+                # Counted as materialized so the selection line does not also
+                # call it missing; check_selection reports the block itself.
+                names.add(entry.name)
+                continue
             try:
                 target = os.path.realpath(entry)
                 if os.path.commonpath([skills_root, target]) == skills_root:
@@ -335,6 +345,12 @@ def check_selection(root: Path, audit: Audit, dst_dir_rel: str, kind: str, expec
         audit.warn("configured", warning)
     wanted = set(selected) if expected is None else expected
     found = materialized_skills(root, dst_dir_rel, kind)
+    blocked = sorted(name for name in found if materialize.link_blocked(Path(root) / dst_dir_rel / name))
+    if blocked:
+        audit.fail(
+            "configured",
+            f"{dst_dir_rel}: {len(blocked)} skill link(s) {materialize.UNTRUSTED_LINK_DRIFT}: " + ", ".join(blocked),
+        )
     if found == wanted:
         audit.ok(
             "configured",

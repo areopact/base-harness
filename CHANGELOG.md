@@ -2,6 +2,12 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.1.4] - 2026-09-17
+
+### Fixed
+
+- Junctions an elevated process cannot traverse are repaired instead of reported healthy. Windows Redirection Guard stamps a junction with its creator's trust level and refuses to let an elevated process follow one created non-elevated (Win32 448, "untrusted mount point"). A terminal that runs elevated, which some launchers do, then loses every materialized link at once, while `--check` and the doctors still said OK because they compared link targets without traversing them, and bootstrap could not repair anything because its registry preflight died on the first blocked link. The engine now probes one read through each link: check mode reports the block as drift with the remedy; apply mode unlinks and recreates the junction, and that recreation from the elevated process carries a trusted stamp while junctions created by a non-elevated bootstrap stay valid for non-elevated tools; when the registry preflight itself is blocked, the link rows are repaired first and the preflight runs again. The three doctors report a blocked link, or blocked skill links, as a `configured` FAIL naming the remedy. Observed on the author's host after a Windows security update on 2026-09-14.
+
 ## [0.1.3] - 2026-09-12
 
 ### Changed

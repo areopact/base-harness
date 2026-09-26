@@ -27,6 +27,7 @@ if str(BOOTSTRAP) not in sys.path:
 DEFAULT_SKILLS = (("alpha", ["core"]), ("beta", ["maintain"]), ("gamma", ["decks"]))
 ENGINE_FILES = (
     "materialize.py",
+    "links.py",
     "skill_catalog.py",
     "contract_files.py",
     "build_codex_adapter.py",

@@ -3,12 +3,22 @@
 
 Usage:
     python harness/tools/adopt.py <target-repo> [--dry-run | -y/--apply]
+    python harness/tools/adopt.py --upgrade <target-repo> [--dry-run | -y/--apply]
+        [--source SRC] [--skip GLOB ...]
 
 Default is a dry run that prints every action and writes nothing; -y/--apply
 performs them. The source is the repository this file lives in.
 
 Refusals (exit 2): the target is not a git repository, has uncommitted
 changes, is this repository, or already carries a harness kernel.
+
+--upgrade refreshes an already-adopted host from a newer copy of the
+template, instead of installing into a fresh target. It reads the source's
+committed HEAD (never its working tree), refuses on a dirty or incompletely
+checked-out target, never deletes a file, and never touches a host-owned
+path (structure.json, selection.json, adopted-files.json, CONTRACT.host.md,
+AGENTS.md, CLAUDE.md, any `*.harness` sibling, or any path the target's
+structure.json lists under `host.harness_owned`). See `upgrade_main` below.
 
 Actions:
   * harness/ is copied file by file. A target file that already exists is
@@ -60,6 +70,7 @@ doctor commands.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import importlib.util
 import json
 import os
@@ -450,6 +461,426 @@ def write_adopted_files(target: Path, new_paths: list, template_version: str) ->
 
 
 # --------------------------------------------------------------------------
+# upgrade (refresh an already-adopted host from a newer template)
+# --------------------------------------------------------------------------
+
+# Every host-facing root file plain adopt only ever installs when the target
+# does not already have it (ROOT_FILES: README.md, AGENTS.md, CLAUDE.md,
+# CONTRIBUTING.md, SECURITY.md, LICENSE, NOTICE, THIRD-PARTY.md, .gitignore,
+# .gitattributes), plus the registry/contract files adopt itself writes for
+# the target rather than copying. None of these is ever refreshed by
+# --upgrade: an adopted host owns its own copy from the moment adopt ran.
+UPGRADE_FIXED_HOST_OWNED = set(ROOT_FILES) | {
+    "harness/registry/structure.json",
+    "harness/registry/selection.json",
+    ADOPTED_FILES_REL,
+    "harness/CONTRACT.host.md",
+}
+HARNESS_SIBLING_SUFFIX_RE = re.compile(r"\.harness(\.[A-Za-z0-9]+)?$")
+
+
+def is_harness_sibling_path(rel: str) -> bool:
+    """True for a `.harness` non-overwrite landing sibling (e.g.
+    README.harness.md, git-workflow.harness.md): a one-time adoption
+    artifact the checklist asks a human to merge or delete, never something
+    --upgrade should recreate or refresh on its own."""
+    return bool(HARNESS_SIBLING_SUFFIX_RE.search(Path(rel).name))
+
+
+def is_safe_candidate_path(rel: str) -> bool:
+    """Strict POSIX-relative path: no backslash, no colon (a Windows drive
+    letter or an alternate data stream), not absolute, and no empty, '.', or
+    '..' segment. Checked before a candidate path is ever joined onto a
+    filesystem path, for both source-manifest/tree paths and
+    adopted-files.json entries: either can carry an adversarial or corrupted
+    value."""
+    if not rel or "\\" in rel or ":" in rel or rel.startswith("/"):
+        return False
+    parts = rel.split("/")
+    return all(part not in ("", ".", "..") for part in parts)
+
+
+def in_plain_adopt_scope(rel: str) -> bool:
+    """True when a path is inside what plain adopt.py itself ever installs:
+    harness/ (minus HARNESS_SKIP_DIRS/HARNESS_SKIP_FILES, the same exclusions
+    plan_actions applies), or one of ROOT_FILES, ROOT_TREES, or ROOT_EXTRA.
+    --upgrade must never create a path (e.g. under brain/) that a plain
+    adopt on this same target would never have written in the first place;
+    only used to gate a manifest-only *new* candidate, never an already
+    recorded adopted-files.json path."""
+    if rel in HARNESS_SKIP_FILES:
+        return False
+    parts = rel.split("/")
+    if parts[0] == "harness":
+        return not any(part in HARNESS_SKIP_DIRS for part in parts[1:-1])
+    if rel in ROOT_FILES or rel in ROOT_EXTRA:
+        return True
+    return parts[0] in ROOT_TREES
+
+
+def _normalize_crlf(data: bytes) -> bytes:
+    return data.replace(b"\r\n", b"\n")
+
+
+def _links_module():
+    """Load harness/bootstrap/links.py's is_link without touching sys.path
+    (mirrors _registry_module's loader for harness_registry.py)."""
+    path = TOOLS_DIR.parent / "bootstrap" / "links.py"
+    if not path.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("harness_links", path)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:  # noqa: BLE001 - a broken links module means "treat as a link" below
+        return None
+    return module
+
+
+def path_has_link_component(target: Path, rel: str) -> bool:
+    """True when the destination itself, or any parent directory between
+    target and the destination, is a symlink or junction, or when the fully
+    resolved destination would fall outside the resolved target directory.
+    A missing path component is never a link (is_symlink/is_link is false
+    for a path that does not exist at all), so this is safe to call before a
+    new file's parent directories are created. Called before any read or
+    write through the candidate path: a write that followed a tracked
+    symlink out of the target would overwrite (or, for a dangling symlink,
+    create) a file entirely outside the host's repository."""
+    links = _links_module()
+    is_link_fn = links.is_link if links is not None else (lambda p: p.is_symlink())
+    current = target
+    for part in Path(rel).parts:
+        current = current / part
+        try:
+            if is_link_fn(current):
+                return True
+        except OSError:
+            return True
+    try:
+        resolved_target = Path(os.path.realpath(target))
+        resolved_dst = Path(os.path.realpath(current))
+    except OSError:
+        return True
+    try:
+        resolved_dst.relative_to(resolved_target)
+    except ValueError:
+        return True
+    return False
+
+
+def target_tracked_paths(target: Path) -> set:
+    """Every path git tracks in the target's index, as repo-relative POSIX
+    strings: the set membership this needs is exactly what
+    `git ls-files --error-unmatch <path>` would answer per path, computed
+    once for the whole run instead of once per candidate."""
+    proc = subprocess.run(["git", "-C", str(target), "ls-files", "-z"], capture_output=True, check=False)
+    if proc.returncode != 0:
+        return set()
+    return {chunk.decode("utf-8") for chunk in proc.stdout.split(b"\x00") if chunk}
+
+
+def upgrade_target_refusal(target: Path) -> str:
+    if not (target / ADOPTED_FILES_REL).is_file():
+        return f"target has no {ADOPTED_FILES_REL} (not an adopted host)"
+    code, out, _ = git(target, "rev-parse", "--is-inside-work-tree")
+    if code != 0 or out.strip() != "true":
+        return "target is not a git repository (git rev-parse --is-inside-work-tree failed)"
+    code, deleted, _ = git(target, "ls-files", "-d")
+    if code != 0:
+        return "git ls-files -d failed on the target"
+    if deleted.strip():
+        return "target has tracked file(s) missing from disk (incomplete checkout); restore them first"
+    code, status, _ = git(target, "status", "--porcelain", "--untracked-files=all")
+    if code != 0:
+        return "git status failed on the target"
+    if status.strip():
+        return "target has uncommitted changes; commit or stash them first"
+    return ""
+
+
+def upgrade_cross_refusal(source: Path, target: Path) -> str:
+    if source.resolve() == target.resolve():
+        return "source and target resolve to the same directory"
+    return ""
+
+
+def upgrade_source_refusal(source: Path) -> str:
+    code, out, _ = git(source, "rev-parse", "--is-inside-work-tree")
+    if code != 0 or out.strip() != "true":
+        return "source is not a git repository (git rev-parse --is-inside-work-tree failed)"
+    if (source / ADOPTED_FILES_REL).is_file():
+        return f"source has {ADOPTED_FILES_REL} (it is a host, not the template)"
+    return ""
+
+
+def source_head_paths(source: Path) -> set:
+    """Every path git tracks at the source's HEAD, as repo-relative POSIX
+    strings. Raises RuntimeError on git failure so the caller can turn it
+    into a clean refusal.
+
+    Reads straight from git (ls-tree / show below), never a temp-directory
+    export: mkdtemp's directory is owner-only (0o700) and, since Python 3.13
+    on Windows, an elevated process's "owner" is the Administrators group,
+    which leaves a later medium-integrity process unable to read anything
+    left there. There is no directory to leak permissions from."""
+    proc = subprocess.run(["git", "-C", str(source), "ls-tree", "-r", "--name-only", "-z", "HEAD"], capture_output=True, check=False)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.decode("utf-8", "replace").strip())
+    return {chunk.decode("utf-8") for chunk in proc.stdout.split(b"\x00") if chunk}
+
+
+def read_source_blob(source: Path, rel: str) -> bytes:
+    """The exact bytes of one path at the source's committed HEAD, never its
+    working tree."""
+    proc = subprocess.run(["git", "-C", str(source), "show", f"HEAD:{rel}"], capture_output=True, check=False)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.decode("utf-8", "replace").strip())
+    return proc.stdout
+
+
+def read_kernel_manifest(source: Path, head_paths: set) -> tuple:
+    """(manifest_dict, version) read from the source's committed HEAD.
+    version is 'unknown' when the manifest is missing, unreadable, or
+    carries no string version, matching kernel_template_version's fallback."""
+    if "harness/kernel-manifest.json" not in head_paths:
+        return {}, "unknown"
+    try:
+        doc = json.loads(read_source_blob(source, "harness/kernel-manifest.json").decode("utf-8-sig"))
+    except (RuntimeError, ValueError, UnicodeDecodeError):
+        return {}, "unknown"
+    version = doc.get("version") if isinstance(doc, dict) else None
+    return doc, (version if isinstance(version, str) and version else "unknown")
+
+
+def kernel_manifest_paths(manifest: dict) -> list:
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(files, list):
+        return []
+    return sorted({f["path"] for f in files if isinstance(f, dict) and isinstance(f.get("path"), str)})
+
+
+def load_adopted_paths(target: Path) -> list:
+    try:
+        doc = json.loads((target / ADOPTED_FILES_REL).read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return []
+    return [p for p in (doc.get("paths") or []) if isinstance(p, str)]
+
+
+def load_target_harness_owned(target: Path) -> set:
+    path = target / "harness" / "registry" / "structure.json"
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return set()
+    owned = (doc.get("host") or {}).get("harness_owned") if isinstance(doc, dict) else None
+    return {p for p in (owned or []) if isinstance(p, str)}
+
+
+def build_upgrade_candidates(target: Path, adopted_paths: list, manifest_paths: list, target_tracked: set) -> tuple:
+    """(candidates_sorted, adopted_set).
+
+    candidates is every recorded adopted path (safe or not: an unsafe one is
+    never stat'd here, only surfaced later so classify can report and skip
+    it), plus every safe, in-scope source-manifest path the target's git
+    does not track yet. Tracked, not merely present on disk: a path the
+    manifest lists that already has some untracked or gitignored file
+    sitting on it is still a candidate, so classify can report and skip it
+    as `untracked on host` instead of silently vanishing here. adopted_set
+    lets classify tell "recorded, now missing" (skip: removed on host)
+    apart from "never adopted, manifest-new" (new).
+
+    An unsafe manifest path is still added to the candidate set (without
+    ever touching the filesystem) purely so it surfaces as `skip (unsafe
+    path)` instead of silently vanishing. Never a path the target already
+    tracks that the manifest lists but the target never adopted: an upgrade
+    refreshes what it manages, it does not import a host's unrelated file
+    that happens to share a path with the template, and never a path plain
+    adopt itself would not have installed (brain/, etc.)."""
+    adopted_set = set(adopted_paths)
+    candidates = set(adopted_set)
+    for rel in manifest_paths:
+        if not is_safe_candidate_path(rel):
+            candidates.add(rel)
+            continue
+        if not in_plain_adopt_scope(rel):
+            continue
+        if rel not in target_tracked:
+            candidates.add(rel)
+    return sorted(candidates), adopted_set
+
+
+def classify_upgrade_path(
+    source: Path,
+    target: Path,
+    rel: str,
+    head_paths: set,
+    harness_owned: set,
+    skip_globs: list,
+    adopted_set: set,
+    target_tracked: set,
+) -> tuple:
+    """(status, reason, src_bytes) for one candidate path. status is one of
+    update, new, same, skip, gone. reason is None except for skip and gone.
+    src_bytes is the fetched source content for update/new (the caller needs
+    it to write), None otherwise (no need to fetch it twice)."""
+    if not is_safe_candidate_path(rel):
+        return "skip", "unsafe path", None
+    if rel in UPGRADE_FIXED_HOST_OWNED:
+        return "skip", "host-owned (fixed)", None
+    if is_harness_sibling_path(rel):
+        return "skip", "harness-sibling (adoption-time artifact)", None
+    if rel in harness_owned:
+        return "skip", "host-owned (structure.json host.harness_owned)", None
+    for pattern in skip_globs:
+        if fnmatch.fnmatchcase(rel, pattern):
+            return "skip", f"--skip {pattern}", None
+    if path_has_link_component(target, rel):
+        return "skip", "link in path", None
+
+    dst_path = target / rel
+    dst_exists = dst_path.is_file()
+    if dst_exists and rel not in target_tracked:
+        return "skip", "untracked on host", None
+    if not dst_exists and rel in adopted_set:
+        # Recorded by an earlier adoption, absent from disk now, and the
+        # incomplete-checkout guard already passed: the host removed it on
+        # purpose. Never recreate it; report it so a human can decide.
+        return "skip", "removed on host", None
+    if rel not in head_paths:
+        return "gone", "recorded but absent from source HEAD; not deleted", None
+
+    src_bytes = read_source_blob(source, rel)
+    if not dst_exists:
+        return "new", None, src_bytes
+    dst_bytes = dst_path.read_bytes()
+    if _normalize_crlf(src_bytes) == _normalize_crlf(dst_bytes):
+        # CRLF-vs-LF alone is not a real difference on an autocrlf checkout;
+        # the write path below always writes the source's exact bytes when a
+        # genuine difference does trigger `update`.
+        return "same", None, None
+    return "update", None, src_bytes
+
+
+def upgrade_main(args, source: Path, target: Path) -> int:
+    why = upgrade_target_refusal(target) or upgrade_cross_refusal(source, target) or upgrade_source_refusal(source)
+    if why:
+        print(f"adopt --upgrade: refused: {why}", file=sys.stderr)
+        return 2
+
+    code, sha_out, _ = git(source, "rev-parse", "--short", "HEAD")
+    source_sha = sha_out.strip() if code == 0 else "unknown"
+
+    try:
+        head_paths = source_head_paths(source)
+    except RuntimeError as exc:
+        print(f"adopt --upgrade: refused: could not read source HEAD: {exc}", file=sys.stderr)
+        return 2
+
+    if "harness/kernel-manifest.json" not in head_paths:
+        print("adopt --upgrade: refused: source has no harness/kernel-manifest.json at HEAD", file=sys.stderr)
+        return 2
+
+    manifest, kernel_version = read_kernel_manifest(source, head_paths)
+    print(f"adopt --upgrade: source HEAD {source_sha}, kernel version {kernel_version}")
+
+    adopted_paths = load_adopted_paths(target)
+    manifest_paths = kernel_manifest_paths(manifest)
+    target_tracked = target_tracked_paths(target)
+    candidates, adopted_set = build_upgrade_candidates(target, adopted_paths, manifest_paths, target_tracked)
+    harness_owned = load_target_harness_owned(target)
+    skip_globs = args.skip or []
+
+    results = {"update": [], "new": [], "same": [], "skip": [], "gone": []}
+    content_cache = {}
+    label = "apply" if args.apply else "dry run"
+    print(f"adopt --upgrade ({label}): {source} -> {target}")
+    for rel in candidates:
+        status, reason, src_bytes = classify_upgrade_path(
+            source, target, rel, head_paths, harness_owned, skip_globs, adopted_set, target_tracked
+        )
+        results[status].append(rel)
+        if src_bytes is not None:
+            content_cache[rel] = src_bytes
+        if status == "same":
+            continue
+        if status in ("skip", "gone"):
+            print(f"  {status:<6} {rel} ({reason})")
+        else:
+            print(f"  {status:<6} {rel}")
+    print(f"  {len(results['same'])} file(s) unchanged (same)")
+
+    write_paths = sorted(results["update"] + results["new"])
+
+    if not args.apply:
+        if write_paths:
+            scripts = [rel for rel in write_paths if is_script_path(rel)]
+            extra = f"; would stage the executable bit on {len(scripts)} script(s)" if scripts else ""
+            print(f"adopt --upgrade: dry run would write {len(write_paths)} file(s){extra}; pass -y/--apply to perform these actions")
+        else:
+            print("adopt --upgrade: dry run, nothing to write; pass -y/--apply to update adopted-files.json's template_version regardless")
+        if results["gone"]:
+            print(f"adopt --upgrade: {len(results['gone'])} path(s) recorded but absent from source HEAD; review before deciding")
+        return 0
+
+    written = []
+    try:
+        for rel in write_paths:
+            dst = target / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(content_cache[rel])
+            written.append(rel)
+    except OSError as exc:
+        print(
+            f"adopt --upgrade: FATAL: write failed after {len(written)} of {len(write_paths)} file(s); "
+            f"not claiming success: {exc}",
+            file=sys.stderr,
+        )
+        for rel in written:
+            print(f"  written: {rel}", file=sys.stderr)
+        return 1
+
+    script_paths = [rel for rel in write_paths if is_script_path(rel)]
+    staged, warning = set_executable_bits(target, script_paths)
+    if warning:
+        print(f"adopt --upgrade: WARN: could not stage the executable bit; run manually: {warning}", file=sys.stderr)
+    elif staged:
+        print(f"adopt --upgrade: staged {len(staged)} script(s) with the executable bit")
+
+    merged, total, added = write_adopted_files(target, write_paths, kernel_version)
+    if merged:
+        print(f"adopt --upgrade: harness/registry/adopted-files.json merged ({added} new path(s), {total} total, template_version {kernel_version})")
+    else:
+        print(f"adopt --upgrade: harness/registry/adopted-files.json written ({total} path(s), template_version {kernel_version})")
+
+    code, diff_out, diff_err = git(target, "diff", "--name-status")
+    if code != 0:
+        print(f"adopt --upgrade: FATAL: could not verify no deletions occurred (git diff failed): {diff_err.strip()}", file=sys.stderr)
+        return 1
+    code2, ls_deleted, ls_err = git(target, "ls-files", "-d")
+    if code2 != 0:
+        print(f"adopt --upgrade: FATAL: could not verify no deletions occurred (git ls-files -d failed): {ls_err.strip()}", file=sys.stderr)
+        return 1
+    deletions = [line for line in diff_out.splitlines() if line.startswith("D\t")]
+    if deletions or ls_deleted.strip():
+        print("adopt --upgrade: FATAL: a deletion appeared after apply; refusing to proceed silently", file=sys.stderr)
+        for line in deletions:
+            print(f"  {line}", file=sys.stderr)
+        for line in ls_deleted.splitlines():
+            if line.strip():
+                print(f"  missing: {line}", file=sys.stderr)
+        return 1
+
+    if results["gone"]:
+        print(f"adopt --upgrade: {len(results['gone'])} path(s) recorded but absent from source HEAD; review before deciding")
+    print("adopt --upgrade: applied")
+    return 0
+
+
+# --------------------------------------------------------------------------
 # refusals
 # --------------------------------------------------------------------------
 
@@ -506,14 +937,20 @@ def checklist(target: Path, structure: dict, local_note: str) -> list:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Install the harness into an existing repository (dry run by default).")
     parser.add_argument("target", help="path to the target repository root")
+    parser.add_argument("--upgrade", action="store_true", help="refresh an already-adopted host from a newer template at --source, instead of installing into a fresh target")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--dry-run", action="store_true", help="print every action and write nothing (default)")
     group.add_argument("-y", "--apply", action="store_true", help="perform the actions")
     parser.add_argument("--source", default=str(ROOT), help="harness repository to install from (default: this repository)")
+    parser.add_argument("--skip", action="append", default=[], metavar="GLOB", help="exclude a path from --upgrade (fnmatch glob on the repo-relative POSIX path; repeatable)")
     args = parser.parse_args(argv)
 
     source = Path(args.source).resolve()
     target = Path(args.target).resolve()
+
+    if args.upgrade:
+        return upgrade_main(args, source, target)
+
     why = refusal(source, target)
     if why:
         print(f"adopt: refused: {why}", file=sys.stderr)

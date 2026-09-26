@@ -19,6 +19,7 @@ import os
 import shutil
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -185,7 +186,14 @@ def write_catalog(root: Path, destination: Path) -> tuple[dict, list[str]]:
         if entry.exists() or entry.is_symlink():
             if not _remove_managed_entry(entry):
                 raise RuntimeError(f"refusing to replace unmanaged entry {entry.as_posix()}; move it aside first")
-        staging = Path(tempfile.mkdtemp(prefix=f".{name}-", dir=destination))
+        # Plain mkdir, not tempfile.mkdtemp: since Python 3.13 on Windows,
+        # mkdtemp's 0o700 becomes a protected owner-only ACL, and under an
+        # elevated token the owner is the Administrators group, so a catalog
+        # generated from an elevated shell turns unreadable and undeletable
+        # once the shell runs at medium integrity again. A plain directory
+        # inherits the parent's ACL like every other generated file.
+        staging = destination / f".{name}-{uuid.uuid4().hex}"
+        staging.mkdir()
         try:
             for relative, content in files.items():
                 if relative.startswith(name + "/"):

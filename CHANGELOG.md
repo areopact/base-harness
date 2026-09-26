@@ -2,6 +2,20 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.1.5] - 2026-09-27
+
+### Added
+
+- `adopt.py --upgrade <host> [-y] [--source <template>] [--skip GLOB ...]` refreshes an adopted host to the template's committed HEAD, dry run by default. Content is read blob by blob with `git show` from the source's HEAD, never its working tree. It refuses a host that is not adopted, has any uncommitted or untracked change, or has tracked files missing from disk (an incomplete checkout, the state in which a broad staging command commits mass deletions), and refuses when the source is the target or is itself an adopted host. Each candidate is reported as `update`, `new`, `skip` with a reason, or `gone`. Host-owned files (the registry, the host contract, the root files adopt installs and hosts then own), paths the host deleted, untracked or ignored files, unsafe paths (backslash, colon, absolute, `..`), and any path whose destination or parent is a link are never written; nothing is ever deleted. New shell scripts land with the executable bit staged, `adopted-files.json` records the new template version, and a post-apply check fails loudly on any deletion.
+
+### Fixed
+
+- Generated catalogs are no longer locked to the Administrators group when bootstrap runs elevated. Since Python 3.13 on Windows, `tempfile.mkdtemp`'s `0o700` becomes a protected owner-only ACL, and under an elevated token the owner is the Administrators group; the Codex skill catalog staged each skill in such a directory and renamed it into place, so a catalog generated from an elevated shell (the recovery path 0.1.4 recommends for untrusted junctions) became unreadable and undeletable once the shell ran at medium integrity, and git reported every catalog file as deleted. The catalog writer now stages with a plain `mkdir` that inherits the parent's ACL. `harness/bootstrap/tests/test_no_owner_only_staging.py` fails on any `tempfile.mkdtemp` in a production module. Recovery for an already-locked catalog without elevation: move the whole `.agents/skills` directory out of the repository (a rename needs no access to the locked children), then rerun bootstrap.
+
+### Changed
+
+- The directory-link primitives (create, unlink without touching the target, match, and the one-read Redirection Guard probe) move from `materialize.py` into `harness/bootstrap/links.py`, a stdlib-only module with no repository knowledge. `materialize.py` and the doctors import it under the same names. The upstream harness this template is ported from uses the same file byte for byte, and its drift release gate fails when the copies differ, so a link fix lands once for both.
+
 ## [0.1.4] - 2026-09-17
 
 ### Fixed

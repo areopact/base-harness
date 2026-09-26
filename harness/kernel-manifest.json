@@ -1,5 +1,5 @@
 {
-  "version": "0.1.4",
+  "version": "0.1.5",
   "files": [
     {
       "path": ".githooks/pre-commit",
@@ -322,6 +322,11 @@
       "source": "upstream-harness:harness/bootstrap/junctions.json"
     },
     {
+      "path": "harness/bootstrap/links.py",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/bootstrap/materialize.py",
       "state": "new",
       "source": null
@@ -373,6 +378,11 @@
     },
     {
       "path": "harness/bootstrap/tests/test_materialize_untrusted_links.py",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/bootstrap/tests/test_no_owner_only_staging.py",
       "state": "new",
       "source": null
     },

@@ -123,4 +123,4 @@ State what was verified at which rung, with the evidence (command plus observed 
 ## Done when
 
 - **Diagnostic (default):** all three doctors ran from the repository root and their output was captured. The reply gives the section 4 block, quotes each runtime's `Evidence tiers:` roll-up and `Result:` line and every `FAIL` and `WARN` line verbatim, and reports any layer the doctor left `UNKNOWN` as `UNKNOWN` with its reason. It ends with the exact fix command, or `none needed`.
-- **Prove before done:** the reply names the highest rung reached with the command and its observed output, and names anything not verified.
+- **Prove before done:** the affected flow was exercised end to end, applicable lower-rung checks passed, and any added error path or guard fired when provoked. The reply names the highest rung reached, its command and observed output, and anything not verified. Docs-only or test-only changes with no runtime surface use the documented skip.

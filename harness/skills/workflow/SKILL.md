@@ -52,7 +52,9 @@ Use managed mode when native execution is proven but a runtime does not expose e
 
 ## Done when
 
-The controller launched and awaited the run for the returned ID, and the run completed with verification and `review.adversarial` stages covering the current artifacts (Commands, Integrity rules). Effective-model and permission fields the runtime did not expose are reported as `unknown`; under strict mode none remains. The reply says the run completed under the managed procedure.
+**Execution (`run`/`resume`):** the controller launched and awaited the run for the returned ID, and the run completed with verification and `review.adversarial` stages covering the current artifacts (Commands, Integrity rules). Effective-model and permission fields the runtime did not expose are reported as `unknown`; under strict mode none remains. The reply says the run completed under the managed procedure.
+
+**Other explicitly requested commands:** `plan` prints the validated task graph; `start` seeds the run and returns its ID; `status` and `cancel` act on that same run ID and the reply gives their result. These outcomes do not claim managed execution completed.
 
 ## Integrity rules
 

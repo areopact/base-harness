@@ -96,4 +96,4 @@ After committing, report: the commit hash and subject, the paths staged, the bra
 
 ## Done when
 
-The reviewed selection is committed on the branch `git.mode` requires (step 3), after the step 2 verification ran or an earlier run was cited. The commit's parent and diff matched the selection, and `git status --short` was read afterward (step 5.4). The message follows step 4 and carries no session link. No push or pull request was made without a separate explicit ask (step 6). The reply follows Summary shape.
+The reviewed selection is committed on the branch `git.mode` requires (step 3), after step 2 verification passed or a passing same-session run was cited whose selected content, dependencies and other inputs remain unchanged. The commit's parent and diff matched the selection, and `git status --short` was read afterward (step 5.4). The message follows step 4 and carries no session link. No push or pull request was made without a separate explicit ask (step 6). The reply follows Summary shape.

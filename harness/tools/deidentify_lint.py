@@ -84,6 +84,17 @@ exits 2 when the resolved term list (the file named by --terms, or the
 shipped seed when --terms is omitted) has fewer than N entries, so a release
 run built against an empty or missing private list cannot pass.
 
+Accepted history. Published history cannot be rewritten, so a TERM finding in
+an already-published commit can be accepted in
+harness/tools/deidentify-accepted-history.txt: one entry per line, a full
+40-hex commit SHA, a path, and a term, whitespace-separated, "#" comments
+allowed. An entry suppresses only the TERM finding that matches all three
+fields in --history; current-tree findings, structural findings, other terms,
+other paths, and other commits still report. A malformed line exits 2, and an
+entry that matched nothing in a --history run is reported as a STALE finding
+(exit 1) so the list stays exact. The file names the terms it accepts, so it is
+excluded from every scan, like the term file.
+
 Exit 0 when clean, 1 on any finding (including "no refs to scan" under
 --history), 2 on a usage error (including --require-terms not met).
 
@@ -156,6 +167,7 @@ DENIED_FIRST_SEGMENTS = {
 # Public seed term list, resolved inside the scanned repository when --terms
 # is omitted. It is skipped from the scan like any explicit term file.
 DEFAULT_TERMS_RELATIVE = "harness/tools/deidentify-terms.txt"
+DEFAULT_ACCEPTED_HISTORY_RELATIVE = "harness/tools/deidentify-accepted-history.txt"
 
 # Built from fragments so this file passes its own D5 check.
 ATTRIBUTION_TERMS = ("".join(("Areo", "pact")), "".join(("Claw", "ford")))
@@ -491,6 +503,36 @@ def load_terms(path: Path) -> list:
     return terms
 
 
+COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+TERM_MESSAGE_RE = re.compile(r"^matched term '(.*)'$")
+
+
+def load_accepted_history(path: Path) -> dict:
+    """Accepted historical TERM findings: {(commit, path, term): line_no}.
+
+    One entry per line: a full 40-hex commit SHA, a repository path, and a
+    term, separated by whitespace. Blank lines and lines starting with "#"
+    are ignored. Any other shape raises ValueError naming the line, so a typo
+    can never widen what is accepted."""
+    accepted = {}
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    for index, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split()
+        if len(fields) != 3:
+            raise ValueError(f"{path.name}:{index}: expected '<40-hex sha> <path> <term>', got {len(fields)} field(s)")
+        sha, rel, term = fields
+        if not COMMIT_SHA_RE.match(sha):
+            raise ValueError(f"{path.name}:{index}: commit must be a full 40-character lowercase hex SHA")
+        key = (sha, rel, term.lower())
+        if key in accepted:
+            raise ValueError(f"{path.name}:{index}: duplicate of line {accepted[key]}")
+        accepted[key] = index
+    return accepted
+
+
 # --------------------------------------------------------------------------
 # content checks
 # --------------------------------------------------------------------------
@@ -798,7 +840,12 @@ class NoRefsError(RuntimeError):
     clean history."""
 
 
-def scan_history(repo: Path, terms: list, allowed: set, structural_only: bool, skip: set) -> list:
+def scan_history(repo: Path, terms: list, allowed: set, structural_only: bool, skip: set, accepted: dict | None = None, used: set | None = None) -> list:
+    """accepted maps (commit, path, term) to a line number and applies ONLY to
+    TERM findings, matched exactly on all three fields. It is consulted before
+    the per-key dedupe, so accepting the first commit that carried a term in a
+    path never hides a later commit that carries it again. Matched keys are
+    added to `used` so the caller can report stale entries."""
     shas = [s for s in git(repo, "rev-list", "--all", "--reverse").split("\n") if s]
     if not shas:
         raise NoRefsError("no refs to scan: git rev-list --all returned nothing")
@@ -819,6 +866,13 @@ def scan_history(repo: Path, terms: list, allowed: set, structural_only: bool, s
             data = git(repo, "cat-file", "-p", blob, binary=True)
             exempt_masks = _self_exempt_masks(data) if path == SELF_EXEMPT_FILE else None
             for finding in scan_content(path, data, terms, allowed, structural_only, commit=sha, term_exempt_masks=exempt_masks):
+                if accepted and finding.check == "TERM":
+                    matched = TERM_MESSAGE_RE.match(finding.message)
+                    accepted_key = (finding.commit, finding.path, matched.group(1) if matched else None)
+                    if accepted_key in accepted:
+                        if used is not None:
+                            used.add(accepted_key)
+                        continue
                 first_by_key.setdefault(finding.key(), finding)
     return list(first_by_key.values())
 
@@ -886,17 +940,35 @@ def main(argv=None) -> int:
             file=sys.stderr,
         )
         return 2
+    accepted = None
+    accepted_path = repo / DEFAULT_ACCEPTED_HISTORY_RELATIVE
+    if accepted_path.is_file():
+        # The file names the terms it accepts, so it is never scanned itself.
+        skip.add(DEFAULT_ACCEPTED_HISTORY_RELATIVE)
+        if not args.structural:
+            try:
+                accepted = load_accepted_history(accepted_path)
+            except ValueError as exc:
+                print(f"deidentify_lint: malformed accepted-history file: {exc}", file=sys.stderr)
+                return 2
     structure = load_structure(repo)
     allowed = allowed_first_segments(repo)
     scope_files, scope_label = scan_scope(repo, structure, args.all)
-    if terms_path is not None:
+    if skip:
         scope_files = [rel for rel in scope_files if rel not in skip]
     print(f"deidentify_lint: scope {scope_label} ({len(scope_files)} file(s) scanned)")
 
     findings = scan_worktree(repo, terms, allowed, args.structural, skip, files=scope_files)
     if args.history:
         try:
-            findings.extend(scan_history(repo, terms, allowed, args.structural, skip))
+            used = set()
+            findings.extend(scan_history(repo, terms, allowed, args.structural, skip, accepted if terms else None, used))
+            if accepted and terms:
+                for key, line_no in sorted(accepted.items(), key=lambda item: item[1]):
+                    if key not in used:
+                        findings.append(
+                            Finding("STALE", DEFAULT_ACCEPTED_HISTORY_RELATIVE, line_no, f"accepted entry matched no history finding: {key[0][:12]} {key[1]} {key[2]}")
+                        )
         except NoRefsError as exc:
             print(f"deidentify_lint: {exc}", file=sys.stderr)
             return 1

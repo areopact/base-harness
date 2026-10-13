@@ -257,6 +257,94 @@ class TestHistory(TempDirCase):
         assert f"{first[:12]} TERM docs/a.md:1: matched term 'privateterm'" in out
         assert "history on" in out
 
+    def _accepted_repo(self):
+        """Two commits carry the denied term in docs/a.md (different blobs),
+        a third file carries it too, and the working tree is reworded."""
+        repo = init_repo(self.tmp / "repo")
+        terms = self.tmp / "terms.txt"
+        write(terms, "privateterm\n")
+        write(repo / "docs" / "a.md", "privateterm one\n")
+        write(repo / "docs" / "b.md", "privateterm other\n")
+        first = commit_all(repo, "first")
+        write(repo / "docs" / "a.md", "privateterm two\n")
+        second = commit_all(repo, "second")
+        write(repo / "docs" / "a.md", "clean now\n")
+        write(repo / "docs" / "b.md", "clean now\n")
+        commit_all(repo, "third")
+        return repo, terms, first, second
+
+    def _accept(self, repo, *lines):
+        write(repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE, "# accepted\n" + "".join(l + "\n" for l in lines))
+        commit_all(repo, "accept")
+
+    def test_accepted_finding_is_suppressed_others_still_report(self):
+        repo, terms, first, second = self._accepted_repo()
+        self._accept(repo, f"{first} docs/a.md privateterm")
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1, out
+        # same term, same path, other commit: still reported
+        assert f"{second[:12]} TERM docs/a.md:1" in out, out
+        # same commit, other path: still reported
+        assert f"{first[:12]} TERM docs/b.md:1" in out, out
+        assert f"{first[:12]} TERM docs/a.md" not in out, out
+        assert "STALE" not in out, out
+
+    def test_fully_accepted_history_passes_and_file_is_not_scanned(self):
+        repo, terms, first, second = self._accepted_repo()
+        self._accept(
+            repo,
+            f"{first} docs/a.md privateterm",
+            f"{second} docs/a.md PrivateTerm",
+            f"{first} docs/b.md privateterm",
+        )
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 0, out
+        # the file names the term and sits in the tree and in history, yet no finding
+        assert "0 finding(s)" in out, out
+
+    def test_current_tree_finding_is_never_suppressed(self):
+        repo, terms, first, _second = self._accepted_repo()
+        write(repo / "docs" / "a.md", "privateterm again\n")
+        self._accept(repo, f"{first} docs/a.md privateterm")
+        code, out, _ = run([str(repo), "--terms", str(terms)])
+        assert code == 1, out
+        assert "TERM docs/a.md:1" in out, out
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1
+        assert any(line.startswith("TERM docs/a.md:1") for line in out.splitlines()), out
+
+    def test_structural_finding_is_never_suppressed(self):
+        repo = init_repo(self.tmp / "repo")
+        terms = self.tmp / "terms.txt"
+        write(terms, "privateterm\n")
+        write(repo / "docs" / "a.md", f"contact {EMAIL} privateterm\n")
+        first = commit_all(repo, "first")
+        self._accept(repo, f"{first} docs/a.md privateterm")
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1
+        assert "D1 docs/a.md:1" in out, out
+
+    def test_malformed_line_is_a_usage_error(self):
+        repo, terms, first, _second = self._accepted_repo()
+        for bad in (f"{first[:12]} docs/a.md privateterm", f"{first} docs/a.md", f"{first} docs/a.md privateterm extra"):
+            self._accept(repo, bad)
+            code, out, err = run([str(repo), "--terms", str(terms), "--history"])
+            assert code == 2, (bad, out, err)
+            assert "malformed accepted-history file" in err, err
+
+    def test_stale_entry_is_reported(self):
+        repo, terms, first, _second = self._accepted_repo()
+        self._accept(repo, f"{first} docs/a.md privateterm", f"{first} docs/gone.md privateterm")
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1, out
+        assert "STALE" in out and "docs/gone.md" in out, out
+
+    def test_accepted_file_is_skipped_from_the_scan(self):
+        repo, terms, first, _second = self._accepted_repo()
+        self._accept(repo, f"{first} docs/a.md privateterm")
+        code, out, _ = run([str(repo), "--terms", str(terms)])
+        assert not any(l.startswith("TERM " + lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE) for l in out.splitlines()), out
+
     def test_history_with_no_refs_exits_1_not_clean(self):
         """F3(b): an empty or ref-less repository must not be indistinguishable
         from a clean history. git rev-list --all returns nothing here because

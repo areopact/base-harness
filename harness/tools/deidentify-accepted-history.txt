@@ -1,0 +1,16 @@
+# Accepted historical TERM findings for harness/tools/deidentify_lint.py.
+#
+# One entry per line: a full 40-hex commit SHA, a repository path, and a term,
+# separated by whitespace. The entry suppresses only the term finding that
+# matches all three fields when --history walks the commit that first carried
+# that file content. It never applies to the current tree, to structural
+# checks, or to any other path, commit, or term. An entry that matches nothing
+# is reported as STALE and fails the run.
+#
+# An entry is allowed only for a finding in already-published history that
+# cannot be rewritten (published tags and clones pin it), and each entry is
+# reviewed by a maintainer. The current files were reworded; these two commits
+# keep the older wording. This file names the terms it accepts, so the scanner
+# skips it.
+5da04918cb67768eab622373f6b1c1b2891cd6fe START_HERE.md vault
+51f8815278dbe5661e568e0b1119c8107df03a7b harness/bootstrap/links.py vault

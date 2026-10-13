@@ -22,6 +22,10 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 
 - Three current-file uses of the generic private-source term from the seed term list are reworded so the term-list release check no longer reports them: two in `START_HERE.md` (the Obsidian setup prose and step) and one in the `harness/bootstrap/links.py` module docstring. Behavior is unchanged.
 
+### Added
+
+- `harness/tools/deidentify-accepted-history.txt` records accepted historical term findings (full commit SHA, path, term). `deidentify_lint.py --history` suppresses only a TERM finding that matches all three fields, reports an entry that matches nothing as `STALE` (exit 1), exits 2 on a malformed line, and skips the file from every scan. It holds the two findings in published commits that cannot be rewritten. This loosens a release gate and needs independent review.
+
 ## [0.1.6] - 2026-10-14
 
 ### Fixed

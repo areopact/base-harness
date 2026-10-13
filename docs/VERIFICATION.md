@@ -132,6 +132,10 @@ Each of these was hit for real during construction of this template or its prede
 | History consists only of this build's own signed commits | documented | 2026-09-08 | this-repo | the publication history is one signed, signed-off commit of the release tree (`git rev-list --count HEAD` returns 1; `git cat-file -p HEAD` carries a `gpgsig` header and a `Signed-off-by:` trailer); the pre-publication working history was squashed, see `CHANGELOG.md` |
 | History de-identification scan (`--history`, private term list) | documented | 2026-09-07 | this-repo | `python harness/tools/deidentify_lint.py . --terms <private list> --history --require-terms 30` exited 0 with 0 findings over every reachable commit; the private list is not published, so a clone reproduces the structural layer only |
 
+### Accepted historical findings
+
+Published history cannot be rewritten, so a term finding that already sits in a published commit is recorded in `harness/tools/deidentify-accepted-history.txt` instead of weakening the scan: one line per finding, a full 40-hex commit SHA, a path, and a term. An entry is allowed only for a finding in published history that cannot be rewritten (the current file must already be clean), and a maintainer reviews each entry. It suppresses only that exact `--history` term finding. The current tree, structural checks, other terms, other paths, and other commits still report. A malformed line exits 2, and an entry that no longer matches any finding is reported as `STALE` and fails the run, so the list never carries an entry that guards nothing. The scanner skips the file itself because it names the terms it accepts.
+
 ## Red-team record
 
 ## Adopted host

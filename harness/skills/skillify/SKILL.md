@@ -81,6 +81,13 @@ The goal is a durable, evidence-backed reduction in recurrence. A repair can mak
 
 A structured result containing: pattern summary, occurrence evidence, existing-owner analysis, selected repair and its limits, changed paths or a concrete draft, failure, legitimate-neighbor, and recovery test evidence, and the canonical wiring and generated-catalog checks that were run with their results.
 
+## Done when
+
+The existing-owner analysis records why the repair belongs where it is, and the reply follows Output.
+
+- **Authorized:** the repair is made at that owner. The failure, legitimate-neighbor, and recovery cases were run through the relevant runtime or deterministic check (step 5); for a new or changed skill, the step 6 commands ran in order with their results reported.
+- **Not yet authorized:** the reply presents the concrete draft with owner, paths, and limits, and mutation waits for the user's authorization (step 4).
+
 ## Failure modes
 
 If the failure is too varied to assign to one owner, record the evidence and defer a durable control until more occurrences establish a stable boundary. Use the knowledge lane only when that cross-session belief is useful; a binding rule or runtime control still requires a clear enforceable behavior and the appropriate authorization.

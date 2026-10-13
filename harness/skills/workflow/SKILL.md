@@ -50,6 +50,10 @@ python harness/tools/workflow.py [--opt-in] run|resume|status|cancel <run-id>
 
 Use managed mode when native execution is proven but a runtime does not expose effective-model or permission telemetry. Report those fields as `unknown`, never as pass. Use strict mode only when completion must fail on any such evidence gap.
 
+## Done when
+
+The controller launched and awaited the run for the returned ID, and the run completed with verification and `review.adversarial` stages covering the current artifacts (Commands, Integrity rules). Effective-model and permission fields the runtime did not expose are reported as `unknown`; under strict mode none remains. The reply says the run completed under the managed procedure.
+
 ## Integrity rules
 
 - Never edit workflow state or import receipts to manufacture completion. A worker or reviewer result counts only when the controller directly launched and awaited the native process.

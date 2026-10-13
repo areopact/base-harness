@@ -66,4 +66,12 @@ Use [perspectives.md](./references/perspectives.md) for the shared, bounded proc
 
 If the user has asked to record or execute a direction, follow that authorization through the appropriate skill or workflow; otherwise leave the result as discussion. A brainstorm output alone is not a decision record or authorization.
 
+## Done when
+
+The reply is discussion, not a decision record or authorization.
+
+- **Quick Explore:** 2 to 3 credible options with the trade-off, a tentative recommendation, and its strongest caveat.
+- **Full Explore:** at least two genuinely different options, each with its decisive assumptions, evidence gaps, downside, and strongest counterargument; a provisional recommendation only when warranted, with what would reverse it and any substantive dissent. A `--peers` run reports peers requested and effective.
+- **Venture exploration:** the six forcing questions are worked through, reusing answers already given.
+
 Adapted in part from the office-hours method in gstack (MIT), https://github.com/garrytan/gstack/blob/026751e/office-hours/SKILL.md; the venture forcing questions in `./references/venture.md` carry that attribution.

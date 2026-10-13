@@ -81,6 +81,10 @@ All lenses use the same issue-confidence scale: 9-10 strongly supported, 7-8 sup
 4. Classify findings under the pipeline rules (AUTO candidate, TASTE, USER CHALLENGE). Reviewers do not edit. The main loop may apply mechanical fixes only where the user has already authorized the scope; otherwise report the proposed edits. `--report` forbids write-back; only the temporary inspection outputs described above are allowed.
 5. Report findings by severity and confidence, with evidence and anchors, the counterargument, the recommended action, dissent, coverage and peer telemetry, and open questions. A file write-back is optional and must stay within the user-authorized scope; never create a decision record merely because the review found a one-way door.
 
+## Done when
+
+The reply states the lens chosen and reports the findings as step 5 specifies, anchored to the source snapshot. A visual claim appears only if the artifact was rendered and inspected. A `--peers` run reports each seat's completion, error, or unknown telemetry. Proposed edits are reported, not applied, under `--report` or without user authorization; under authorized `--apply`, the mechanical fixes made are listed.
+
 ## Attribution
 
 The lens method is adapted from the review family in gstack (MIT): the review, plan-ceo-review, plan-eng-review, plan-design-review, design-review, plan-devex-review, and autoplan skills. The audience lens is adapted from the cross-modal-review skill in gbrain (MIT). Each reference file names its own upstream.

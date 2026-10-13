@@ -47,7 +47,7 @@ Quick mode declares no lane and writes nothing.
 ## The verification core (all modes)
 
 1. **Memory-first gate.** The check sequence in `harness/rules/memory-first.md` runs before any external call: knowledge, decisions, docs, records, each skipped with "no lane configured" when unset. A local hit is reported with its date and never silently discarded; a stale local record is noted next to the fresh finding, and the answer says which one it trusted.
-2. **Reader-consultable primaries only.** Every load-bearing claim carries `[Source: ...]` pointing at something the reader can open: a page in a configured lane, a URL, a named document. Never the run's own scaffolding (worker outputs, checkpoints, prompts, scope notes). A citation that points at construction material looks like evidence and is not; it is banned here for that reason.
+2. **Reader-consultable primaries only.** Every load-bearing claim carries `[Source: ...]` pointing at something the reader can open: a page in a configured lane, a URL, a named document. Never the run's own scaffolding (worker outputs, checkpoints, prompts, scope notes). A citation that points at construction material looks like evidence and is not; it is banned here for that reason. Write the marker itself literally as `[Source: ...]`; a bare wikilink or link in its place does not count.
 3. **Verification.** Checks three things: the source resolves; the claimed content actually appears there (a quote is on the page, a figure is in the table, a date is in the document); every number matches the primary. Quick mode runs with no delegation, so its check is a same-session recheck (the source reopened, the draft claim compared against it in the same context that wrote it) and the evidence table labels it that way, never "independent". Deep mode with delegated execution runs one verifier per claim batch that did not write the claim, blind to the writer's reasoning, and that pass is the one labeled "independent". Numeric deliverables also follow the recomputation floor in `harness/rules/base-routing.md`.
 4. **Adversarial pass for contested claims.** Surprising, load-bearing, or conflicting findings get refute-by-default verifiers whose brief is to kill the claim. Majority refuted means the claim dies or ships flagged as disputed with both readings shown. This pass is what separates a research deliverable from confident summarizing.
 5. **Visible uncertainty.** Unverifiable claims are labeled unverifiable in place, with the reason. An empty result is stated as empty ("no source found for X"). Confidence is never manufactured to round out a section.
@@ -70,6 +70,14 @@ Quick mode declares no lane and writes nothing.
 - quick: the answer first, the evidence table after, then one line naming what was checked and what was not (including "no external pass ran" when web search was absent).
 - deep: the deliverable folder path plus a five-line console summary: headline findings, coverage (modalities run and skipped), disputed and unverifiable counts, whether delegated workers ran, and the cost note. The folder is the record; the terminal is the dispatch surface.
 - ingest: the source study path, a one-line summary, and any proposed knowledge-lane page (proposed as a suggestion with a suggested title; the user decides whether it is written).
+
+## Done when
+
+Every load-bearing claim carries a `[Source: ...]` marker to a reader-consultable primary, or is labeled unverifiable in place with the reason.
+
+- **quick:** the reply gives the answer, the evidence table with its same-session verification labeled as such, and the line stating what was and was not checked.
+- **deep:** the approved scope ran, the completeness check named what did not run and what stays unverified, and the deliverable is in the records lane or the named path. The reply gives the Output summary.
+- **ingest:** the study is in the records lane or the named path and cites the transcript or archived copy. The reply gives the path, a one-line summary, and any proposed knowledge-lane page.
 
 ## Failure modes
 

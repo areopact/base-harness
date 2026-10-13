@@ -93,3 +93,7 @@ of backing off. Honor the header with a capped exponential delay.
 ## Summary shape
 
 After committing, report: the commit hash and subject, the paths staged, the branch verified, the git mode applied, which verification source ran and why (solo checklist and doctor ladder, or the specific team discovery hit, or the earlier run cited and why it still stood), the host profile applied, the close-the-loop outcome per lane (written, skipped because the lane is unset, or nothing to record), and any closeout item left outstanding for the operator.
+
+## Done when
+
+The reviewed selection is committed on the branch `git.mode` requires (step 3), after the step 2 verification ran or an earlier run was cited. The commit's parent and diff matched the selection, and `git status --short` was read afterward (step 5.4). The message follows step 4 and carries no session link. No push or pull request was made without a separate explicit ask (step 6). The reply follows Summary shape.

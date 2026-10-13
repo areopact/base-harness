@@ -7,15 +7,16 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 ### Added
 
 - The v0.2 skill contract, an additive extension of the skill frontmatter. `metadata.form` (`procedure`, `criteria`, or `reference`) says what a skill body tells the agent; `metadata.dependencies` is a list drawn from `code`, `system`, and `agents`, omitted when a skill needs none. Both are optional, and any other value is rejected by `harness/bootstrap/validate_skills.py`.
-- An optional `evals/` folder per skill: `triggers.tsv` (header `prompt`, `expect`, `competitor`, with `expect` of `select` or `skip`), `cases.md` (outcome cases with input, acceptance checks, and a without-skill note), and `ledger.tsv` (the eleven-column run ledger). When the folder exists the validator checks each file's shape; a skill without it is `spec-only`, as before.
+- An optional `evals/` folder per skill: `triggers.tsv` (header `prompt`, `expect`, `competitor`, with `expect` of `select` or `skip`), `cases.md` (outcome cases with input, acceptance checks, and a without-skill note), and `ledger.tsv` (the eleven-column run ledger). When the folder exists the validator checks each file's shape; a skill without it is unaffected. `metadata.status` and promotion still follow the `docs/VERIFICATION.md` row (`CONTRIBUTING.md`); the ledger is protocol guidance the template does not compute.
 - Advisory section checks for a declared form, printed as WARN lines and never changing the exit status: a procedure carries ordered steps (a numbered list or numbered headings, outside fenced code) and a `## Done when` section; a criteria skill carries `## Floors` and `## Ceilings`; a reference skill carries no ordered steps.
-- `harness/tools/templates/skills/` with a `procedure`, a `criteria`, and a `reference` skeleton, each with complete frontmatter, the sections its form expects, and an `evals/` trio.
-- `docs/ADDING-A-SKILL.md` documents the forms, dependencies, the description rule, the `## Done when` convention, and the evaluation protocol and maturity rule.
+- `harness/tools/templates/skills/` with a `procedure`, a `criteria`, and a `reference` skeleton, each with complete frontmatter, the sections its form expects, and an `evals/` trio with a placeholder case to delete or replace.
+- `docs/ADDING-A-SKILL.md` documents the forms, dependencies, the description rule, the `## Done when` convention, and the evaluation protocol as guidance. A table now names which tool enforces each frontmatter row (lint L4 or `validate_skills.py`).
+- CI runs `python harness/bootstrap/validate_skills.py` after the strict lint step; `CONTRIBUTING.md` lists it among the local checks.
 
 ### Compatibility
 
-- Every v0.1 skill passes the v0.2 validator unchanged, with no error and no warning; `harness/bootstrap/tests/test_skill_contract.py` proves it on a v0.1 fixture and on this repository's own skills.
-- No key is removed or renamed, `WHEN:` stays required in descriptions, and `validate_source` keeps its return shape.
+- A v0.1 skill passes the v0.2 validator unchanged, with no error and no warning, unless it already used `metadata.form`, `metadata.dependencies`, or an `evals/` folder with other meanings. Migration for that case: rename the key or folder, or bring its values and files to the v0.2 shapes. `harness/bootstrap/tests/test_skill_contract.py` proves it on a v0.1 fixture and on this repository's own skills.
+- The success line is byte-identical when there are no warnings. No key is removed or renamed, `WHEN:` stays required in descriptions, and `validate_source` keeps its return shape.
 
 ## [0.1.6] - 2026-10-14
 

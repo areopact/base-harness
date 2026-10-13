@@ -37,30 +37,29 @@ metadata:
 ---
 ```
 
-What lint L4 enforces (`python harness/tools/lint.py`):
+Two tools check a skill's frontmatter. Lint L4 (`python harness/tools/lint.py --strict`) enforces the base keys through the manifest generator. `python harness/bootstrap/validate_skills.py` reads the same frontmatter with the documented YAML subset, enforces the v0.2 keys and the `evals/` shapes, repeats several of the base rules, and, with `--catalog` or when `.agents/skills` exists, checks that the generated Codex catalog matches the selection exactly. CI runs both.
 
-| Key | Rule |
-|---|---|
-| `name` | required; the folder name |
-| `description` | required; contains `WHEN:`. Codex reads this text for discovery and, once a skill is `implemented`, for implicit routing (a `spec-only` wrapper is generated explicit-only), so the trigger phrases belong here as well as in `metadata.triggers`. |
-| `metadata.packs` | required; every slug kebab-case |
-| `metadata.triggers` | required; the list the resolver is generated from |
-| `metadata.neighbor` | optional; a skill name or `none`; overrides the neighbor derived from the first skill named in `WHEN NOT` |
-| `metadata.form` | optional; `procedure`, `criteria`, or `reference`. Checked by `validate_skills.py`; see "Form and sections" |
-| `metadata.dependencies` | optional; a list drawn from `code`, `system`, `agents`; any other value is rejected. See "Dependencies" |
-| `metadata.status` | required; `implemented`, `spec-only`, or `stub` |
-| `metadata.distribution` | required; `native`, `vendored`, or `runtime-provided` |
-| `metadata.license` | required; packs never mix values |
-| `metadata.requires` | optional; every entry is validated on every skill: a bare id must exist in `capabilities.json`, `lane:<name>` must name a lane in `structure.json`; a `runtime-provided` skill names at least one capability id |
-| `metadata.notice` | optional; must match the `sources.json` row for a vendored asset |
+| Key | Rule | Enforced by |
+|---|---|---|
+| `name` | required; the folder name | L4 |
+| `description` | required; contains `WHEN:`. Codex reads this text for discovery and, once a skill is `implemented`, for implicit routing (a `spec-only` wrapper is generated explicit-only), so the trigger phrases belong here as well as in `metadata.triggers`. | L4 and `validate_skills.py` (`WHEN:`) |
+| `metadata.packs` | required; every slug kebab-case | L4 and `validate_skills.py` |
+| `metadata.triggers` | required; the list the resolver is generated from | L4 |
+| `metadata.neighbor` | optional; a skill name or `none`; overrides the neighbor derived from the first skill named in `WHEN NOT` | L4 (shape), `resolver_lint.py` |
+| `metadata.form` | optional; `procedure`, `criteria`, or `reference`; see "Form and sections" | `validate_skills.py` (value: error; sections: WARN) |
+| `metadata.dependencies` | optional; a list drawn from `code`, `system`, `agents`; any other value is rejected; see "Dependencies" | `validate_skills.py` |
+| `metadata.status` | required; `implemented`, `spec-only`, or `stub` | L4 and the shared reader |
+| `metadata.distribution` | required; `native`, `vendored`, or `runtime-provided` | L4 and the shared reader |
+| `metadata.license` | required; packs never mix values | L4 (values and pack mixing), `validate_skills.py` (values) |
+| `metadata.requires` | optional; every entry is validated on every skill: a bare id must exist in `capabilities.json`, `lane:<name>` must name a lane in `structure.json`; a `runtime-provided` skill names at least one capability id | L4 and `validate_skills.py` (runtime-provided rule) |
+| `metadata.notice` | optional; must match the `sources.json` row for a vendored asset | L4 (string or null), `validate_skills.py` (vendored) |
+| `evals/` | optional; the three files described under "Evaluation and maturity" | `validate_skills.py` |
 
-`harness/bootstrap/validate_skills.py` reads the same frontmatter with the documented YAML subset and, with `--catalog` or when `.agents/skills` exists, checks that the generated Codex catalog matches the selection exactly.
-
-`form`, `dependencies`, and `evals/` are optional: a skill written to the earlier contract passes unchanged, and `validate_skills.py` rejects only a value outside the closed vocabularies or an `evals/` folder whose files have the wrong shape.
+`form`, `dependencies`, and `evals/` are optional. A v0.1 skill passes the v0.2 validator unchanged unless it already used `metadata.form`, `metadata.dependencies`, or an `evals/` folder with other meanings. Migration for that case: rename the key or folder, or bring its values and files to the shapes below.
 
 ## Starting from a skeleton
 
-`harness/tools/templates/skills/` holds one skeleton per form (`procedure`, `criteria`, `reference`), each with complete frontmatter, the sections its form expects, and an `evals/` trio. Copy the folder to `harness/skills/<name>/`, set `name` to the folder name, replace the prose, and delete `evals/` until the skill has real prompts and cases. The skeletons live outside `harness/skills/` because the catalog builders read every `SKILL.md` there.
+`harness/tools/templates/skills/` holds one skeleton per form (`procedure`, `criteria`, `reference`), each with complete frontmatter, the sections its form expects, and an `evals/` trio with a placeholder case to delete or replace. Copy the folder to `harness/skills/<name>/`, set `name` to the folder name, replace the prose, and delete `evals/` until the skill has real prompts and cases. The skeletons live outside `harness/skills/` because the catalog builders read every `SKILL.md` there.
 
 ## Description
 
@@ -70,6 +69,8 @@ The description is the text a runtime loads before it chooses a skill, so it car
 2. `WHEN:` with the phrases a person would say. Write natural language. A slash command is resolved by name, so it selects nothing a trigger run can observe; the lint checks that the name and resolver row exist.
 3. `WHEN NOT:` is optional. Name the neighbor skill or the excluded case and where it goes.
 4. Plain wording, under 1,024 characters in all. Do not summarize the steps: a description that outlines the workflow lets an agent follow the outline and skip the body.
+
+The skills shipped in this repository predate this rule and are updated as they are touched.
 
 ## Form and sections
 
@@ -107,7 +108,7 @@ A procedure ends with one section headed exactly `## Done when`, placed after th
 
 ## Evaluation and maturity
 
-A skill may carry `evals/` with three files. `validate_skills.py` checks their shape when the folder exists; a skill without it is `spec-only`.
+A skill may carry `evals/` with three files. `validate_skills.py` checks their shape when the folder exists; a skill without it is unaffected.
 
 | File | Content |
 |---|---|
@@ -121,11 +122,11 @@ Protocol:
 - **Outcomes.** Run each case three times and pass it when the acceptance checks hold in two of three. Pair every case with a run without the skill, so the case shows what the skill adds. An outcome prompt names the skill it measures, because selection is the trigger set's job.
 - **Refusal cases.** A case that expects the skill to decline passes when the skill fails safely.
 - **External dependencies.** Replace a live system with a stand-in case, so a run needs no credentials or network.
-- **Revisions.** The four `*_rev` columns are SHA-256 digests of the description, the trigger file, the package (body plus `scripts/` and `references/`), and the cases file. Use one implementation, normalize CRLF to LF before hashing, and record the harness and model, since rows compare only within one configuration.
+- **Revisions.** The four `*_rev` columns are SHA-256 digests of the description, the trigger file, the package (body plus `scripts/` and `references/`), and the cases file. A `*_rev` cell is empty or lowercase 64-character hex, and `date` is a real calendar date. Use one implementation, normalize CRLF to LF before hashing, and record the harness and model, since rows compare only within one configuration.
 - **Staleness.** A description or trigger edit voids trigger evidence only; a body, script, reference, or case edit voids outcome evidence only.
-- **Maturity.** A skill is `implemented` when its latest ledger row matches the current revisions and both results are `pass`; otherwise it is `spec-only`. Missing or stale evidence is a warning and never an error.
+- **Maturity.** As protocol guidance, a skill is `implemented` when its latest ledger row matches the current revisions and both results are `pass`; otherwise it is `spec-only`.
 
-This template validates the shape of `evals/` and does not ship a runner or a hashing tool. The VERIFICATION row described under "Promotion from spec-only to implemented" stays this repository's promotion gate.
+The template does not compute any of this: it checks the shape of `evals/` and ships no runner, no hashing tool, and no staleness check. `metadata.status` and promotion still follow the VERIFICATION row described under "Promotion from spec-only to implemented" and in `CONTRIBUTING.md`.
 
 ## Triggers and the generated resolver
 

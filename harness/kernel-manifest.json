@@ -392,6 +392,11 @@
       "source": "upstream-harness:harness/bootstrap/tests/test_codex_catalog.py"
     },
     {
+      "path": "harness/bootstrap/tests/test_skill_contract.py",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/bootstrap/validate_skills.py",
       "state": "ported",
       "source": "upstream-harness:harness/bootstrap/validate_skills.py"
@@ -3413,6 +3418,66 @@
     },
     {
       "path": "harness/tools/templates/lanes.example.json",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/criteria/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/criteria/evals/cases.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/criteria/evals/ledger.tsv",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/criteria/evals/triggers.tsv",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/procedure/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/procedure/evals/cases.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/procedure/evals/ledger.tsv",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/procedure/evals/triggers.tsv",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/reference/SKILL.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/reference/evals/cases.md",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/reference/evals/ledger.tsv",
+      "state": "new",
+      "source": null
+    },
+    {
+      "path": "harness/tools/templates/skills/reference/evals/triggers.tsv",
       "state": "new",
       "source": null
     },

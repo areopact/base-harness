@@ -98,6 +98,9 @@ jobs:
       - name: Strict lint passes
         run: python harness/tools/lint.py --strict
 
+      - name: Skill contract (form, dependencies, evals shape) validates
+        run: python harness/bootstrap/validate_skills.py
+
       - name: Resolver routes every trigger to an existing skill
         run: python harness/tools/resolver_lint.py
 

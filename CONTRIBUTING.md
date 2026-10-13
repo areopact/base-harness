@@ -46,6 +46,7 @@ The pattern that works, in this order:
 
 ```sh
 python harness/tools/lint.py --strict
+python harness/bootstrap/validate_skills.py
 python harness/tools/resolver_lint.py
 python harness/tools/gen_manifest.py --check
 python harness/bootstrap/build_codex_adapter.py --check

@@ -75,6 +75,10 @@ Write the bundle where the user names it. Otherwise use the docs lane resolved t
 
 Publishing is a separate external write. Deploy only when the user explicitly requests a live URL, then verify the real path after deployment. Never read or embed secrets; deployment tools consume credential environment variables by name. When a host needs one self-contained document, fold the bundle with `python harness/skills/deck-render/scripts/inline_bundle.py <deck-dir> <out.html>`.
 
+## Done when
+
+The HTML bundle passed the existing workflow's mechanical and visual QA and sits at the user-named destination, the configured docs lane or a scratch path. A scratch destination is printed in the reply. Any explicitly requested deployment is verified at its real path.
+
 ## Failure modes
 
 - **Responsive article behavior:** changing to vertical cards on phones breaks the requested medium. Scale the stage as one object.

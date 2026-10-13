@@ -73,6 +73,14 @@ If the source text is too thin to support these, say so and ask for the missing 
 
 **Audit (`--report`):** the clusters found with line anchors and the pattern family for each, or "no cluster found". Nothing is written.
 
+## Done when
+
+**Rewrite:** the final text preserves source facts; the author's supplied sample governs dash usage, otherwise the em/en-dash ban applies. The reply follows the applicable Output form.
+
+**Audit (`--report`):** the audit is returned without changes; this mode takes precedence over rewrite inputs.
+
+When the scan finds no cluster, the reply says "no cluster found" without manufacturing a rewrite.
+
 ## Failure modes
 
 - **Text is a quotation, transcript, or third-party excerpt.** Do not rewrite. Secondhand text keeps its own voice. Flag tells if asked, change nothing.

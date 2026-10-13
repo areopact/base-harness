@@ -69,6 +69,11 @@ The craft is encoded here so any executor tier hits the same bar (preferred mode
 
 The rendered explainer in the side panel (or the printed scratch path), plus one terminal line naming the file and topic. Do not restate the content in the terminal: the page is the answer. Under `--deck`: the bundle path plus deck-render's QA verdict in one line, or the Markdown slide-map path plus "renderer not selected".
 
+## Done when
+
+- **default:** the HTML page was written to scratch and delivered with the runtime's delivery tool or by printing its absolute path, and one terminal line names the file and topic.
+- **--deck:** the rendered bundle is in scratch, and one line gives its path with deck-render's QA verdict. When deck-render is not selected, the Markdown slide map is in scratch instead, and the line gives its path with "renderer not selected".
+
 ## Failure modes
 
 - Client cannot render inline -> write the file to the scratch path and print the absolute path so the reader can open it in a browser.

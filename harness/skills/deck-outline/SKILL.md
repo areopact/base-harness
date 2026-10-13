@@ -57,6 +57,10 @@ Claims cite deterministic local paths or external sources. Gaps stay visible. Vi
 
 Return the Markdown in the reply by default. When the user asks for a file, write it to the docs lane resolved through `harness/registry/structure.json` when that lane is configured, otherwise to a path the user names. No lane is mandatory for this skill: when the docs lane is unset and no path was named, ask for a path rather than inventing a folder.
 
+## Done when
+
+The outline Markdown, returned in the reply or saved to a path the docs lane or the user names, carries the brief, the arc, the slide map with cited claims, visible gaps, visuals, timing, and speaker cues, and its approval state with an ISO date once the user has approved it.
+
 ## Handoff
 
 After the outline is approved, `/deck-render --web <outline>` may build it. The renderer confirms currency and format, but does not force a second approval of an outline already approved in the current session. A material content or evidence change reopens only the affected outline slides.

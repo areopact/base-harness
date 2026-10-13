@@ -134,7 +134,17 @@ Each of these was hit for real during construction of this template or its prede
 
 ### Accepted historical findings
 
-Published history cannot be rewritten, so a term finding that already sits in a published commit is recorded in `harness/tools/deidentify-accepted-history.txt` instead of weakening the scan: one line per finding, a full 40-hex commit SHA, a path, and a term. An entry is allowed only for a finding in published history that cannot be rewritten (the current file must already be clean), and a maintainer reviews each entry. It suppresses only that exact `--history` term finding. The current tree, structural checks, other terms, other paths, and other commits still report. A malformed line exits 2, and an entry that no longer matches any finding is reported as `STALE` and fails the run, so the list never carries an entry that guards nothing. The scanner skips the file itself because it names the terms it accepts.
+Published history cannot be rewritten, so a term finding that already sits in a published commit is recorded in `harness/tools/deidentify-accepted-history.txt` instead of weakening the scan: one line per finding, a full 40-hex commit SHA, a path, and an ASCII term. An entry is allowed only for a finding in published history that cannot be rewritten (the current file must already be clean, and the commit must be contained in a release tag), and a maintainer reviews each entry.
+
+What an entry does and does not do:
+
+- It is read from the file committed at `HEAD`; an untracked, ignored, or edited working-tree copy is never honored.
+- It suppresses only that exact `--history` term finding, and it covers the whole file version at that commit, not one line: a second occurrence of the term in the same file version is suppressed with it. The current tree, structural checks, other terms, other paths, and other commits still report.
+- The file is parsed in every mode. A malformed line, a non-ASCII path or term, or a commit that no tag contains exits 2. An entry that no longer matches any finding is reported as `STALE` and fails the run.
+- Every run with `--history` prints the number of suppressed findings and each entry; `release_check.py` repeats the count on its step line, and `release_check.py --no-terms` refuses while the file has entries.
+- The file is scanned like any other, in the worktree and in every historical version. Only the term field of a line that parses as an entry is masked from the term layer, so comments and any other text in the file are checked in full.
+
+Known limit: a commit that reintroduces byte-identical content for an accepted path is not reported by the history walk, which scans each (path, blob) pair once at its first commit. The worktree scan still reports the content if it reaches the checked-out tree, and a reintroduction that differs by even one byte is a new blob and is reported.
 
 ## Red-team record
 

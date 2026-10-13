@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _helpers import TempDirCase, commit_all, init_repo, write, load_tool  # noqa: E402
+from _helpers import TempDirCase, commit_all, git, init_repo, write, load_tool  # noqa: E402
 
 lint = load_tool("deidentify_lint")
 
@@ -259,15 +259,18 @@ class TestHistory(TempDirCase):
 
     def _accepted_repo(self):
         """Two commits carry the denied term in docs/a.md (different blobs),
-        a third file carries it too, and the working tree is reworded."""
+        another file carries it too, and the working tree is reworded. The
+        first two commits are tagged, so they count as published."""
         repo = init_repo(self.tmp / "repo")
         terms = self.tmp / "terms.txt"
         write(terms, "privateterm\n")
         write(repo / "docs" / "a.md", "privateterm one\n")
         write(repo / "docs" / "b.md", "privateterm other\n")
         first = commit_all(repo, "first")
+        git(repo, "tag", "v1")
         write(repo / "docs" / "a.md", "privateterm two\n")
         second = commit_all(repo, "second")
+        git(repo, "tag", "v2")
         write(repo / "docs" / "a.md", "clean now\n")
         write(repo / "docs" / "b.md", "clean now\n")
         commit_all(repo, "third")
@@ -275,7 +278,7 @@ class TestHistory(TempDirCase):
 
     def _accept(self, repo, *lines):
         write(repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE, "# accepted\n" + "".join(l + "\n" for l in lines))
-        commit_all(repo, "accept")
+        return commit_all(repo, "accept")
 
     def test_accepted_finding_is_suppressed_others_still_report(self):
         repo, terms, first, second = self._accepted_repo()
@@ -289,7 +292,7 @@ class TestHistory(TempDirCase):
         assert f"{first[:12]} TERM docs/a.md" not in out, out
         assert "STALE" not in out, out
 
-    def test_fully_accepted_history_passes_and_file_is_not_scanned(self):
+    def test_fully_accepted_history_passes_and_reports_suppressions(self):
         repo, terms, first, second = self._accepted_repo()
         self._accept(
             repo,
@@ -299,7 +302,8 @@ class TestHistory(TempDirCase):
         )
         code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
         assert code == 0, out
-        # the file names the term and sits in the tree and in history, yet no finding
+        assert "3 accepted history finding(s) suppressed (3 entries)" in out, out
+        assert f"ACCEPTED {first[:12]} docs/a.md privateterm (1 finding(s))" in out, out
         assert "0 finding(s)" in out, out
 
     def test_current_tree_finding_is_never_suppressed(self):
@@ -319,31 +323,114 @@ class TestHistory(TempDirCase):
         write(terms, "privateterm\n")
         write(repo / "docs" / "a.md", f"contact {EMAIL} privateterm\n")
         first = commit_all(repo, "first")
+        git(repo, "tag", "v1")
         self._accept(repo, f"{first} docs/a.md privateterm")
         code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
         assert code == 1
         assert "D1 docs/a.md:1" in out, out
 
-    def test_malformed_line_is_a_usage_error(self):
+    def test_malformed_line_is_a_usage_error_in_every_mode(self):
         repo, terms, first, _second = self._accepted_repo()
-        for bad in (f"{first[:12]} docs/a.md privateterm", f"{first} docs/a.md", f"{first} docs/a.md privateterm extra"):
+        for bad in (
+            f"{first[:12]} docs/a.md privateterm",
+            f"{first} docs/a.md",
+            f"{first} docs/a.md privateterm extra",
+            f"{first} docs/a.md privateterm\n{first} docs/a.md PRIVATETERM",
+            f"{first} docs/a" + chr(0xE9) + ".md privateterm",
+            f"{first} docs/a.md privatet" + chr(0xE9) + "rm",
+        ):
             self._accept(repo, bad)
-            code, out, err = run([str(repo), "--terms", str(terms), "--history"])
-            assert code == 2, (bad, out, err)
-            assert "malformed accepted-history file" in err, err
+            for args in (
+                ["--terms", str(terms), "--history"],
+                ["--terms", str(terms)],
+                ["--structural"],
+                ["--structural", "--history"],
+            ):
+                code, out, err = run([str(repo), *args])
+                assert code == 2, (bad, args, out, err)
+                assert "malformed accepted-history file" in err, err
 
-    def test_stale_entry_is_reported(self):
+    def test_stale_entry_fails_whenever_history_runs_with_terms(self):
         repo, terms, first, _second = self._accepted_repo()
         self._accept(repo, f"{first} docs/a.md privateterm", f"{first} docs/gone.md privateterm")
         code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
         assert code == 1, out
         assert "STALE" in out and "docs/gone.md" in out, out
-
-    def test_accepted_file_is_skipped_from_the_scan(self):
-        repo, terms, first, _second = self._accepted_repo()
-        self._accept(repo, f"{first} docs/a.md privateterm")
+        # a wholly unmatched entry fails even when no TERM finding exists at all
         code, out, _ = run([str(repo), "--terms", str(terms)])
-        assert not any(l.startswith("TERM " + lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE) for l in out.splitlines()), out
+        assert "STALE" not in out, out  # no history walk, no verdict on staleness
+
+    def test_accepted_file_is_scanned_for_non_term_checks_and_comments(self):
+        """P1: private text in a comment of the accepted file is reported by
+        every check, in the worktree and in structural mode."""
+        repo, terms, first, _second = self._accepted_repo()
+        path = repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE
+        write(path, f"# privateterm {EMAIL}\n{first} docs/a.md privateterm\n")
+        commit_all(repo, "accept")
+        code, out, _ = run([str(repo), "--terms", str(terms)])
+        assert code == 1, out
+        assert f"TERM {lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:1" in out, out
+        assert f"D1 {lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:1" in out, out
+        # the entry line's own term field stays masked
+        assert f"{lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:2" not in out, out
+        code, out, _ = run([str(repo), "--structural"])
+        assert code == 1 and "D1" in out, out
+
+    def test_entry_line_with_trailing_text_is_not_masked(self):
+        repo, terms, first, _second = self._accepted_repo()
+        path = repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE
+        write(path, f"{first} docs/a.md privateterm\n")
+        commit_all(repo, "accept")
+        code, out, _ = run([str(repo), "--terms", str(terms)])
+        assert code == 0, out
+        write(path, f"{first} docs/a.md privateterm # note\n")
+        commit_all(repo, "annotate")
+        code, out, err = run([str(repo), "--terms", str(terms)])
+        assert code == 2, (out, err)  # four fields: malformed, never silently masked
+
+    def test_earlier_version_of_accepted_file_is_scanned_in_history(self):
+        """P2: private text added to the accepted file and removed later is
+        found in the history walk."""
+        repo, terms, first, _second = self._accepted_repo()
+        entry = f"{first} docs/a.md privateterm\n"
+        path = repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE
+        write(path, entry + f"# privateterm leaked {EMAIL}\n")
+        leak = commit_all(repo, "leak")
+        write(path, entry)
+        commit_all(repo, "clean")
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1, out
+        assert f"{leak[:12]} TERM {lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:2" in out, out
+        assert f"{leak[:12]} D1 {lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:2" in out, out
+
+    def test_uncommitted_entries_are_not_honored(self):
+        """P3: an untracked, ignored, or edited working-tree copy is ignored."""
+        repo, terms, first, _second = self._accepted_repo()
+        path = repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE
+        write(path, f"{first} docs/a.md privateterm\n")  # untracked
+        code, out, err = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1 and "suppressed" not in out, out
+        assert "not committed at HEAD" in err, err
+        commit_all(repo, "accept")
+        write(path, f"{first} docs/a.md privateterm\n{first} docs/b.md privateterm\n")  # edited, uncommitted
+        code, out, err = run([str(repo), "--terms", str(terms), "--history"])
+        assert f"{first[:12]} TERM docs/b.md:1" in out, out
+        assert "differs from HEAD" in err, err
+
+    def test_entry_for_an_unpublished_commit_is_rejected(self):
+        """P3: a committed entry whose commit no tag contains exits 2."""
+        repo, terms, _first, _second = self._accepted_repo()
+        write(repo / "docs" / "c.md", "privateterm local\n")
+        local = commit_all(repo, "local only")
+        write(repo / "docs" / "c.md", "clean\n")
+        commit_all(repo, "unleak")
+        self._accept(repo, f"{local} docs/c.md privateterm")
+        code, out, err = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 2, (out, err)
+        assert "not contained in any tag" in err, err
+        git(repo, "tag", "v3", local)
+        code, out, err = run([str(repo), "--terms", str(terms), "--history"])
+        assert "not contained in any tag" not in err, err
 
     def test_history_with_no_refs_exits_1_not_clean(self):
         """F3(b): an empty or ref-less repository must not be indistinguishable

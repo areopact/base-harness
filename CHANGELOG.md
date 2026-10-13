@@ -24,7 +24,11 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 
 ### Added
 
-- `harness/tools/deidentify-accepted-history.txt` records accepted historical term findings (full commit SHA, path, term). `deidentify_lint.py --history` suppresses only a TERM finding that matches all three fields, reports an entry that matches nothing as `STALE` (exit 1), exits 2 on a malformed line, and skips the file from every scan. It holds the two findings in published commits that cannot be rewritten. This loosens a release gate and needs independent review.
+- `harness/tools/deidentify-accepted-history.txt` records accepted historical term findings (full commit SHA, path, ASCII term). `deidentify_lint.py --history` suppresses only a TERM finding that matches all three fields, reads entries from the file committed at HEAD, requires each commit to be contained in a tag, reports an entry that matches nothing as `STALE` (exit 1), exits 2 on a malformed or non-ASCII line, parses the file in every mode, and prints the suppression count and each entry. The file is scanned like any other file; only the term field of an entry line is masked. `release_check.py` repeats the count on its terms step and `--no-terms` refuses while entries exist. It holds the two findings in published commits that cannot be rewritten. This loosens a release gate and needs independent review.
+
+### Fixed (history walk)
+
+- `deidentify_lint.py --history` walks commits in topological order, so the commit reported for a file version is its first in ancestry even when commit timestamps tie.
 
 ## [0.1.6] - 2026-10-14
 

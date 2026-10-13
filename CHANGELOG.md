@@ -18,6 +18,10 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 - A v0.1 skill passes the v0.2 validator unchanged, with no error and no warning, unless it already used `metadata.form`, `metadata.dependencies`, or an `evals/` folder with other meanings. Migration for that case: rename the key or folder, or bring its values and files to the v0.2 shapes. `harness/bootstrap/tests/test_skill_contract.py` proves it on a v0.1 fixture and on this repository's own skills.
 - The success line is byte-identical when there are no warnings. No key is removed or renamed, `WHEN:` stays required in descriptions, and `validate_source` keeps its return shape.
 
+### Fixed
+
+- Three current-file uses of the generic private-source term from the seed term list are reworded so the term-list release check no longer reports them: two in `START_HERE.md` (the Obsidian setup prose and step) and one in the `harness/bootstrap/links.py` module docstring. Behavior is unchanged.
+
 ## [0.1.6] - 2026-10-14
 
 ### Fixed

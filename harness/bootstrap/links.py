@@ -3,7 +3,7 @@
 paths through links.
 
 One module, byte-identical wherever it is used: the template engine
-(materialize.py and the doctors) and the upstream vault's link layer import
+(materialize.py and the doctors) and the upstream host's link layer import
 it, and the upstream drift gate fails a release when the copies differ, so a
 link fix lands once. Stdlib only; no repository knowledge; no side effects on
 import.

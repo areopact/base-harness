@@ -93,8 +93,8 @@ provider key. Check: `opencode --version`.
 
 What it is: a note-reading and note-writing app that opens a folder of
 Markdown files as a linked notebook. Install from
-https://obsidian.md/download, then open the repository folder as a vault
-so you can read and write the notes in it directly. Recommended for
+https://obsidian.md/download, then open the repository folder in the app
+so you can read and write its notes directly. Recommended for
 anyone on the team who is more comfortable reading notes than reading a
 terminal.
 
@@ -154,8 +154,8 @@ are running more than one agent at a time; see section 6.
    Check: each command ends in a line that starts with `Result:` and names
    `repository PASS`.
 
-5. Optional: open the folder in Obsidian. Choose "Open folder as vault"
-   and select the repository folder.
+5. Optional: open the folder in Obsidian. Choose the option that opens
+   a folder, and select the repository folder.
    Check: the file tree in Obsidian's left sidebar matches the files you
    see in your file manager.
 

@@ -330,6 +330,55 @@ def test_ledger_header_results_dates_and_revisions_are_checked(tmp_path):
     assert "harness/skills/short/evals/ledger.tsv: row 2 does not have exactly 11 fields" in text
 
 
+def test_double_quotes_in_a_prompt_are_read_literally(tmp_path):
+    root = empty_repo(tmp_path)
+    directory = write_contract_skill(root, "demo", [], "# demo\n")
+    write_evals(
+        directory,
+        triggers=(
+            "prompt\texpect\tcompetitor\n"
+            'Rename the "draft" file, then say "done".\tselect\t\n'
+            'A lone " quote.\tskip\tbeta\n'
+        ),
+    )
+    _, errors, _ = run(root)
+    assert errors == []
+
+
+def test_impossible_ledger_dates_are_rejected(tmp_path):
+    root = empty_repo(tmp_path)
+    directory = write_contract_skill(root, "demo", [], "# demo\n")
+    row = f"2026-13-45\th\t1\tm\t{HASH}\t{HASH}\t{HASH}\t{HASH}\tpass\tpass\tn\n"
+    write_evals(directory, ledger=LEDGER_HEADER + row)
+    _, errors, _ = run(root)
+    assert any("date must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_uppercase_revision_digest_is_rejected(tmp_path):
+    root = empty_repo(tmp_path)
+    directory = write_contract_skill(root, "demo", [], "# demo\n")
+    row = f"2026-10-05\th\t1\tm\t{'A' * 64}\t{HASH}\t{HASH}\t{HASH}\tpass\tpass\tn\n"
+    write_evals(directory, ledger=LEDGER_HEADER + row)
+    _, errors, _ = run(root)
+    assert any("description_rev must be empty or a SHA-256 hex digest" in e for e in errors)
+
+
+def test_success_line_is_unchanged_without_warnings_and_counts_them_otherwise(tmp_path):
+    (tmp_path / "clean").mkdir()
+    (tmp_path / "noisy").mkdir()
+    clean = build_repo(tmp_path / "clean", with_git=False)
+    stream = io.StringIO()
+    with redirect_stdout(stream):
+        assert validate_skills.main(["--root", str(clean)]) == 0
+    assert stream.getvalue() == "Skill frontmatter: 3 checked, 0 error(s)\n"
+    noisy = empty_repo(tmp_path / "noisy")
+    write_contract_skill(noisy, "proc", ["form: procedure"], "# proc\n")
+    stream = io.StringIO()
+    with redirect_stdout(stream):
+        assert validate_skills.main(["--root", str(noisy)]) == 0
+    assert stream.getvalue().startswith("Skill frontmatter: 1 checked, 0 error(s), 2 warning(s)\n")
+
+
 def test_ledger_allows_an_empty_cases_revision(tmp_path):
     root = empty_repo(tmp_path)
     directory = write_contract_skill(root, "demo", [], "# demo\n")

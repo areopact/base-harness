@@ -29,6 +29,7 @@ import csv
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -133,7 +134,7 @@ def read_tsv(path: Path, columns: tuple[str, ...]) -> tuple[list[dict[str, str]]
     """Read a tab-separated file with an exact header; return (rows, problems)."""
     try:
         with path.open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle, delimiter="\t", strict=True)
+            reader = csv.DictReader(handle, delimiter="\t", quoting=csv.QUOTE_NONE, strict=True)
             if reader.fieldnames != list(columns):
                 return [], [f"header must be exactly {' | '.join(columns)}"]
             rows = list(reader)
@@ -198,7 +199,11 @@ def eval_errors(rel_dir: str, evals: Path) -> list[str]:
             add("ledger.tsv", problem)
         if not problems:
             for number, row in enumerate(rows, 2):
-                if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", row["date"]):
+                try:
+                    valid_date = date.fromisoformat(row["date"]).isoformat() == row["date"]
+                except ValueError:
+                    valid_date = False
+                if not valid_date:
                     add("ledger.tsv", f"row {number} date must be YYYY-MM-DD")
                 for column in REVISION_COLUMNS:
                     if row[column] and not re.fullmatch(r"[0-9a-f]{64}", row[column]):
@@ -299,7 +304,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  WARN: {warning}")
         return 1
     note = "; exact Codex catalog OK" if catalog_requested else ""
-    print(f"Skill frontmatter: {checked} checked, 0 error(s), {len(warnings)} warning(s){note}")
+    count = f", {len(warnings)} warning(s)" if warnings else ""
+    print(f"Skill frontmatter: {checked} checked, 0 error(s){count}{note}")
     for warning in warnings:
         print(f"  WARN: {warning}")
     return 0

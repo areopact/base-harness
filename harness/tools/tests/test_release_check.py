@@ -31,7 +31,7 @@ class FakeRunner:
         self.codes = codes or {}
         self.default = default
 
-    def __call__(self, argv, cwd=None):
+    def __call__(self, argv, cwd=None, **_kwargs):
         index = len(self.calls)
         self.calls.append((argv, cwd))
         return FakeCompleted(self.codes.get(index, self.default))
@@ -194,3 +194,46 @@ def test_help_exits_zero():
 
 
 install_bridge(globals(), "ReleaseCheckBridge")
+
+
+def test_no_terms_refuses_when_accepted_history_entries_are_committed(tmp_path):
+    import subprocess
+
+    def git(*args):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    git("config", "commit.gpgsign", "false")
+    entry = tmp_path / rc.ACCEPTED_HISTORY_RELATIVE
+    entry.parent.mkdir(parents=True)
+    entry.write_text("# only a comment\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "x")
+    with _env(RELEASE_TERMS=None):
+        runner = FakeRunner()
+        code, _out = _run(["--root", str(tmp_path), "--no-terms"], runner)
+        assert code == 0 and len(runner.calls) == 7  # comments only: nothing accepted
+    entry.write_text("# c\n" + "a" * 40 + " x.md term\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "y")
+    with _env(RELEASE_TERMS=None):
+        runner = FakeRunner()
+        code, out = _run(["--root", str(tmp_path), "--no-terms"], runner)
+        assert code == 2 and "accepted historical findings" in out, out
+        assert runner.calls == []
+
+
+def test_terms_step_line_echoes_the_accepted_count(tmp_path):
+    import types
+    def fake(argv, cwd=None, **kwargs):
+        obj = types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        if kwargs.get("capture_output"):
+            obj.stdout = "deidentify_lint: 2 accepted history finding(s) suppressed (2 entries)\n"
+        return obj
+
+    with _env(RELEASE_TERMS=None):
+        code, out = _run(["--root", str(tmp_path), "--terms", str(tmp_path / "t.txt")], fake)
+    assert code == 0
+    assert "deidentify_lint terms+history: exit 0 (PASS, 2 accepted history finding(s) suppressed)" in out, out

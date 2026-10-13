@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -50,16 +51,38 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REQUIRE_TERMS = 3
 
 
-class Step:
-    __slots__ = ("name", "argv")
+ACCEPTED_HISTORY_RELATIVE = "harness/tools/deidentify-accepted-history.txt"
+ACCEPTED_COUNT_RE = re.compile(r"(\d+) accepted history finding\(s\) suppressed")
 
-    def __init__(self, name: str, argv: list):
+
+class Step:
+    __slots__ = ("name", "argv", "capture")
+
+    def __init__(self, name: str, argv: list, capture: bool = False):
         self.name = name
         self.argv = argv
+        self.capture = capture
 
 
 def _python(root: Path, *args) -> list:
     return [sys.executable, *args]
+
+
+def _accepted_entry_count(root: Path) -> int:
+    """Entries in the accepted-history file committed at HEAD (0 when absent
+    or when git cannot read it)."""
+    try:
+        blob = subprocess.run(
+            ["git", "-C", str(root), "show", f"HEAD:{ACCEPTED_HISTORY_RELATIVE}"],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return 0
+    if blob.returncode != 0:
+        return 0
+    lines = blob.stdout.decode("utf-8", "replace").splitlines()
+    return sum(1 for line in lines if line.strip() and not line.strip().startswith("#"))
 
 
 def plan(root: Path, terms_path, require_terms: int, run_terms_layer: bool, run_tests: bool) -> list:
@@ -89,6 +112,7 @@ def plan(root: Path, terms_path, require_terms: int, run_terms_layer: bool, run_
                     "--require-terms", str(require_terms),
                     "--history",
                 ),
+                capture=True,
             )
         )
     if run_tests:
@@ -131,14 +155,30 @@ def run(argv=None, runner=subprocess.run) -> int:
             )
             return 2
 
+    if args.no_terms and _accepted_entry_count(args.root):
+        print(
+            "release check: refused: --no-terms with accepted historical findings on file "
+            f"({ACCEPTED_HISTORY_RELATIVE}); the term layer is the only check that gives them meaning"
+        )
+        return 2
+
     steps = plan(args.root, terms_path, args.require_terms, run_terms_layer, args.tests)
 
     overall_ok = True
     for step in steps:
-        result = runner(step.argv, cwd=str(args.root))
+        if step.capture:
+            result = runner(step.argv, cwd=str(args.root), capture_output=True, text=True)
+            output = (getattr(result, "stdout", "") or "") + (getattr(result, "stderr", "") or "")
+            if output:
+                print(output, end="" if output.endswith("\n") else "\n")
+        else:
+            result = runner(step.argv, cwd=str(args.root))
+            output = ""
         code = result.returncode
         status = "PASS" if code == 0 else "FAIL"
-        print(f"{step.name}: exit {code} ({status})")
+        accepted = ACCEPTED_COUNT_RE.search(output)
+        note = f", {accepted.group(1)} accepted history finding(s) suppressed" if accepted else ""
+        print(f"{step.name}: exit {code} ({status}{note})")
         if code != 0:
             overall_ok = False
 

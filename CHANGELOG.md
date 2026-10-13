@@ -2,6 +2,13 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.1.6] - 2026-10-14
+
+### Fixed
+
+- The openpyxl guard's path scans are linear in the length of the command. Its two unquoted-path patterns retried from every position inside a long run of path characters, so cost grew with the square of the run: a 160 KB command took over 45 seconds, the hook timed out, and the deny for a save against an existing workbook was lost with it. Both scans now walk each run of path characters once and return exactly the lists the patterns returned, so the same command is judged in well under a second. Every extracted path is still probed on disk, so a command that names tens of thousands of distinct paths can still outlast a hook timeout.
+- The openpyxl guard sees unquoted drive-qualified paths. The path character class has no colon, so an unquoted script or workbook path that began with a drive letter was extracted without its drive and resolved against whatever drive the process or the payload working directory was on; a script or workbook on another drive was never found and the save was allowed. A second phase, run only when the first allowed, rebuilds the drive-qualified form (one ASCII letter, a colon, a path starting with a slash, not glued to a longer word) and repeats both checks against it. It runs after the first phase has decided, so a probe that stalls on an unreachable drive cannot cost a deny the first phase would have issued, and an error inside it falls through to allow. Still without a candidate: drive-relative paths, extended-length paths, an option glued to the drive letter, file URLs, and paths with spaces or a tilde. On Windows, a Git Bash drive path (a leading slash, the drive letter, a slash) is not mapped to its drive. `harness/hooks/tests/test_openpyxl_guard.py` carries the parity, drive-candidate, timing, host-independent decision and wiring, and cross-drive tests.
+
 ## [0.1.5] - 2026-09-27
 
 ### Added

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "files": [
     {
       "path": ".githooks/pre-commit",
@@ -2875,6 +2875,11 @@
       "path": "harness/hooks/tests/test_no_state.py",
       "state": "ported",
       "source": "upstream-harness:harness/hooks/tests/test_no_state.py"
+    },
+    {
+      "path": "harness/hooks/tests/test_openpyxl_guard.py",
+      "state": "ported",
+      "source": "upstream-harness:harness/hooks/tests/test_openpyxl_guard.py"
     },
     {
       "path": "harness/hooks/tests/test_pre_bootstrap_detector.py",

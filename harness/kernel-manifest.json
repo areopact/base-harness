@@ -3272,6 +3272,11 @@
       "source": null
     },
     {
+      "path": "harness/tools/deidentify-accepted-history.txt",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/tools/deidentify-terms.txt",
       "state": "new",
       "source": null

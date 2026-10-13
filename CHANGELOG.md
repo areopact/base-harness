@@ -12,6 +12,7 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 - `harness/tools/templates/skills/` with a `procedure`, a `criteria`, and a `reference` skeleton, each with complete frontmatter, the sections its form expects, and an `evals/` trio with a placeholder case to delete or replace.
 - `docs/ADDING-A-SKILL.md` documents the forms, dependencies, the description rule, the `## Done when` convention, and the evaluation protocol as guidance. A table now names which tool enforces each frontmatter row (lint L4 or `validate_skills.py`).
 - CI runs `python harness/bootstrap/validate_skills.py` after the strict lint step; `CONTRIBUTING.md` lists it among the local checks.
+- `harness/tools/deidentify-accepted-history.txt` records accepted historical term findings (full commit SHA, path, ASCII term). `deidentify_lint.py --history` suppresses only a TERM finding that matches all three fields, reads entries from the file committed at HEAD, requires each commit to be contained in a tag, reports an entry that matches nothing as `STALE` (exit 1), exits 2 on a malformed or non-ASCII line, parses the file in every mode, and prints the suppression count and each entry. The file is scanned like any other file; only the term field of an entry line is masked. `release_check.py` repeats the count on its terms step and `--no-terms` refuses while entries exist. It holds the two findings in published commits that cannot be rewritten. This loosens a release gate and needs independent review.
 
 ### Compatibility
 
@@ -21,13 +22,6 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 ### Fixed
 
 - Three current-file uses of the generic private-source term from the seed term list are reworded so the term-list release check no longer reports them: two in `START_HERE.md` (the Obsidian setup prose and step) and one in the `harness/bootstrap/links.py` module docstring. Behavior is unchanged.
-
-### Added
-
-- `harness/tools/deidentify-accepted-history.txt` records accepted historical term findings (full commit SHA, path, ASCII term). `deidentify_lint.py --history` suppresses only a TERM finding that matches all three fields, reads entries from the file committed at HEAD, requires each commit to be contained in a tag, reports an entry that matches nothing as `STALE` (exit 1), exits 2 on a malformed or non-ASCII line, parses the file in every mode, and prints the suppression count and each entry. The file is scanned like any other file; only the term field of an entry line is masked. `release_check.py` repeats the count on its terms step and `--no-terms` refuses while entries exist. It holds the two findings in published commits that cannot be rewritten. This loosens a release gate and needs independent review.
-
-### Fixed (history walk)
-
 - `deidentify_lint.py --history` walks commits in topological order, so the commit reported for a file version is its first in ancestry even when commit timestamps tie.
 
 ## [0.1.6] - 2026-10-14

@@ -22,6 +22,8 @@ description: >
   One paragraph. WHEN: the phrases and situations that should route here.
   WHEN NOT: the neighbors that should not, and where they go instead.
 metadata:
+  form: procedure                # optional; procedure | criteria | reference
+  dependencies: [code]           # optional; a list drawn from code | system | agents; omit when none
   packs: [core]                  # kebab-case pack slugs; a skill may belong to several
   triggers:                      # phrases the generated resolver routes from
     - "explore options"
@@ -44,6 +46,8 @@ What lint L4 enforces (`python harness/tools/lint.py`):
 | `metadata.packs` | required; every slug kebab-case |
 | `metadata.triggers` | required; the list the resolver is generated from |
 | `metadata.neighbor` | optional; a skill name or `none`; overrides the neighbor derived from the first skill named in `WHEN NOT` |
+| `metadata.form` | optional; `procedure`, `criteria`, or `reference`. Checked by `validate_skills.py`; see "Form and sections" |
+| `metadata.dependencies` | optional; a list drawn from `code`, `system`, `agents`; any other value is rejected. See "Dependencies" |
 | `metadata.status` | required; `implemented`, `spec-only`, or `stub` |
 | `metadata.distribution` | required; `native`, `vendored`, or `runtime-provided` |
 | `metadata.license` | required; packs never mix values |
@@ -51,6 +55,77 @@ What lint L4 enforces (`python harness/tools/lint.py`):
 | `metadata.notice` | optional; must match the `sources.json` row for a vendored asset |
 
 `harness/bootstrap/validate_skills.py` reads the same frontmatter with the documented YAML subset and, with `--catalog` or when `.agents/skills` exists, checks that the generated Codex catalog matches the selection exactly.
+
+`form`, `dependencies`, and `evals/` are optional: a skill written to the earlier contract passes unchanged, and `validate_skills.py` rejects only a value outside the closed vocabularies or an `evals/` folder whose files have the wrong shape.
+
+## Starting from a skeleton
+
+`harness/tools/templates/skills/` holds one skeleton per form (`procedure`, `criteria`, `reference`), each with complete frontmatter, the sections its form expects, and an `evals/` trio. Copy the folder to `harness/skills/<name>/`, set `name` to the folder name, replace the prose, and delete `evals/` until the skill has real prompts and cases. The skeletons live outside `harness/skills/` because the catalog builders read every `SKILL.md` there.
+
+## Description
+
+The description is the text a runtime loads before it chooses a skill, so it carries the routing.
+
+1. A capability sentence first, in the third person: what the skill does, in under 100 characters.
+2. `WHEN:` with the phrases a person would say. Write natural language. A slash command is resolved by name, so it selects nothing a trigger run can observe; the lint checks that the name and resolver row exist.
+3. `WHEN NOT:` is optional. Name the neighbor skill or the excluded case and where it goes.
+4. Plain wording, under 1,024 characters in all. Do not summarize the steps: a description that outlines the workflow lets an agent follow the outline and skip the body.
+
+## Form and sections
+
+`metadata.form` says what the body tells the agent. It is an author's assertion; the sections are advisory, so a missing one is a WARN and never an error.
+
+| Form | The body tells the agent | Sections checked (WARN when absent) |
+|---|---|---|
+| `procedure` | what to do, in order, and when it is finished | ordered steps, as a numbered list or numbered headings outside fenced code; a `## Done when` section |
+| `criteria` | what a result must and must not be | `## Floors` (countable minimums) and `## Ceilings` (limits and prohibitions) |
+| `reference` | what is true | no ordered steps; a table or schema fits |
+
+Headings match by prefix, so `## Floors (what good looks like)` counts. A body with ordered steps is a procedure even if it also lists criteria; a body with criteria and no steps is a criteria skill.
+
+## Dependencies
+
+`metadata.dependencies` records what the skill needs beyond its own text, and the body is written for exactly that:
+
+- `code`: it runs bundled scripts from `scripts/`.
+- `system`: it needs one named external system. Name the product once in the description and keep its interface in `references/` or `scripts/`, not in the steps.
+- `agents`: its main path needs other agents. State what to do when no delegation is available.
+
+Omit the key when the skill needs none; omission means none.
+
+## The `## Done when` convention
+
+A procedure ends with one section headed exactly `## Done when`, placed after the steps and before the failure-handling section (or after the last procedural section when there is none).
+
+1. It states the requested outcome, the evidence that is enough to call it reached, and what the reply gives. The evidence is whatever the steps already produced; the section never asks for another pass.
+2. Every condition is observable in an artifact, a tool result, or the reply. Where the skill already runs a check, name it. Avoid "the user is satisfied" and "verify everything".
+3. Prose when there is one outcome. When modes end in different states, a short lead sentence for what they share, then one bullet per mode with the mode name in bold. Only the invoked mode binds. No checkbox syntax.
+4. Success only. Blocked, partial, and unverified outcomes stay in the failure-handling section. Do not claim what the steps cannot back: no "nothing else changed", no unqualified "all".
+5. Two to five statements, about 80 words, unless a material exception needs more. It adds no obligation and no permission: every condition maps to a step that exists. A condition with no step behind it is a gap in the skill, not a line to write here.
+6. One completion statement. If the skill already states completion elsewhere, move only the terminal assertion here and leave the instruction that performs a check where it is.
+7. Plain present tense or imperative, one logical line per paragraph or bullet, the skill's own vocabulary.
+
+## Evaluation and maturity
+
+A skill may carry `evals/` with three files. `validate_skills.py` checks their shape when the folder exists; a skill without it is `spec-only`.
+
+| File | Content |
+|---|---|
+| `triggers.tsv` | tab-separated, header `prompt`, `expect`, `competitor`. `expect` is `select` or `skip`; `competitor` names the skill a near miss belongs to, or is empty. Every prompt is natural language. About ten `select` rows and ten `skip` rows, the `skip` rows sharing words with the skill |
+| `cases.md` | at least one outcome case: the input, binary acceptance checks, and what a run without the skill produces |
+| `ledger.tsv` | one row per recorded run, with the columns `date`, `harness`, `harness_version`, `model`, `description_rev`, `triggers_rev`, `package_rev`, `cases_rev`, `trigger_result`, `outcome_result`, `notes` |
+
+Protocol:
+
+- **Triggers.** Run each prompt three times; a prompt passes when the skill is selected (or correctly not selected) in at least two of three runs. The set passes at 90 percent of prompts. A run that fails for a harness reason is `unknown` and counts for neither side.
+- **Outcomes.** Run each case three times and pass it when the acceptance checks hold in two of three. Pair every case with a run without the skill, so the case shows what the skill adds. An outcome prompt names the skill it measures, because selection is the trigger set's job.
+- **Refusal cases.** A case that expects the skill to decline passes when the skill fails safely.
+- **External dependencies.** Replace a live system with a stand-in case, so a run needs no credentials or network.
+- **Revisions.** The four `*_rev` columns are SHA-256 digests of the description, the trigger file, the package (body plus `scripts/` and `references/`), and the cases file. Use one implementation, normalize CRLF to LF before hashing, and record the harness and model, since rows compare only within one configuration.
+- **Staleness.** A description or trigger edit voids trigger evidence only; a body, script, reference, or case edit voids outcome evidence only.
+- **Maturity.** A skill is `implemented` when its latest ledger row matches the current revisions and both results are `pass`; otherwise it is `spec-only`. Missing or stale evidence is a warning and never an error.
+
+This template validates the shape of `evals/` and does not ship a runner or a hashing tool. The VERIFICATION row described under "Promotion from spec-only to implemented" stays this repository's promotion gate.
 
 ## Triggers and the generated resolver
 

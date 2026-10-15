@@ -1,6 +1,7 @@
 """openpyxl-guard: path extraction parity with the reference regexes, drive-qualified candidates, linear cost."""
 from __future__ import annotations
 
+import importlib
 import itertools
 import json
 import os
@@ -274,6 +275,14 @@ class DrivePhaseDecisionTests(unittest.TestCase):
         targets = self.run_phase(f"python {script} other.xlsx", {script, "other.xlsx"}, {script: ARGV_BODY})
         assert targets == ["other.xlsx"]
 
+    def test_url_skip_applies_to_script_bodies_in_the_second_phase(self):
+        script, book = "C:/work/writer.py", "//srv/share/book.xlsx"
+        existing = {script, book}
+        url_body = ARGV_BODY + "# src: https://srv/share/book.xlsx\n"
+        plain_body = ARGV_BODY + "# src: //srv/share/book.xlsx\n"
+        assert self.run_phase(f"python {script}", existing, {script: url_body}) == []
+        assert self.run_phase(f"python {script}", existing, {script: plain_body}) == [book]
+
     def test_script_without_write_pattern_allows(self):
         script, workbook = "C:/work/reader.py", "C:/work/data.xlsx"
         assert self.run_phase(f"python {script} {workbook}", {script, workbook}, {script: READ_ONLY_BODY}) == []
@@ -296,6 +305,229 @@ class DrivePhaseDecisionTests(unittest.TestCase):
                 mock.patch.object(og, "read_script", fake_read):
             assert og.drive_phase_targets("python " + " ".join(scripts), "", []) == []
         assert reads == scripts[:og.SCRIPT_SCAN_MAX_FILES]
+
+
+MSYS_ROWS = [
+    ("python /c/work/x.py", "py", ["C:/work/x.py"]),
+    ('python "/c/work/x.py"', "py", ["C:/work/x.py"]),
+    ('python "/d/my docs/x.py"', "py", ["D:/my docs/x.py"]),
+    ("python /c/work/x.py /e/y.py", "py", ["C:/work/x.py", "E:/y.py"]),
+    ('open "/c/data/book.xlsx"', "xlsx", ["C:/data/book.xlsx"]),
+    ("open /c/data/book.xlsx", "xlsx", ["C:/data/book.xlsx"]),
+    ("--out=/c/a.xlsx", "xlsx", ["C:/a.xlsx"]),
+    ("python /cc/x.py", "py", []),
+    ("python C:/c/x.py", "py", []),
+    ("http://h/c/a.xlsx", "xlsx", []),
+    ("python docs/c/x.py", "py", []),
+    ("python ~/c/x.py", "py", []),
+    ("python ${d}/c/x.py", "py", []),
+    ("python $(pwd)/c/x.py", "py", []),
+    ("python @/c/x.py", "py", []),
+    ("python a+/c/x.py", "py", []),
+    ("open ~/c/data/book.xlsx", "xlsx", []),
+    ("open $(pwd)/c/data/book.xlsx", "xlsx", []),
+    ("python x=/c/work/x.py", "py", ["C:/work/x.py"]),
+    ("open /c/a.xlsx.xlsx\"b", "xlsx", ["C:/a.xlsx"]),
+    ("open /c/a.xlsx\"b", "xlsx", []),
+    ("python /cygdrive/c/x.py", "py", []),
+    ("python /mnt/c/x.py", "py", []),
+    ("python /1/x.py", "py", []),
+    ("python /c/", "py", []),
+]
+
+
+class MsysDriveCandidateTests(unittest.TestCase):
+    def setUp(self):
+        patch = mock.patch.object(og, "MSYS_DRIVE_PATHS", True)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def candidates(self, text, kind):
+        return og.xlsx_msys_candidates(text) if kind == "xlsx" else og.script_msys_candidates(text)
+
+    def test_pure_mapping(self):
+        rows = {"/c/x": "C:/x", "/D/a/b.py": "D:/a/b.py", "/c": "", "/c/": "", "/cc/x": "",
+                "/1/x": "", "c/x": "", "C:/x": "", "": "", "/" + chr(233) + "/x": ""}
+        for path, expected in rows.items():
+            assert og.msys_drive_path(path) == expected, path
+
+    def test_table_rows(self):
+        for text, kind, expected in MSYS_ROWS:
+            got = self.candidates(text, kind)
+            assert got == expected, f"{text!r}: {got} != {expected}"
+
+    def test_gate_defaults_to_windows_only(self):
+        # the real default, with the class-level patch undone: Git Bash drive paths map on Windows only
+        for name, expected in (("nt", True), ("posix", False)):
+            with mock.patch.object(os, "name", name):
+                importlib.reload(og)
+            try:
+                assert og.MSYS_DRIVE_PATHS is expected, name
+            finally:
+                importlib.reload(og)
+        assert og.MSYS_DRIVE_PATHS == (os.name == "nt")
+
+    def test_gate_off_yields_nothing(self):
+        with mock.patch.object(og, "MSYS_DRIVE_PATHS", False):
+            for text, kind, _ in MSYS_ROWS:
+                assert self.candidates(text, kind) == [], text
+
+    def test_linear_on_long_inputs(self):
+        n = 5000
+        shapes_ = ["/c/a.xlsx " * n, "/c/a.py " * n, '"/c/a.xlsx" ' * n, "docs/c/a.xlsx " * n,
+                   "/c/" * n + "a.xlsx", "x" * 50000]
+        for text in shapes_:
+            for fn in (og.xlsx_msys_candidates, og.script_msys_candidates):
+                best = None
+                for _ in range(3):
+                    t0 = time.perf_counter()
+                    fn(text)
+                    dt = time.perf_counter() - t0
+                    best = dt if best is None else min(best, dt)
+                assert best < TimingTests.CEILING, f"{fn.__name__} took {best:.3f}s on {text[:12]!r}"
+
+
+class MsysPhaseDecisionTests(unittest.TestCase):
+    """Git Bash drive paths in the second phase, with the filesystem replaced."""
+
+    def setUp(self):
+        patch = mock.patch.object(og, "MSYS_DRIVE_PATHS", True)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def run_phase(self, command, existing, bodies=None, flagged=()):
+        bodies = bodies or {}
+        with mock.patch.object(og, "resolve_existing", lambda paths, cwd: [p for p in paths if p in existing]), \
+                mock.patch.object(og, "read_script", lambda path: bodies.get(path, "")):
+            return og.drive_phase_targets(command, "", list(flagged))
+
+    def test_quoted_and_unquoted_script_found(self):
+        script = "C:/work/writer.py"
+        for spelled in ("/c/work/writer.py", '"/c/work/writer.py"'):
+            targets = self.run_phase(f"python {spelled}", {script, "book.xlsx"}, {script: SCRIPT_BODY})
+            assert targets and set(targets) == {"book.xlsx"}, (spelled, targets)
+
+    def test_inline_workbook_found(self):
+        command = 'python -c "import openpyxl; wb.save(sys.argv[1])" '
+        for spelled in ("/c/work/data.xlsx", '"/c/work/data.xlsx"'):
+            assert self.run_phase(command + spelled, {"C:/work/data.xlsx"}) == ["C:/work/data.xlsx"], spelled
+
+    def test_flagged_script_arms_argv_workbook(self):
+        command = "python s.py /c/work/data.xlsx"
+        assert self.run_phase(command, {"C:/work/data.xlsx"}, flagged=[ARGV_BODY]) == ["C:/work/data.xlsx"]
+        assert self.run_phase(command, {"C:/work/data.xlsx"}) == []
+
+    def test_script_body_is_not_mapped(self):
+        existing = {"C:/work/data.xlsx", "C:/work/w.py"}
+        body = ARGV_BODY + "# target: /c/work/data.xlsx\n"
+        assert self.run_phase("python s.py", existing, flagged=[body]) == []
+        assert self.run_phase("python C:/work/w.py", existing, {"C:/work/w.py": body}) == []
+
+    def test_gate_off_allows(self):
+        script = "C:/work/writer.py"
+        with mock.patch.object(og, "MSYS_DRIVE_PATHS", False):
+            assert self.run_phase("python /c/work/writer.py", {script, "book.xlsx"}, {script: SCRIPT_BODY}) == []
+            command = 'python -c "import openpyxl; wb.save(sys.argv[1])" /c/work/data.xlsx'
+            assert self.run_phase(command, {"C:/work/data.xlsx"}) == []
+
+    def test_drive_and_git_bash_scripts_share_the_cap(self):
+        drive = [f"C:/d{i}.py" for i in range(3)]
+        bash = [f"/c/g{i}.py" for i in range(4)]
+        reads = []
+
+        def fake_read(path):
+            reads.append(path)
+            return ""
+
+        with mock.patch.object(og, "resolve_existing", lambda paths, cwd: list(paths)), \
+                mock.patch.object(og, "read_script", fake_read):
+            assert og.drive_phase_targets("python " + " ".join(drive + bash), "", []) == []
+        assert reads == drive + ["C:/g0.py", "C:/g1.py"], reads
+
+
+class UrlProbeTests(unittest.TestCase):
+    """A path read out of a URL is never probed on disk; a UNC path the operator wrote still is."""
+
+    INLINE = 'python -c "import openpyxl; wb.save(sys.argv[1])" '
+
+    def decide_with_probe_log(self, command, strict):
+        probes = []
+
+        def fake_isfile(path):
+            probes.append(path)
+            if strict and (path.startswith("//") or path.startswith(BACKSLASH * 2)):
+                raise AssertionError(f"network probe {path!r}")
+            return False
+
+        data = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": ""}
+        with mock.patch.object(os.path, "isfile", fake_isfile):
+            og.decide(data)
+        return [p for p in probes if p.startswith("//") or p.startswith(BACKSLASH * 2)]
+
+    def test_url_forms_are_not_probed(self):
+        commands = [
+            self.INLINE + "https://x.com/a/b.xlsx",
+            self.INLINE + "HTTPS://X.COM/a/b.xlsx",
+            self.INLINE + "ssh://h/r/a.xlsx",
+            self.INLINE + "git+ssh://h/r/a.xlsx",
+            self.INLINE + "http://h/a.xlsx",
+            "python https://x.com/a/s.py",
+            "curl https://x.com/a/b.md && python HTTP://h/s.py",
+            "git clone ssh://h/r",
+        ]
+        for command in commands:
+            assert self.decide_with_probe_log(command, strict=True) == [], command
+
+    def test_explicit_unc_forms_are_still_probed(self):
+        unc_back = BACKSLASH * 2 + "server" + BACKSLASH + "share" + BACKSLASH + "x.xlsx"
+        cases = {
+            self.INLINE + "//server/share/x.xlsx": "//server/share/x.xlsx",
+            self.INLINE + "file://server/share/x.xlsx": "//server/share/x.xlsx",
+            self.INLINE + "FILE://server/share/x.xlsx": "//server/share/x.xlsx",
+            self.INLINE + unc_back: unc_back,
+            "python //server/share/s.py": "//server/share/s.py",
+            "python file://server/share/s.py": "//server/share/s.py",
+        }
+        for command, expected in cases.items():
+            probed = self.decide_with_probe_log(command, strict=False)
+            assert expected in probed, (command, probed)
+
+    def test_url_detection_table(self):
+        rows = [
+            ("https://h/a", 6, True), ("HTTPS://h/a", 6, True), ("ssh://h/r", 4, True),
+            ("a+b.c-d://h/r", 8, True), ("1http://h/a", 6, True),
+            ("file://h/a", 5, False), ("FILE://h/a", 5, False), ("//h/a", 0, False),
+            (" //h/a", 1, False), ("=//h/a", 1, False), ("h://h/a", 2, False),
+            ("1://h/a", 2, False), ("-://h/a", 2, False), ("http:/h/a", 5, False),
+            (" h://h/a", 3, False), ("s3://b/a", 3, True),
+            ("a" * 64 + "://h/a", 65, True), ("a" * 65 + "://h/a", 66, False),
+            ("3" * 20 + "ab://h/a", 23, True),
+        ]
+        for text, i, expected in rows:
+            assert og._url_derived(text, i) is expected, (text, i)
+
+    def test_extraction_without_probe_is_unchanged(self):
+        assert og.extract_xlsx_paths("http://host/a.xlsx") == ["//host/a.xlsx"]
+        assert og.extract_xlsx_paths("http://host/a.xlsx", probe=True) == []
+        assert og.extract_xlsx_paths("file://host/a.xlsx", probe=True) == ["//host/a.xlsx"]
+        assert og.extract_script_paths("python https://h/s.py", probe=True) == []
+        assert og.extract_script_paths("python https://h/s.py x.py", probe=True) == ["x.py"]
+
+    def test_url_paths_do_not_consume_the_script_cap(self):
+        urls = " ".join(f"https://h/u{i}.py" for i in range(9))
+        assert og.extract_script_paths(urls + " real.py", probe=True) == ["real.py"]
+
+    def test_url_filter_is_linear(self):
+        long_scheme = "a" * 200000 + "://" + "x.xlsx/" * 100
+        for text in ("a" * 50000 + "://x.xlsx", "https://h/a.xlsx " * 3000, "a://" * 10000 + "b.py", long_scheme):
+            best = None
+            for _ in range(3):
+                t0 = time.perf_counter()
+                og.extract_xlsx_paths(text, probe=True)
+                og.extract_script_paths(text, probe=True)
+                dt = time.perf_counter() - t0
+                best = dt if best is None else min(best, dt)
+            assert best < TimingTests.CEILING, (text[:12], best)
 
 
 class DecideWiringTests(unittest.TestCase):
@@ -339,6 +571,20 @@ class DecideWiringTests(unittest.TestCase):
         command = f'python "{script}" {workbook}'
         for body in ("print('hello')\n", READ_ONLY_BODY):
             assert self.decision(command, {script, workbook}, {script: body}) == "allow", body
+
+    def test_url_skip_applies_to_script_bodies_and_argv(self):
+        # Pinned: a URL read out of a script body or out of the command line is never probed, so a
+        # script that strips the scheme itself (smb://srv/share/book.xlsx -> //srv/share/book.xlsx)
+        # is allowed. This is the accepted trade-off named in the module docstring.
+        book = "//srv/share/book.xlsx"
+        existing = {"w.py", book}
+        url_body = ARGV_BODY + "# src: https://srv/share/book.xlsx\n"
+        plain_body = ARGV_BODY + "# src: //srv/share/book.xlsx\n"
+        assert self.decision("python w.py", existing, {"w.py": url_body}) == "allow"
+        assert self.decision("python w.py", existing, {"w.py": plain_body}) == "deny"
+        assert self.decision("python w.py https://srv/share/book.xlsx", existing, {"w.py": ARGV_BODY}) == "allow"
+        assert self.decision("python w.py smb://srv/share/book.xlsx", existing, {"w.py": ARGV_BODY}) == "allow"
+        assert self.decision("python w.py //srv/share/book.xlsx", existing, {"w.py": ARGV_BODY}) == "deny"
 
     def test_first_phase_deny_does_not_wait_for_second_phase(self):
         def unreachable(command, cwd, flagged):
@@ -425,6 +671,33 @@ class EndToEndTests(unittest.TestCase):
             for command in commands:
                 proc, _ = self.run_guard(command, other + "\\", process_cwd=other + "\\")
                 self.assert_deny(proc)
+
+
+    @unittest.skipUnless(os.name == "nt", "Git Bash drive spelling exists only on Windows")
+    def test_git_bash_drive_spelling_reaches_the_phase_two_targets(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = os.path.realpath(raw)
+            drive, tail = os.path.splitdrive(tmp)
+            if not re.fullmatch(r"[A-Za-z]:[\w./\\-]+", tmp):
+                self.skipTest("fixture path has characters that end an unquoted path")
+            bash_tmp = "/" + drive[0].lower() + tail.replace(BACKSLASH, "/")
+            xlsx = os.path.join(tmp, "book.xlsx")
+            script = os.path.join(tmp, "writer.py")
+            Path(xlsx).write_bytes(b"PK")
+            Path(script).write_text(f"import openpyxl\nwb = openpyxl.load_workbook(r'{xlsx}')\n"
+                                    f"wb.save(r'{xlsx}')\n", encoding="utf-8")
+            argv_script = os.path.join(tmp, "argv_writer.py")
+            Path(argv_script).write_text(ARGV_BODY, encoding="utf-8")
+            inline = 'python -c "import openpyxl; wb = openpyxl.Workbook(); wb.save(sys.argv[1])" '
+            with mock.patch.object(og, "MSYS_DRIVE_PATHS", True):
+                for command in (f"python {bash_tmp}/writer.py", f'python "{bash_tmp}/writer.py"',
+                                inline + f"{bash_tmp}/book.xlsx", inline + f'"{bash_tmp}/book.xlsx"',
+                                f"python {bash_tmp}/argv_writer.py {bash_tmp}/book.xlsx"):
+                    flagged = [ARGV_BODY] if "argv_writer" in command else []
+                    hit = og.drive_phase_targets(command, "", flagged)
+                    assert hit and os.path.samefile(hit[0], xlsx), (command, hit)
+            with mock.patch.object(og, "MSYS_DRIVE_PATHS", False):
+                assert og.drive_phase_targets(f"python {bash_tmp}/writer.py", "", []) == []
 
 
 if __name__ == "__main__":

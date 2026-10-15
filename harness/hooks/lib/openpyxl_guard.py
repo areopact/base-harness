@@ -31,9 +31,31 @@ to allow. Both phases walk each maximal run of path characters once, so
 extraction stays linear in the command; every extracted path is still
 probed on disk.
 Still without a candidate: drive-relative paths (C:x.py), extended-length
-paths, an option glued to the drive (-oC:/a.xlsx), file:/// URLs, and paths
-with spaces or a tilde. On Windows, a Git Bash drive path (/c/work/x.py) is
-not mapped to its drive, quoted or unquoted.
+paths, an option glued to the drive (-oC:/a.xlsx), file:/// URLs, paths with
+spaces or a tilde, and the Cygwin and WSL spellings (/cygdrive/c/, /mnt/c/).
+
+On Windows the same second phase also maps a Git Bash drive path (/c/work/x.py
+or /c/data/book.xlsx, quoted or unquoted) to its drive form, since the
+original spelling resolves against the session drive. Only the command-line
+text yields these candidates, never a script body (Python reads /c/x there
+as a path on the current drive). They are gated by MSYS_DRIVE_PATHS and share
+the further-script cap with the drive-prefix candidates.
+A run maps only when it opens a shell word (start of text, whitespace, a quote, or =),
+so ~/c/x.py, $(pwd)/c/x.py and a+/c/x.py do not.
+
+Network lookups: an unquoted path run that starts with // and directly follows
+a URL scheme of two or more characters other than file: (https://host/a.xlsx
+is read as the run //host/a.xlsx) is never probed on disk, because a UNC name
+lookup on Windows can stall for seconds and a hook timeout drops the deny.
+Accepted trade-off: the skip can lose a real deny. A script that strips the
+scheme itself and writes the workbook, as in
+python smbwriter.py smb://srv/share/book.xlsx with //srv/share/book.xlsx
+existing, was denied before the skip and is allowed now. A scheme-character run
+longer than 64 characters is not read as a URL, so the path behind it is still
+probed (the backward scheme scan reads at most 64 characters, which keeps it
+linear on a long run before many // hits). A UNC path the operator wrote
+(//server/share/x.xlsx with no scheme, a backslash UNC path, file://server/...)
+is still probed and remains a residual stall risk.
 
 Relative paths resolve against the payload cwd first, then the repository
 root, so a fixture with a repo-relative path behaves the same from any
@@ -43,6 +65,7 @@ Called by harness/hooks/pre-tool-use/openpyxl-guard.{sh,ps1} and by
 harness/hooks/lib/dispatch.py.
 """
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -73,6 +96,9 @@ WRITE_PATTERNS = [
 SCRIPT_SCAN_MAX_FILES = 5
 SCRIPT_SCAN_MAX_BYTES = 256 * 1024
 
+# A Git Bash drive path (/c/work/x.py) names C:/work/x.py only on Windows. Tests patch this.
+MSYS_DRIVE_PATHS = os.name == "nt"
+
 
 def has_write_pattern(text):
     return any(re.search(pattern, text) for pattern in WRITE_PATTERNS)
@@ -83,6 +109,23 @@ _QUOTE_WORD = re.compile(r"""['"]\w""")
 _PY_SUFFIX = re.compile(r"\.py(?!\w)")
 _DRIVE_GUARD = re.compile(r"[\w./\\:-]")
 _ASCII_LETTERS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+_SCHEME_CHARS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+.-")
+URL_SCHEME_MAX_SCAN = 64
+_WORD_START = frozenset("'\"=")
+
+
+def _url_derived(text, i):
+    """True when text[i:i+2] is // directly after a URL scheme (2+ characters, not file:)."""
+    if i < 3 or text[i:i + 2] != "//" or text[i - 1] != ":":
+        return False
+    j = i - 1
+    floor = max(0, j - URL_SCHEME_MAX_SCAN - 1)
+    while j > floor and text[j - 1] in _SCHEME_CHARS:
+        j -= 1
+    if i - 1 - j > URL_SCHEME_MAX_SCAN:
+        return False
+    scheme = text[j:i - 1].lstrip("0123456789+.-")
+    return len(scheme) >= 2 and scheme[0] in _ASCII_LETTERS and scheme.lower() != "file"
 
 
 def _unquoted_xlsx(text):
@@ -107,15 +150,21 @@ def _unquoted_scripts(text):
             yield m.group()[:last.end()], m.start()
 
 
-def extract_xlsx_paths(text):
+def _probeable(text, pairs, probe):
+    """Paths from (path, index) pairs; with probe, those read from a URL are dropped."""
+    return [path for path, i in pairs if not (probe and _url_derived(text, i))]
+
+
+def extract_xlsx_paths(text, probe=False):
+    """Quoted then unquoted .xlsx paths. probe=True drops the ones read out of a URL."""
     quoted = re.findall(r"""['"]([^'"]*\.xlsx)['"]""", text)
-    return quoted + [path for path, _ in _unquoted_xlsx(text)]
+    return quoted + _probeable(text, _unquoted_xlsx(text), probe)
 
 
-def extract_script_paths(text):
+def extract_script_paths(text, probe=False):
     quoted = re.findall(r"""['"]([^'"]+\.py)['"]""", text)
     seen, out = set(), []
-    for path in quoted + [path for path, _ in _unquoted_scripts(text)]:
+    for path in quoted + _probeable(text, _unquoted_scripts(text), probe):
         if path not in seen:
             seen.add(path)
             out.append(path)
@@ -151,6 +200,66 @@ def script_drive_candidates(text):
     return _drive_candidates(text, _unquoted_scripts(text)) if ":" in text else []
 
 
+def msys_drive_path(path):
+    """Map a Git Bash drive path (/c/rest) to its drive form (C:/rest); anything else gives ''."""
+    if len(path) > 3 and path[0] == "/" and path[1] in _ASCII_LETTERS and path[2] == "/":
+        return path[1].upper() + ":" + path[2:]
+    return ""
+
+
+def _msys_candidates(text, quoted_pattern, suffix_end):
+    if not MSYS_DRIVE_PATHS or "/" not in text:
+        return []
+    raw = re.findall(quoted_pattern, text)
+    for m in _PATH_RUN.finditer(text):
+        run, start = m.group(), m.start()
+        if start and not (text[start - 1].isspace() or text[start - 1] in _WORD_START):
+            continue  # the /x/ run must open a shell word: not ~/c/x.py, $(pwd)/c/x.py, a+/c/x.py
+        end = suffix_end(run, text, m.end())
+        if end:
+            raw.append(run[:end])
+    seen, out = set(), []
+    for path in raw:
+        mapped = msys_drive_path(path)
+        if mapped and mapped not in seen:
+            seen.add(mapped)
+            out.append(mapped)
+    return out
+
+
+def _xlsx_end(run, text, run_end):
+    k = run.rfind(".xlsx", 1)
+    if k != -1 and k + 5 == len(run) and _QUOTE_WORD.match(text, run_end):
+        k = run.rfind(".xlsx", 1, len(run) - 1)
+    return k + 5 if k != -1 else 0
+
+
+def _py_end(run, text, run_end):
+    last = None
+    for last in _PY_SUFFIX.finditer(run, 1):
+        pass
+    return last.end() if last else 0
+
+
+def xlsx_msys_candidates(text):
+    """Drive forms of Git Bash .xlsx paths in command text, quoted or not; [] off Windows."""
+    return _msys_candidates(text, r"""['"]([^'"]*\.xlsx)['"]""", _xlsx_end)
+
+
+def script_msys_candidates(text):
+    """Drive forms of Git Bash .py paths in command text, quoted or not; [] off Windows."""
+    return _msys_candidates(text, r"""['"]([^'"]+\.py)['"]""", _py_end)
+
+
+def _joined(*lists):
+    seen, out = set(), []
+    for item in itertools.chain(*lists):
+        if item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
+
+
 def resolve_existing(paths, cwd):
     """Return the paths that exist as files: as given, under cwd, under the root."""
     found = []
@@ -184,7 +293,7 @@ def drive_phase_targets(command, cwd, flagged):
     pattern but no existing workbook. Returns the existing targets; [] means allow. Never raises.
     """
     try:
-        cmd_x = xlsx_drive_candidates(command)
+        cmd_x = _joined(xlsx_drive_candidates(command), xlsx_msys_candidates(command))
         inline = "openpyxl" in command and ".xlsx" in command and has_write_pattern(command)
         if cmd_x and (inline or flagged):
             hit = resolve_existing(cmd_x, cwd)
@@ -195,14 +304,15 @@ def drive_phase_targets(command, cwd, flagged):
             if hit:
                 return hit
         if ".py" in command:
-            old = set(extract_script_paths(command))
-            fresh = [p for p in script_drive_candidates(command) if p not in old][:SCRIPT_SCAN_MAX_FILES]
+            old = set(extract_script_paths(command, probe=True))
+            fresh = [p for p in _joined(script_drive_candidates(command), script_msys_candidates(command))
+                     if p not in old][:SCRIPT_SCAN_MAX_FILES]
             for spath in resolve_existing(fresh, cwd):
                 body = read_script(spath)
                 if "openpyxl" not in body or not has_write_pattern(body):
                     continue
                 hit = resolve_existing(
-                    extract_xlsx_paths(body) + extract_xlsx_paths(command)
+                    extract_xlsx_paths(body, probe=True) + extract_xlsx_paths(command, probe=True)
                     + xlsx_drive_candidates(body) + cmd_x, cwd)
                 if hit:
                     return hit
@@ -222,17 +332,18 @@ def decide(data):
     digest = hashlib.sha256(command.encode("utf-8")).hexdigest()
 
     if "openpyxl" in command and ".xlsx" in command and has_write_pattern(command):
-        if resolve_existing(extract_xlsx_paths(command), cwd):
+        if resolve_existing(extract_xlsx_paths(command, probe=True), cwd):
             return deny(HOOK_NAME, TIER, REASON, digest, RECOVERY)
 
     flagged = []
     try:
         if ".py" in command:
-            for script in resolve_existing(extract_script_paths(command), cwd):
+            for script in resolve_existing(extract_script_paths(command, probe=True), cwd):
                 body = read_script(script)
                 if "openpyxl" not in body or not has_write_pattern(body):
                     continue
-                if resolve_existing(extract_xlsx_paths(body) + extract_xlsx_paths(command), cwd):
+                if resolve_existing(
+                        extract_xlsx_paths(body, probe=True) + extract_xlsx_paths(command, probe=True), cwd):
                     return deny(HOOK_NAME, TIER, REASON, digest, RECOVERY)
                 flagged.append(body)
     except Exception:

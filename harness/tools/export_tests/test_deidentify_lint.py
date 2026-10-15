@@ -7,6 +7,7 @@ the lint it exercises.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import sys
 from pathlib import Path
@@ -431,6 +432,155 @@ class TestHistory(TempDirCase):
         git(repo, "tag", "v3", local)
         code, out, err = run([str(repo), "--terms", str(terms), "--history"])
         assert "not contained in any tag" not in err, err
+
+    def test_seed_entries_do_not_report_against_the_seed_file(self):
+        repo = init_repo(self.tmp / "repo")
+        private = self.tmp / "private.txt"
+        write(private, "privateterm\n")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, "# seed\nprivateterm\n")
+        write(repo / "docs" / "a.md", "clean\n")
+        commit_all(repo, "first")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 0, out
+        code, out, _ = run([str(repo), "--terms", str(private), "--history"])
+        assert code == 0, out
+        # the default run (seed file as the term source) is clean too
+        code, out, _ = run([str(repo), "--history"])
+        assert code == 0, out
+        # other files are still term-scanned
+        write(repo / "docs" / "a.md", "privateterm\n")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 1 and "TERM docs/a.md:1" in out, out
+
+    def test_non_seed_private_term_in_the_seed_file_reports(self):
+        repo = init_repo(self.tmp / "repo")
+        private = self.tmp / "private.txt"
+        write(private, "privateterm\nsecondterm\n")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, "# seed\nsecondterm\n")
+        commit_all(repo, "first")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 0, out
+        # a private term that is not a seed entry: in a comment, and inside a longer entry line
+        seed = lint.DEFAULT_TERMS_RELATIVE
+        write(repo / seed, "# seed privateterm note\nsecondterm\n")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 1 and f"TERM {seed}:1" in out, out
+        assert f"{seed}:2" not in out, out
+        write(repo / seed, "# seed\nsecondterm\nsecondterm but privateterm\n")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 1 and f"TERM {seed}:3" in out, out
+        assert f"{seed}:2" not in out, out
+
+    def test_non_seed_private_term_in_seed_history_reports(self):
+        repo = init_repo(self.tmp / "repo")
+        private = self.tmp / "private.txt"
+        write(private, "privateterm\nsecondterm\n")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, "# seed\nsecondterm\n")
+        commit_all(repo, "first")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, "# seed privateterm note\nsecondterm\n")
+        leak = commit_all(repo, "leak")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, "# seed\nsecondterm\n")
+        commit_all(repo, "clean")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 0, out
+        code, out, _ = run([str(repo), "--terms", str(private), "--history"])
+        assert code == 1 and f"{leak[:12]} TERM {lint.DEFAULT_TERMS_RELATIVE}:1" in out, out
+
+    def test_history_seed_file_still_gets_structural_checks(self):
+        repo = init_repo(self.tmp / "repo")
+        private = self.tmp / "private.txt"
+        write(private, "privateterm\n")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, f"seedterm {EMAIL}\n")
+        bad = commit_all(repo, "bad")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, "seedterm\n")
+        commit_all(repo, "clean")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 0, out
+        code, out, _ = run([str(repo), "--terms", str(private), "--history"])
+        assert code == 1 and f"{bad[:12]} D1 {lint.DEFAULT_TERMS_RELATIVE}:1" in out, out
+        assert "TERM" not in out, out
+
+    def test_seed_file_still_gets_structural_checks(self):
+        repo = init_repo(self.tmp / "repo")
+        private = self.tmp / "private.txt"
+        write(private, "privateterm\n")
+        write(repo / lint.DEFAULT_TERMS_RELATIVE, f"seedterm {EMAIL}\n")
+        commit_all(repo, "first")
+        code, out, _ = run([str(repo), "--terms", str(private)])
+        assert code == 1, out
+        assert f"D1 {lint.DEFAULT_TERMS_RELATIVE}:1" in out, out
+        assert "TERM" not in out, out
+
+    @staticmethod
+    def _digest(term):
+        return "sha256:" + hashlib.sha256(term.lower().encode("utf-8")).hexdigest()
+
+    def test_digest_entry_suppresses_its_finding_and_plaintext_still_works(self):
+        repo, terms, first, second = self._accepted_repo()
+        self._accept(
+            repo,
+            f"{first} docs/a.md {self._digest('PrivateTerm')}",
+            f"{second} docs/a.md privateterm",
+            f"{first} docs/b.md privateterm",
+        )
+        code, out, err = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 0, (out, err)
+        assert "3 accepted history finding(s) suppressed (3 entries)" in out, out
+        assert f"ACCEPTED {first[:12]} docs/a.md {self._digest('privateterm')} (1 finding(s))" in out, out
+
+    def test_digest_entry_is_exact_on_commit_and_path(self):
+        repo, terms, first, second = self._accepted_repo()
+        self._accept(repo, f"{first} docs/a.md {self._digest('privateterm')}")
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1, out
+        assert f"{second[:12]} TERM docs/a.md:1" in out, out
+        assert f"{first[:12]} TERM docs/b.md:1" in out, out
+        assert f"{first[:12]} TERM docs/a.md" not in out, out
+        assert "STALE" not in out, out
+
+    def test_digest_matching_nothing_is_stale(self):
+        repo, terms, first, _second = self._accepted_repo()
+        self._accept(
+            repo,
+            f"{first} docs/a.md privateterm",
+            f"{first} docs/a.md {self._digest('someotherterm')}",
+        )
+        code, out, _ = run([str(repo), "--terms", str(terms), "--history"])
+        assert code == 1, out
+        assert "STALE" in out and self._digest("someotherterm") in out, out
+
+    def test_malformed_digest_is_a_usage_error(self):
+        repo, terms, first, _second = self._accepted_repo()
+        good = self._digest("privateterm")
+        for bad in (
+            good[:-1],  # 63 hex
+            good + "0",  # 65 hex
+            good[:-1] + "g",  # non-hex
+            "sha256:" + good[len("sha256:"):].upper(),  # uppercase hex
+            "SHA256:" + good[len("sha256:"):],  # wrong-case prefix
+            "sha256:",
+        ):
+            self._accept(repo, f"{first} docs/a.md {bad}")
+            for args in (["--terms", str(terms), "--history"], ["--terms", str(terms)], ["--structural"]):
+                code, out, err = run([str(repo), *args])
+                assert code == 2, (bad, args, out, err)
+                assert "malformed accepted-history file" in err, err
+
+    def test_digest_entry_line_produces_no_term_finding(self):
+        repo, _terms, first, _second = self._accepted_repo()
+        digest = self._digest("privateterm")
+        fragment = tmp_terms = self.tmp / "fragment.txt"
+        write(tmp_terms, digest[len("sha256:"):][:8] + "\n")
+        self._accept(repo, f"{first} docs/a.md {digest}")
+        code, out, err = run([str(repo), "--terms", str(fragment)])
+        assert code == 0, (out, err)
+        assert "TERM" not in out, out
+        # a comment line carrying the same fragment is not masked
+        write(repo / lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE, f"# {digest}\n{first} docs/a.md {digest}\n")
+        commit_all(repo, "comment")
+        code, out, _ = run([str(repo), "--terms", str(fragment)])
+        assert code == 1 and f"TERM {lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:1" in out, out
+        assert f"{lint.DEFAULT_ACCEPTED_HISTORY_RELATIVE}:2" not in out, out
 
     def test_history_with_no_refs_exits_1_not_clean(self):
         """F3(b): an empty or ref-less repository must not be indistinguishable

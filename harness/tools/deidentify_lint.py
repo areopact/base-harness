@@ -71,7 +71,12 @@ is used, so the default invocation always has a term source. A host that
 publishes from a private source keeps its own list outside the published tree
 and passes it with --terms; that list should carry the seed entries as well,
 since only one term file is read per run. The term file in use is excluded
-from the scan so its own entries never report against themselves.
+from the scan so its own entries never report against themselves. The shipped
+seed file is scanned by the term layer with the run's terms minus its own
+entries, in the worktree and in every commit of history, also when --terms
+names a different file: a private list that repeats the seed entries cannot
+match the seed file itself, while any other private term in the seed file (a
+comment, or part of a longer line) reports. Structural checks apply to it too.
 
 --history walks every commit reachable from any ref and runs the content checks
 over each (path, blob) pair once. It prints the first offending commit per
@@ -88,7 +93,11 @@ Accepted history. Published history cannot be rewritten, so a TERM finding in
 an already-published commit can be accepted in
 harness/tools/deidentify-accepted-history.txt: one entry per line, a full
 40-hex commit SHA, a path, and an ASCII term, whitespace-separated, "#" comments
-allowed. Entries are read from the file committed at HEAD only; an untracked,
+allowed. The term field may instead be "sha256:" plus 64 lowercase hex
+characters, the sha256 of the lowercased term's UTF-8 bytes, so a private term
+can be accepted without being published; any other shape after "sha256:" is
+malformed. A digest hides the term from reading, not from someone who guesses
+it. Entries are read from the file committed at HEAD only; an untracked,
 ignored, or edited working-tree copy is never honored. An entry suppresses only
 the TERM finding that matches all three fields in --history, and covers the
 whole file version at that commit, not one line; current-tree findings,
@@ -116,6 +125,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import importlib.util
 import json
 import os
@@ -499,9 +509,9 @@ def scan_scope(root: Path, structure: dict, all_scope: bool) -> tuple:
 # --------------------------------------------------------------------------
 
 
-def load_terms(path: Path) -> list:
+def parse_terms(text: str) -> list:
     terms = []
-    for raw in path.read_text(encoding="utf-8-sig", errors="replace").splitlines():
+    for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
@@ -509,11 +519,35 @@ def load_terms(path: Path) -> list:
     return terms
 
 
+def load_terms(path: Path) -> list:
+    return parse_terms(path.read_text(encoding="utf-8-sig", errors="replace"))
+
+
+def terms_for_file(rel: str, data: bytes, terms: list, term_skip: frozenset) -> list:
+    """The terms a file is scanned with. The seed file lists its own entries,
+    which would report against themselves, so those entries (as that file's
+    content, at that commit, lists them) are removed from the run's terms. Any
+    other run term, such as a private term added to the seed file as an entry
+    of a longer line or in a comment, still reports."""
+    if rel not in term_skip:
+        return terms
+    own = set(parse_terms(data.decode("utf-8-sig", errors="replace")))
+    return [term for term in terms if term not in own]
+
+
 COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TERM_MESSAGE_RE = re.compile(r"^matched term '(.*)'$")
 
 
 ACCEPTED_ENTRY_RE = re.compile(r"^\s*[0-9a-f]{40}\s+\S+\s+(\S+)\s*$")
+DIGEST_PREFIX = "sha256:"
+DIGEST_FIELD_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def term_digest_field(term: str) -> str:
+    """The accepted-file term field for a term given as a digest: 'sha256:'
+    plus the hex sha256 of the lowercased term's UTF-8 bytes."""
+    return DIGEST_PREFIX + hashlib.sha256(term.lower().encode("utf-8")).hexdigest()
 
 
 def parse_accepted_history(text: str, label: str) -> dict:
@@ -536,6 +570,8 @@ def parse_accepted_history(text: str, label: str) -> dict:
             raise ValueError(f"{label}:{index}: commit must be a full 40-character lowercase hex SHA")
         if not (rel.isascii() and term.isascii()):
             raise ValueError(f"{label}:{index}: path and term must be ASCII")
+        if term.lower().startswith(DIGEST_PREFIX) and not DIGEST_FIELD_RE.match(term):
+            raise ValueError(f"{label}:{index}: digest term must be 'sha256:' plus 64 lowercase hex characters")
         key = (sha, rel, term.lower())
         if key in accepted:
             raise ValueError(f"{label}:{index}: duplicate of line {accepted[key]}")
@@ -863,7 +899,7 @@ def _worktree_cr_is_normalization_noise(repo: Path, rel: str, data: bytes) -> bo
     return b"\r" not in blob
 
 
-def scan_worktree(repo: Path, terms: list, allowed: set, structural_only: bool, skip: set, files: list | None = None) -> list:
+def scan_worktree(repo: Path, terms: list, allowed: set, structural_only: bool, skip: set, files: list | None = None, term_skip: frozenset = frozenset()) -> list:
     """Scan files=list_files(repo) by default, or the given file list (an
     adopted-host scope, an --only subset, ...) when files is passed."""
     findings = []
@@ -877,7 +913,7 @@ def scan_worktree(repo: Path, terms: list, allowed: set, structural_only: bool, 
         if _worktree_cr_is_normalization_noise(repo, rel, data):
             data = data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
         exempt_masks = _exempt_masks(rel, data)
-        findings.extend(scan_content(rel, data, terms, allowed, structural_only, term_exempt_masks=exempt_masks))
+        findings.extend(scan_content(rel, data, terms_for_file(rel, data, terms, term_skip), allowed, structural_only, term_exempt_masks=exempt_masks))
     return findings
 
 
@@ -888,7 +924,7 @@ class NoRefsError(RuntimeError):
     clean history."""
 
 
-def scan_history(repo: Path, terms: list, allowed: set, structural_only: bool, skip: set, accepted: dict | None = None, used: dict | None = None) -> list:
+def scan_history(repo: Path, terms: list, allowed: set, structural_only: bool, skip: set, accepted: dict | None = None, used: dict | None = None, term_skip: frozenset = frozenset()) -> list:
     """accepted maps (commit, path, term) to a line number and applies ONLY to
     TERM findings, matched exactly on all three fields. It is consulted before
     the per-key dedupe, so accepting the first commit that carried a term in a
@@ -913,10 +949,13 @@ def scan_history(repo: Path, terms: list, allowed: set, structural_only: bool, s
             seen.add((path, blob))
             data = git(repo, "cat-file", "-p", blob, binary=True)
             exempt_masks = _exempt_masks(path, data)
-            for finding in scan_content(path, data, terms, allowed, structural_only, commit=sha, term_exempt_masks=exempt_masks):
+            for finding in scan_content(path, data, terms_for_file(path, data, terms, term_skip), allowed, structural_only, commit=sha, term_exempt_masks=exempt_masks):
                 if accepted and finding.check == "TERM":
                     matched = TERM_MESSAGE_RE.match(finding.message)
-                    accepted_key = (finding.commit, finding.path, matched.group(1) if matched else None)
+                    found_term = matched.group(1) if matched else None
+                    accepted_key = (finding.commit, finding.path, found_term)
+                    if accepted_key not in accepted and found_term is not None:
+                        accepted_key = (finding.commit, finding.path, term_digest_field(found_term))
                     if accepted_key in accepted:
                         if used is not None:
                             used[accepted_key] = used.get(accepted_key, 0) + 1
@@ -1010,7 +1049,8 @@ def main(argv=None) -> int:
         scope_files = [rel for rel in scope_files if rel not in skip]
     print(f"deidentify_lint: scope {scope_label} ({len(scope_files)} file(s) scanned)")
 
-    findings = scan_worktree(repo, terms, allowed, args.structural, skip, files=scope_files)
+    term_skip = frozenset({DEFAULT_TERMS_RELATIVE})
+    findings = scan_worktree(repo, terms, allowed, args.structural, skip, files=scope_files, term_skip=term_skip)
     if args.history:
         try:
             unpublished = [key for key in accepted if not _is_published(repo, key[0])]
@@ -1019,7 +1059,7 @@ def main(argv=None) -> int:
                     print(f"deidentify_lint: accepted entry names a commit not contained in any tag: {key[0][:12]} {key[1]}", file=sys.stderr)
                 return 2
             used = {}
-            findings.extend(scan_history(repo, terms, allowed, args.structural, skip, accepted, used))
+            findings.extend(scan_history(repo, terms, allowed, args.structural, skip, accepted, used, term_skip))
             if accepted and not args.structural:
                 for key, line_no in sorted(accepted.items(), key=lambda item: item[1]):
                     if key not in used:

@@ -13,5 +13,16 @@
 # commits keep the older wording. Entries are read from the copy committed at
 # HEAD. This file is scanned like any other, so comments must stay free of
 # private text; only the term field of an entry line is masked.
+#
+# The term field may be written as "sha256:" plus 64 lowercase hex characters,
+# the sha256 of the lowercased term's UTF-8 bytes, so a private term can be
+# accepted without being published. A digest hides the term from reading, not
+# from someone who guesses it.
 5da04918cb67768eab622373f6b1c1b2891cd6fe START_HERE.md vault
 51f8815278dbe5661e568e0b1119c8107df03a7b harness/bootstrap/links.py vault
+86641185fafdd826b6dd0738b5502d54ea7a1af4 harness/tools/export_tests/test_adopt.py sha256:dcb2473dc33ebb142e87a109619eb4508ba230843ae3acd7fee950d27649fef0
+a55b894cf37859783beb2d62513ed3f86826fbd3 harness/tools/export_tests/test_adopt.py sha256:dcb2473dc33ebb142e87a109619eb4508ba230843ae3acd7fee950d27649fef0
+276029468f6a096f5c199ccb6c29f1f66738e876 harness/tools/export_tests/test_adopt.py sha256:dcb2473dc33ebb142e87a109619eb4508ba230843ae3acd7fee950d27649fef0
+f676ab42841946452606697ad511c7795f99bfa5 harness/tools/export_tests/test_adopt.py sha256:dcb2473dc33ebb142e87a109619eb4508ba230843ae3acd7fee950d27649fef0
+aefebf5dc70d7c25a52e96928983087d31c2fe72 harness/tools/export_tests/test_adopt.py sha256:dcb2473dc33ebb142e87a109619eb4508ba230843ae3acd7fee950d27649fef0
+51f8815278dbe5661e568e0b1119c8107df03a7b harness/tools/export_tests/test_adopt.py sha256:dcb2473dc33ebb142e87a109619eb4508ba230843ae3acd7fee950d27649fef0

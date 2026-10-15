@@ -39,26 +39,26 @@ class TestDeriveHostName(TempDirCase):
         target = init_repo(self.tmp / "checkout")
         write(target / "README.md", "x\n")
         commit_all(target, "seed")
-        assert git(target, "remote", "add", "origin", "https://github.com/org/ilmu.git").returncode == 0
+        assert git(target, "remote", "add", "origin", "https://github.com/org/sample-host.git").returncode == 0
         name, source = adopt.derive_host_name(target)
-        assert name == "ilmu"
+        assert name == "sample-host"
         assert "origin remote" in source
 
     def test_ssh_origin_uses_repo_basename(self):
         target = init_repo(self.tmp / "checkout2")
         write(target / "README.md", "x\n")
         commit_all(target, "seed")
-        assert git(target, "remote", "add", "origin", "git@example.com:org/ilmu.git").returncode == 0
+        assert git(target, "remote", "add", "origin", "git@example.com:org/sample-host.git").returncode == 0
         name, source = adopt.derive_host_name(target)
-        assert name == "ilmu"
+        assert name == "sample-host"
         assert "origin remote" in source
 
     def test_no_origin_falls_back_to_folder_name(self):
-        target = init_repo(self.tmp / "ilmu-adopt-final")
+        target = init_repo(self.tmp / "sample-host-adopt-final")
         write(target / "README.md", "x\n")
         commit_all(target, "seed")
         name, source = adopt.derive_host_name(target)
-        assert name == "ilmu-adopt-final"
+        assert name == "sample-host-adopt-final"
         assert "folder name" in source
 
     def test_odd_characters_are_sanitized(self):

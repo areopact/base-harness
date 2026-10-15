@@ -2,6 +2,18 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.2.1] - 2026-10-16
+
+### Fixed
+
+- The openpyxl guard maps Git Bash drive paths on Windows. A path written with a leading slash, one drive letter and a slash was resolved against the session's drive, so a script or workbook on another drive was never found and the save was allowed. The second phase now also tries the drive-qualified form of such a path when it starts a shell word (start of text, whitespace, a quote, or `=`) on the command line, quoted or unquoted; it never maps paths inside a script body, where Python reads the same spelling as the current drive. The mapping is on only when `os.name` is `nt`. Still without a candidate: `/cygdrive/` and `/mnt/` forms.
+- The openpyxl guard no longer probes the host of a URL as a network path. A path cut from `http://host/a.xlsx` begins with two slashes, which Windows treats as a network share, and the existence check waited on a name lookup for 2 to 23 seconds, long enough for a hook to time out and lose its deny. A path whose two slashes directly follow a URL scheme of 2 to 64 characters, other than `file:`, is no longer probed. An explicit network path, with no scheme or with `file:`, is still probed and can still stall on an unreachable host. Accepted trade-off: a script that strips the scheme from an argument such as `smb://srv/share/book.xlsx` and saves to the share is now allowed.
+- `deidentify_lint.py` scans the shipped seed term list with the run's terms minus the seed's own entries. Before, a host list that carried the seed entries, as the documentation asks, reported the seed file against itself, so no private list could pass the release check. A private term placed in the seed file still reports.
+
+### Added
+
+- An accepted history entry may give its term as `sha256:` followed by 64 lowercase hex digits, the digest of the lowercased term, so a finding for a private term can be accepted without publishing the term. A digest hides the term from a reader, not from someone who guesses it. Six already-published commits of `harness/tools/export_tests/test_adopt.py` are accepted this way, and the current file uses a neutral fixture name.
+
 ## [0.2.0] - 2026-10-16
 
 ### Added

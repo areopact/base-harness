@@ -1,6 +1,6 @@
 # dangerous-ops-guard (PreToolUse wrapper, PowerShell)
 #
-# Event: PreToolUse. Matcher: Bash.
+# Event: PreToolUse. Matcher: Bash|PowerShell.
 # Decision: deny (permissionDecision in the JSON) for a modeled destructive shape, or silence.
 # Delegates to harness/hooks/lib/dangerous_ops_guard.py, which reads the JSON envelope on stdin and
 # prints zero or one JSON line. Exits 0 unconditionally: a missing lib file

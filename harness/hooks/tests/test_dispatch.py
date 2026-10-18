@@ -70,6 +70,7 @@ class RoutingTests(unittest.TestCase):
         assert dispatch.modules_for("PreToolUse", {"tool_name": "shell_command"}) == [dangerous_ops_guard, openpyxl_guard]
         assert dispatch.modules_for("PreToolUse", {"tool_name": "exec_command"}) == [dangerous_ops_guard, openpyxl_guard]
         assert dispatch.modules_for("PreToolUse", {"tool_name": "write_stdin"}) == []
+        assert dispatch.modules_for("PreToolUse", {"tool_name": "PowerShell"}) == []
         for web in ("WebSearch", "WebFetch", "web_search", "web__run", "web.run"):
             assert dispatch.modules_for("PreToolUse", {"tool_name": web}) == [memory_first]
         assert dispatch.modules_for("PreToolUse", {"tool_name": "Read"}, env_off) == []

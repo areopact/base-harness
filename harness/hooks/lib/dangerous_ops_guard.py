@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash) guard: deny literal command shapes that destroy data.
+"""PreToolUse(Bash|PowerShell) guard: deny literal command shapes that destroy data.
 
 Enforcement rung: hard-block. The decision is carried in the JSON on stdout
 (permissionDecision: deny), never in the exit code, and the module exits 0
@@ -87,6 +87,8 @@ from _debug import debug
 from hook_io import canonical_tool_name, deny, load_structure, shell_command_text
 
 HOOK_NAME = "dangerous-ops-guard"
+# Claude Code runs shell commands through Bash or PowerShell; both are scanned.
+SHELL_TOOLS = ("Bash", "PowerShell")
 RECOVERY = (
     "If you truly intend this, run it in a shell outside the harness, "
     "or update harness/hooks/lib/dangerous_ops_guard.py to exempt the pattern."
@@ -713,24 +715,29 @@ def reads_secret(command, structure=None):
 
 # ----- system-destroy ---------------------------------------------------------
 
+# The users root and one user's home directory itself are system roots; a
+# strict descendant of a home directory is ordinary user data.
+_HOME_ROOTS = {"home", "users"}
 _SYSTEM_ROOTS = [
     r"/(?:\*)?(?=$|[\s\"';|&])",
     r"~(?:/\*)?/?(?=$|[\s\"';|&])",
     r"\$HOME(?:/\*)?/?(?=$|[\s\"';|&])",
     r"\$\{HOME\}(?:/\*)?/?(?=$|[\s\"';|&])",
     r"/usr(?:/|\b)", r"/etc(?:/|\b)", r"/var(?:/|\b)",
-    r"/home(?:/|\b)", r"/Users(?:/|\b)", r"/System(?:/|\b)",
+    r"/(?:home|Users)(?:/[^/\s\"';|&]+)?/?(?:\*)?(?=$|[\s\"';|&])",
+    r"/System(?:/|\b)",
     r"/mnt(?:/|\b)", r"/opt(?:/|\b)", r"/bin(?:/|\b)", r"/sbin(?:/|\b)",
     r"/lib(?:/|\b)", r"/boot(?:/|\b)",
     r"[A-Za-z]:[\\/](?:\*)?(?=$|[\s\"';|&])",
-    r"[A-Za-z]:[\\/](?:Windows|Program Files(?: \(x86\))?|Users)(?:[\\/]|(?=$|[\s\"';|&]))",
+    r"[A-Za-z]:[\\/](?:Windows|Program Files(?: \(x86\))?)(?:[\\/]|(?=$|[\s\"';|&]))",
+    r"[A-Za-z]:[\\/]Users(?:[\\/][^\\/\s\"';|&]+)?[\\/]?(?:\*)?(?=$|[\s\"';|&])",
     r"(?:\./)*\.\.(?:[\\/][^\s\"';|&]*)?(?=$|[\s\"';|&])",
 ]
 _SYSTEM_TOP = {
-    "usr", "etc", "var", "home", "users", "system", "mnt", "opt",
+    "usr", "etc", "var", "system", "mnt", "opt",
     "bin", "sbin", "lib", "boot",
 }
-_WINDOWS_TOP = {"windows", "users", "program files", "program files (x86)", "programdata"}
+_WINDOWS_TOP = {"windows", "program files", "program files (x86)", "programdata"}
 _HOME_TOKENS = {"~", "$home", "${home}", "$env:userprofile", "$env:homepath"}
 _DRIVE_ONLY = re.compile(r"^[A-Za-z]:$")
 _DD_TARGET = re.compile(
@@ -802,6 +809,21 @@ def _normalized_parts(base):
     return parts
 
 
+_GLOB_CHARS = re.compile(r"[*?\[{]")
+
+
+def _home_glob(parts):
+    """A glob in the user segment or the first segment below the home."""
+    return any(_GLOB_CHARS.search(part) for part in parts[2:4])
+
+
+def _home_unprovable(base, parts):
+    """Below a home, only a literal path is a descendant: deny a glob in the
+    user or first segment, and any "." or ".." segment in the raw text (even
+    one that resolves to a descendant)."""
+    return _home_glob(parts) or any(seg in (".", "..") for seg in base.split("/"))
+
+
 def _is_system_target(value):
     """True when an operand names root, home, a system path, or a parent."""
     text = value.strip().strip("\"'").replace("\\", "/")
@@ -826,10 +848,15 @@ def _is_system_target(value):
     if parts[0] == "..":
         return True
     if base.startswith("/"):
+        if len(parts) > 1 and parts[1].lower() in _HOME_ROOTS:
+            # The users root itself or one user's home; not a descendant.
+            return len(parts) <= 3 or _home_unprovable(base, parts)
         return len(parts) > 1 and parts[1].lower() in _SYSTEM_TOP
     if _DRIVE_ONLY.match(parts[0]):
         if len(parts) == 1 or parts[1] in ("", "*"):
             return True
+        if parts[1].lower() in _HOME_ROOTS:
+            return len(parts) <= 3 or _home_unprovable(base, parts)
         return parts[1].lower() in _WINDOWS_TOP
     return False
 
@@ -1211,6 +1238,116 @@ _GIT_LOCAL_REASONS = {
 }
 
 
+_PS_CONTINUATION = re.compile(chr(96) + r"[ \t]*\r?\n")
+
+
+_HERE_OPEN = {"'": re.compile(r"@'[ \t]*(?=\r?\n)"), '"': re.compile(r'@"[ \t]*(?=\r?\n)')}
+_HERE_CLOSE = {"'": re.compile(r"\r?\n'@"), '"': re.compile(r'\r?\n"@')}
+
+
+def _here_body(body, quote):
+    """Make a here-string body safe to sit inside one quoted token.
+
+    Quote characters are dropped (an apostrophe or a double quote in prose
+    would close the token early and desync every later command). A double-quoted
+    body keeps its live expansions, so its backtick escapes are normalized the
+    same way as in a string and its backslashes become slashes (a trailing
+    backslash would otherwise escape the closing quote).
+    """
+    if quote == "'":
+        return body.replace("'", "").replace('"', "")
+    out = []
+    index = 0
+    while index < len(body):
+        char = body[index]
+        if char == "`":
+            match = _PS_CONTINUATION.match(body, index)
+            if match:
+                out.append(" ")
+                index = match.end()
+                continue
+            if index + 1 < len(body):
+                following = body[index + 1]
+                if following == "$":
+                    out.append("\\$")
+                elif following not in "\"'`":
+                    out.append(following)
+                index += 2
+                continue
+            index += 1
+            continue
+        if char == "\\":
+            out.append("/")
+        elif char not in "\"'":
+            out.append(char)
+        index += 1
+    return "".join(out)
+
+
+def powershell_normalize(text):
+    """Rewrite PowerShell backtick syntax into text the POSIX lexer can read.
+
+    The lexer reads a backtick as command substitution, which hides a flag
+    carried across a PowerShell line continuation. Outside single quotes a
+    backtick followed by optional spaces, CR and a line feed joins the lines;
+    a doubled backtick (a literal backtick in PowerShell) is dropped so it
+    cannot open a substitution; any other backtick escape is dropped, keeping
+    the escaped character (a quote or dollar sign stays escaped so it cannot
+    open a string or an expansion). Single-quoted text is inert and left
+    untouched. A here-string (at-sign, quote, line end ... line start, quote,
+    at-sign) becomes one quoted token with its quote characters removed, so
+    an apostrophe in a commit message cannot desync the lexer and hide a later
+    command; an unterminated here-string runs to the end of the text.
+    """
+    out = []
+    index = 0
+    length = len(text)
+    single = False
+    double = False
+    while index < length:
+        char = text[index]
+        if single:
+            if char == "'":
+                single = False
+            out.append(char)
+            index += 1
+            continue
+        if char == "@" and not double and index + 1 < length and text[index + 1] in "'\"":
+            quote = text[index + 1]
+            opener = _HERE_OPEN[quote].match(text, index)
+            if opener:
+                close = _HERE_CLOSE[quote].search(text, opener.end())
+                stop = close.start() if close else length
+                out.append(quote + _here_body(text[opener.end():stop], quote) + quote)
+                index = close.end() if close else length
+                continue
+        if char == "`":
+            match = _PS_CONTINUATION.match(text, index)
+            if match:
+                out.append(" ")
+                index = match.end()
+                continue
+            if index + 1 < length:
+                following = text[index + 1]
+                if following == "`":
+                    index += 2
+                    continue
+                if following in "\"'$":
+                    out.append("\\")
+                out.append(following)
+                index += 2
+                continue
+            index += 1
+            continue
+        if char == "'" and not double:
+            single = True
+        elif char == '"':
+            double = not double
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
 def classify(command, structure=None):
     """Return (block, tier, reason). block is False on allow."""
     structure = structure if structure is not None else load_structure()
@@ -1254,14 +1391,16 @@ def classify(command, structure=None):
 
 def decide(data, structure=None):
     """Return the deny JSON string for a payload, or None to allow."""
-    if not isinstance(data, dict) or canonical_tool_name(data) != "Bash":
+    if not isinstance(data, dict) or canonical_tool_name(data) not in SHELL_TOOLS:
         return None
-    command = shell_command_text(data)
+    command = shell_command_text(data, tools=SHELL_TOOLS)
     if not command:
         return None
     # The digest hashes the payload text as it arrived; classification
     # re-parses it, so it asks for the join that keeps the argv boundary.
-    classified = shell_command_text(data, quote=True) or command
+    classified = shell_command_text(data, quote=True, tools=SHELL_TOOLS) or command
+    if canonical_tool_name(data) == "PowerShell":
+        classified = powershell_normalize(classified)
     block, tier, reason = classify(strip_safe_contexts(classified), structure)
     if not block:
         return None

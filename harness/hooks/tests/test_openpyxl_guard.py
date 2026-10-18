@@ -533,9 +533,9 @@ class UrlProbeTests(unittest.TestCase):
 class DecideWiringTests(unittest.TestCase):
     """decide() with the filesystem replaced: how the two phases are joined, on every host."""
 
-    def decision(self, command, existing, bodies=None, read=None, phase_two=None):
+    def decision(self, command, existing, bodies=None, read=None, phase_two=None, tool="Bash"):
         bodies = bodies or {}
-        data = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": ""}
+        data = {"tool_name": tool, "tool_input": {"command": command}, "cwd": ""}
         patches = [
             mock.patch.object(og, "resolve_existing", lambda paths, cwd: [p for p in paths if p in existing]),
             mock.patch.object(og, "read_script", read or (lambda path: bodies.get(path, ""))),
@@ -550,6 +550,12 @@ class DecideWiringTests(unittest.TestCase):
             for patch in reversed(patches):
                 patch.stop()
         return "allow" if out is None else json.loads(out)["hookSpecificOutput"]["permissionDecision"]
+
+    def test_powershell_inline_save_denied(self):
+        command = 'python -c "import openpyxl; wb = openpyxl.load_workbook(\'book.xlsx\'); wb.save(\'book.xlsx\')"'
+        assert self.decision(command, {"book.xlsx"}, tool="Bash") == "deny"
+        assert self.decision(command, {"book.xlsx"}, tool="PowerShell") == "deny"
+        assert self.decision(command, {"book.xlsx"}, tool="Read") == "allow"
 
     def test_phase_one_error_does_not_skip_phase_two(self):
         first, second = "x.py", "C:/work/writer.py"

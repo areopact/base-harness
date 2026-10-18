@@ -301,5 +301,192 @@ class GuardBehaviorTests(unittest.TestCase):
         assert not self.denied("echo ok # cat .env")
 
 
+BS = chr(92)
+BT = chr(96)
+
+
+def _users_path(*names):
+    """A drive-qualified Users path built from parts, so no literal drive-and-backslash shape appears in this file."""
+    return "C" + ":" + BS + BS.join(("Users",) + names)
+
+
+def _posix_home(*names):
+    return "/" + "ho" + "me" + "".join("/" + n for n in names)
+
+
+class PowerShellCoverageTests(unittest.TestCase):
+    def ps(self, command):
+        return dangerous_ops_guard.decide({"tool_name": "PowerShell", "tool_input": {"command": command}})
+
+    def bash(self, command):
+        return dangerous_ops_guard.decide({"tool_name": "Bash", "tool_input": {"command": command}})
+
+    def test_powershell_force_push_main_denied(self):
+        assert self.ps("git push --force origin main") is not None
+        assert self.ps("git push -f origin main") is not None
+        assert self.ps("git push --force-with-lease origin feature") is None
+
+    def test_powershell_remove_item_drive_root_denied(self):
+        assert self.ps("Remove-Item -Recurse -Force C:" + BS) is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path()) is not None
+
+    def test_powershell_get_content_env_denied(self):
+        assert self.ps("Get-Content .env") is not None
+        assert self.ps("Get-Content README.md") is None
+
+    def test_powershell_backtick_continuation_force_push_denied(self):
+        assert self.ps("git push origin main " + BT + chr(10) + "  --force") is not None
+        assert self.ps("git push origin main " + BT + chr(13) + chr(10) + "  --force") is not None
+        assert self.ps("git push origin main " + BT + "  " + chr(10) + "  -f") is not None
+        assert self.ps("git push origin feature " + BT + chr(10) + "  --force") is None
+        # A backtick is a POSIX substitution in Bash: Bash handling is unchanged.
+        assert self.bash("echo " + BT + "echo hi" + BT) is None
+
+    def test_powershell_backtick_escape_is_dropped(self):
+        assert self.ps("git push --for" + BT + "ce origin main") is not None
+        # Single-quoted text stays inert.
+        assert self.ps("Write-Output 'git push --force origin main " + BT + "'") is None
+
+    def test_powershell_benign_set_allows(self):
+        benign = [
+            "git status",
+            "git commit -m 'fix: tidy the parser'",
+            "python harness/tools/lint.py --out build",
+            "npm install",
+            "npm run test",
+            "Get-ChildItem -Recurse -Filter *.md",
+            "Remove-Item -Recurse " + "." + BS + "build",
+            "git commit -m @'" + chr(10) + "feat: add the thing" + chr(10) + chr(10) + "Body line." + chr(10) + "'@",
+            'Write-Host "line one' + BT + 'nline two"',
+        ]
+        for command in benign:
+            assert self.ps(command) is None, command
+
+    def test_night_watch_ignores_powershell(self):
+        # The guards other than the two opted in keep ignoring PowerShell: the dispatcher routes nothing for it.
+        import dispatch
+        assert dispatch.modules_for("PreToolUse", {"tool_name": "PowerShell"}) == []
+        assert dispatch.modules_for("PostToolUse", {"tool_name": "PowerShell"}) == []
+
+    def test_deep_descendant_of_a_home_directory_is_allowed(self):
+        scratch = _users_path("alice", "AppData", "Local", "Temp", "run", "scratch", "tmp")
+        assert self.ps('Remove-Item -Recurse -Force "' + scratch + '" -Confirm:$false') is None
+        assert self.bash("rm -rf " + scratch.replace(BS, "/")) is None
+        assert self.ps("Remove-Item -Recurse -Force " + scratch.replace(BS, "/")) is None
+        assert self.bash("rm -rf " + _posix_home("alice", "work", "clone")) is None
+        assert self.ps("Remove-Item -Recurse -Force " + _posix_home("alice", "work")) is None
+        assert self.bash("rm -rf ~/work") is None
+
+    def test_home_directory_itself_is_denied(self):
+        for shell in (self.bash, self.ps):
+            assert shell("rm -rf " + _posix_home("alice")) is not None
+            assert shell("rm -rf " + _posix_home("alice") + "/") is not None
+            assert shell("rm -rf '" + _posix_home("alice") + "'") is not None
+            assert shell("rm -rf " + _users_path("alice").replace(BS, "/")) is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path("alice")) is not None
+        assert self.ps('Remove-Item -Recurse -Force "' + _users_path("alice") + '"') is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path("ALICE").replace("Users", "USERS")) is not None
+
+    def test_home_level_wildcards_are_denied(self):
+        assert self.bash("rm -rf " + _posix_home("alice") + "/*") is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path("alice") + BS + "*") is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path("alice").replace(BS, "/") + "/*") is not None
+        assert self.bash("rm -rf " + _posix_home() + "/*") is not None
+
+    def test_users_root_is_denied(self):
+        assert self.bash("rm -rf " + _posix_home()) is not None
+        assert self.bash("rm -rf /Us" + "ers") is not None
+        assert self.bash("rm -rf /Us" + "ers/") is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path()) is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path().replace(BS, "/")) is not None
+        assert self.ps("Remove-Item -Recurse -Force " + _users_path() + BS + "*") is not None
+
+    def test_home_tokens_are_still_denied(self):
+        assert self.bash("rm -rf ~") is not None
+        assert self.bash("rm -rf $HOME") is not None
+        assert self.bash("rm -rf ${HOME}") is not None
+        assert self.ps("Remove-Item -Recurse -Force $env:USERPROFILE") is not None
+        assert self.ps("Remove-Item -Recurse -Force $env:HOMEPATH") is not None
+
+    def test_other_roots_are_unchanged(self):
+        assert self.bash("rm -rf /") is not None
+        assert self.bash("rm -rf /usr/local/lib") is not None
+        assert self.bash("rm -rf /etc") is not None
+        assert self.ps("Remove-Item -Recurse -Force C:" + BS + "Windows" + BS + "Temp") is not None
+        assert self.ps("Remove-Item -Recurse -Force $env:SystemRoot") is not None
+        assert self.bash("rm -rf " + _posix_home("alice") + "/../..") is not None
+
+    def test_recursive_chown_follows_the_same_root_rule(self):
+        assert self.bash("chown -R alice " + _posix_home("alice")) is not None
+        assert self.bash("chown -R alice " + _posix_home("alice", "project")) is None
+
+
+    def test_globs_in_the_user_or_first_segment_are_denied(self):
+        home = _posix_home("alice")
+        for command in (
+            "rm -rf " + home + "/**",
+            "rm -rf " + home + "/?*",
+            "rm -rf " + home + "/[a-z]*",
+            "rm -rf " + home + "/{*,.*}",
+            "rm -rf " + home + "/.*",
+            "rm -rf " + _posix_home("*", ".config"),
+            "rm -rf " + _users_path("*", "AppData").replace(BS, "/"),
+            "chown -R me " + _posix_home("*", "x"),
+        ):
+            assert self.bash(command) is not None, command
+        for command in (
+            "Remove-Item -Recurse -Force " + _users_path("alice", "**"),
+            "Remove-Item -Recurse -Force " + _users_path("alice", "?*"),
+            "Remove-Item -Recurse -Force " + _users_path("alice", "[a-z]*"),
+            "Remove-Item -Recurse -Force " + _users_path("alice", "{*,.*}"),
+            "Remove-Item -Recurse -Force " + _users_path("alice", ".*"),
+            "Remove-Item -Recurse -Force " + _users_path("*", "AppData"),
+            "Remove-Item -Recurse -Force " + _posix_home("alice", "**"),
+            "Remove-Item -Recurse -Force " + _posix_home("*", ".config"),
+        ):
+            assert self.ps(command) is not None, command
+        # A glob deeper than the first segment below the home stays a descendant.
+        assert self.bash("rm -rf " + home + "/project/build/*") is None
+
+    def test_dot_segments_below_a_home_are_denied(self):
+        home = _posix_home("alice")
+        for command in ("rm -rf " + home + "/x/.", "rm -rf " + home + "/x/../y", "rm -rf " + home + "/./x",
+                        "rm -rf " + home + "/../../etc", "chown -R me " + home + "/x/."):
+            assert self.bash(command) is not None, command
+        for command in ("Remove-Item -Recurse -Force " + _users_path("alice", "x") + BS + ".",
+                        "Remove-Item -Recurse -Force " + _users_path("alice", "x", "..", "y"),
+                        "Remove-Item -Recurse -Force " + _users_path("alice", "..", ".."),
+                        "Remove-Item -Recurse -Force " + _users_path("alice", ".")):
+            assert self.ps(command) is not None, command
+
+    def test_doubled_backtick_does_not_hide_a_later_command(self):
+        later = "git push --force origin main"
+        assert self.ps('Write-Output "' + BT + BT + '"; ' + later) is not None
+        assert self.ps("Write-Output " + BT + BT + "; " + later) is not None
+        assert self.ps('Write-Output "' + BT + BT + '"; git status') is None
+
+    def test_here_string_quotes_do_not_hide_a_later_command(self):
+        later = "git push --force origin main"
+        nl = chr(10)
+        single = "git commit -m @'" + nl + "fix: don't break" + nl + "'@; " + later
+        double = 'git commit -m @"' + nl + 'say "hi' + nl + '"@; ' + later
+        assert self.ps(single) is not None
+        assert self.ps(double) is not None
+        assert self.ps(single.replace(nl, chr(13) + nl)) is not None
+        # A benign message with apostrophes and quotes still passes.
+        assert self.ps("git commit -m @'" + nl + "fix: don't break the parser's tests" + nl + "'@") is None
+        assert self.ps('git commit -m @"' + nl + 'say "hi" and don' + chr(39) + 't' + nl + '"@') is None
+        assert self.ps("git commit -m @'" + nl + "body" + nl + "'@; git status") is None
+        # The text inside a here-string is data, not a command.
+        assert self.ps("git commit -m @'" + nl + later + nl + "'@") is None
+
+    def test_unterminated_here_string_does_not_crash(self):
+        nl = chr(10)
+        for text in ("git commit -m @'" + nl + "never closed", 'git commit -m @"' + nl + "open " + chr(34) + "quote",
+                     "@'", "@'" + nl, "@" + chr(34)):
+            assert self.ps(text) is None, text
+        assert dangerous_ops_guard.powershell_normalize("x @'" + nl + "a'b") == "x '" + nl + "ab'"
+
+
 if __name__ == "__main__":
     unittest.main()

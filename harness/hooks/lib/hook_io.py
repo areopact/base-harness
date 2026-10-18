@@ -206,7 +206,7 @@ def _command_field_text(value, quote: bool = False) -> str:
     return ""
 
 
-def shell_command_text(data: dict, quote: bool = False) -> str:
+def shell_command_text(data: dict, quote: bool = False, tools: tuple = ("Bash",)) -> str:
     """Extract a shell command from the canonical Bash payload.
 
     Codex unified exec (exec_command) carries the command under "cmd" rather
@@ -217,8 +217,13 @@ def shell_command_text(data: dict, quote: bool = False) -> str:
 
     quote=True keeps the argv boundary of a list-valued field for a caller
     that re-parses the joined text.
+
+    tools names the canonical tool names the caller accepts. The default keeps
+    every existing caller on Bash; a guard that also covers Claude Code's
+    PowerShell tool passes ("Bash", "PowerShell"). PowerShell is deliberately
+    not an alias of Bash in canonical_tool_name.
     """
-    if canonical_tool_name(data) != "Bash":
+    if canonical_tool_name(data) not in tools:
         return ""
     input_data = tool_input(data)
     parts = []

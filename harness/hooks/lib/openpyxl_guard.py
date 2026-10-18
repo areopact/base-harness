@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash) guard: deny openpyxl writes against an existing workbook.
+"""PreToolUse(Bash|PowerShell) guard: deny openpyxl writes against an existing workbook.
 
 Enforcement rung: hard-block. openpyxl rewrites every style definition on
 save, so a formatted .xlsx that goes through it loses conditional formats,
@@ -75,6 +75,8 @@ from _debug import debug
 from hook_io import REPO_ROOT, canonical_tool_name, deny, shell_command_text
 
 HOOK_NAME = "openpyxl-guard"
+# Claude Code runs shell commands through Bash or PowerShell; both are scanned.
+SHELL_TOOLS = ("Bash", "PowerShell")
 TIER = "styled-workbook"
 REASON = (
     "writing to an existing .xlsx with openpyxl rewrites its styling "
@@ -323,9 +325,9 @@ def drive_phase_targets(command, cwd, flagged):
 
 def decide(data):
     """Return the deny JSON string, or None to allow."""
-    if not isinstance(data, dict) or canonical_tool_name(data) != "Bash":
+    if not isinstance(data, dict) or canonical_tool_name(data) not in SHELL_TOOLS:
         return None
-    command = shell_command_text(data)
+    command = shell_command_text(data, tools=SHELL_TOOLS)
     if not command:
         return None
     cwd = data.get("cwd") if isinstance(data.get("cwd"), str) else ""

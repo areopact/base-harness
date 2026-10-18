@@ -1,6 +1,6 @@
 # openpyxl-guard (PreToolUse wrapper, PowerShell)
 #
-# Event: PreToolUse. Matcher: Bash.
+# Event: PreToolUse. Matcher: Bash|PowerShell.
 # Decision: deny (permissionDecision in the JSON) for an openpyxl write to an existing workbook, or silence.
 # Delegates to harness/hooks/lib/openpyxl_guard.py, which reads the JSON envelope on stdin and
 # prints zero or one JSON line. Exits 0 unconditionally: a missing lib file

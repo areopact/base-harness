@@ -155,6 +155,19 @@ class PayloadNormalizationTests(unittest.TestCase):
         payload = {"tool_name": "Bash", "tool_input": {"command": "echo hi", "cmd": "git push -f origin main"}}
         assert shell_command_text(payload) == "echo hi; git push -f origin main"
 
+    def test_default_ignores_powershell(self):
+        payload = {"tool_name": "PowerShell", "tool_input": {"command": "git push --force origin main"}}
+        assert canonical_tool_name(payload) == "PowerShell"
+        assert shell_command_text(payload) == ""
+        assert shell_command_text(payload, quote=True) == ""
+
+    def test_accepts_powershell_when_named(self):
+        payload = {"tool_name": "PowerShell", "tool_input": {"command": "git push --force origin main"}}
+        assert shell_command_text(payload, tools=("Bash", "PowerShell")) == "git push --force origin main"
+        bash = {"tool_name": "Bash", "tool_input": {"command": "echo hi"}}
+        assert shell_command_text(bash, tools=("Bash", "PowerShell")) == "echo hi"
+        assert shell_command_text(bash, tools=("PowerShell",)) == ""
+
     def test_write_stdin_stays_silent(self):
         payload = {"tool_name": "write_stdin", "tool_input": {"input": "y\n"}}
         assert canonical_tool_name(payload) == "write_stdin"

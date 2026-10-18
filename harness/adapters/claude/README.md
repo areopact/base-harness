@@ -29,7 +29,7 @@ Every command string has the shape `bash "${CLAUDE_PROJECT_DIR}/harness/hooks/<e
 |---|---|---|
 | SessionStart | (all) | `load-identity`, `pre-bootstrap-detector` |
 | PreToolUse | `WebSearch\|WebFetch` | `memory-first` |
-| PreToolUse | `Bash` | `dangerous-ops-guard`, `openpyxl-guard` |
+| PreToolUse | `Bash\|PowerShell` | `dangerous-ops-guard`, `openpyxl-guard` |
 | PreToolUse | `Agent\|Workflow` | `delegation-guard` |
 | PreToolUse | `Write\|Edit\|NotebookEdit` | `write-deny` (silent until `write_deny.globs` is set in `structure.json`) |
 | PostToolUse | `Write\|Edit` | `frontmatter-guard`, `prose-lint` |

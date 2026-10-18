@@ -19,6 +19,22 @@ The Claude and OpenCode deny lists, `.gitignore`, the pre-commit filename block,
 
 Generated subagent roles for shell-readonly profiles (review, extract, inspect, ops-check; "plan" is not a shell-readonly profile, plan-readonly renders read-only) use a `shell-readonly` class: no `Edit` or `Write` tool is granted, but Bash still is, on Claude Code and OpenCode, so the write scope for those roles stays instruction-only on those two runtimes. Codex has no equivalent tool-grant mechanism for its generated roles; its `sandbox_mode` read-only setting enforces the boundary instead.
 
+PowerShell coverage: on Claude Code, `dangerous-ops-guard` and `openpyxl-guard` also run on the `PowerShell` tool (registration matcher `Bash|PowerShell`) and go straight to a hard block there. Codex, OpenCode, and the other guards still ignore PowerShell. For PowerShell payloads only, the guard joins backtick line continuations and drops backtick escapes outside single-quoted strings before classifying; here-string bodies are folded into one quoted token so they cannot hide a later command, while a command built with `Invoke-Expression` or runtime string assembly stays a miss, like the equivalent Bash shapes. The recursive-delete tier matches a users root or one user's home directory itself, not a literal path below it (a `.` or `..` segment below the home, or a glob in the user segment or the first segment below the home, keeps the deny).
+
+Known PowerShell gaps (the guard does not model these; do not rely on it for them):
+
+- `rd /s /q` and `rmdir /s`, also through `cmd /c`.
+- Unique-prefix switches such as `-Recu`, and en-dash switches.
+- Pipeline deletes such as `Get-Item x | Remove-Item -Recurse`.
+- .NET calls such as `[IO.Directory]::Delete`.
+- Module-qualified names such as `Microsoft.PowerShell.Management\Remove-Item`.
+- `Invoke-Expression` or `iex` strings.
+- Backtick `n` and `t` escapes inside `-Command` strings.
+- Block comments (`<# ... #>`) containing a quote character, and script blocks built with `[scriptblock]::Create`.
+- Traversal that climbs above a drive root, such as three `..` segments after a user's home, and `..` directly after `~`, `$HOME`, or the users root.
+- Extended-length paths (`\\?\` prefix).
+- Over-denies: text inside a here-string passed to `-Command`, a doubled backtick inside a switch name, and an escaped `$HOME` in a double-quoted string are classified as if they ran.
+
 For real secret coverage, add gitleaks or trufflehog in your own CI and rotate anything that ever lands in a commit. A committed secret is a compromised secret.
 
 ## Data classification

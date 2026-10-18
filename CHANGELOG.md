@@ -2,6 +2,19 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.2.2] - 2026-10-18
+
+### Changed
+
+- `dangerous-ops-guard` and `openpyxl-guard` also run on Claude Code's `PowerShell` tool. The Claude hook registration matcher for both wrappers is now `Bash|PowerShell`, and `hook_io.shell_command_text` takes a `tools` keyword (default `("Bash",)`, so every other caller is unchanged). PowerShell is not an alias of Bash anywhere else: the other guards, the Codex and OpenCode dispatcher, and `canonical_tool_name` still ignore it. Compatibility: the guards go straight to hard block on PowerShell, so a host's existing PowerShell calls that match a denied shape (a force-push to a protected branch, a recursive removal of a drive, home, or system root, a read of a credential file, an openpyxl save to an existing workbook) are now denied. Rerun `bootstrap` to resync `.claude/settings.json`.
+
+### Fixed
+
+- A path below a home directory no longer reads as the home root. The system-destroy tier treated any path under `/home`, `/Users`, or a drive's `Users` folder as that root, so removing a scratch directory deep under a user's temporary folder was denied. The rule now matches the users root itself (`/home`, `/Users`, a drive's `Users`) or one user's home directory itself (`/home/<name>`, `/Users/<name>`, a drive's `Users\<name>`), with an optional trailing slash, `/*` or `\*`, in either slash direction and in any letter case on both the POSIX and Windows forms. A strict descendant is allowed, matching how `~/x` was already treated, but only when it is literal: a path with a `.` or `..` segment below the home is denied, and so is a glob character (`*`, `?`, `[`, `{`) in the user segment or in the first segment below the home (a star in place of the user name, or a hidden-file glob right under the home) is denied. Every other root is unchanged. This applies to `rm`, PowerShell recursive removal, and recursive `chown`.
+- A backtick line continuation hid flags in PowerShell commands. The lexer read a backtick as POSIX command substitution, so a force flag on a continued line was missed. For PowerShell payloads only, continuations are joined and escape backticks are dropped outside single-quoted strings before the command is classified.
+- A doubled backtick (a literal backtick in PowerShell) no longer reaches the lexer as a bare backtick. It is dropped, so it cannot open a command substitution that swallows a later `git push --force` in the same command.
+- PowerShell here-strings no longer desync the lexer. An apostrophe or a double quote inside a here-string body (a commit message such as `don't break`) used to open or close a quote and hide a later command in the same payload. The body now becomes one quoted token with its quote characters removed; an unterminated here-string runs to the end of the text.
+
 ## [0.2.1] - 2026-10-16
 
 ### Fixed

@@ -2,6 +2,17 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+## [0.2.3] - 2026-10-22
+
+### Added
+
+- `workstation/`, an optional terminal kit outside the kernel: an Alacritty configuration, a Herdr configuration, a five-line ccstatusline layout, and Claude Code keybindings, with `workstation/README.md` explaining each file. Shift+Enter inserts a newline in the Claude Code prompt under Herdr: Alacritty sends a line feed, Herdr's kitty keyboard protocol delivers it to Claude Code as ctrl+enter, and `keybindings.json` binds both shift+enter and ctrl+enter to `chat:newline`. Ctrl+Tab and Ctrl+Shift+Tab switch agents and Ctrl+Alt+] and Ctrl+Alt+[ switch Herdr tabs, through CSI u sequences Alacritty sends and the Herdr keys bound to them. The status line's `statusLine` block and its two `ccstatusline --hook` entries ship as `workstation/claude/settings.snippet.json`, merged by hand.
+- `workstation/install.py` copies the four standalone files into the user's configuration folders (Windows `%APPDATA%`, `~/.config`, `~/.claude`; `XDG_CONFIG_HOME`, `HERDR_CONFIG_PATH`, and `CLAUDE_CONFIG_DIR` honoured). A dry run is the default and reports `new`, `same`, `differs`, `link`, or `blocked` per target, with `--diff` for a unified diff that keeps line endings, so a CRLF-only difference still shows. `--apply` writes new targets, leaves identical ones alone, and skips a differing one (exit 1); `--force` replaces it after copying the old file to `<name>.bak-<timestamp>`, suffixed `-1`, `-2` rather than overwriting an existing backup. A symbolic link or a target that is not a readable regular file is always skipped (exit 1), never written through. `--only` limits the run. It writes only to the four resolved targets and their backups, and never edits `settings.json`. CI runs `workstation/tests` under pytest and the unittest fallback.
+
+### Changed
+
+- `deidentify_lint.py` allows `workstation` as a repository root for D3 path tokens.
+
 ## [0.2.2] - 2026-10-18
 
 ### Changed

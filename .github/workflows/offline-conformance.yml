@@ -133,11 +133,13 @@ jobs:
           cp "$RUNNER_TEMP/seed.bak" "$f"
 
       - name: Tests pass under pytest
-        run: python -m pytest harness -q -p no:cacheprovider
+        run: python -m pytest harness workstation -q -p no:cacheprovider
 
       - name: Tests pass under the unittest fallback (Linux proof; pytest may be absent elsewhere)
         if: runner.os == 'Linux'
-        run: python -m unittest discover -s harness -p "test_*.py" -v
+        run: |
+          python -m unittest discover -s harness -p "test_*.py" -v
+          python -m unittest discover -s workstation/tests -p "test_*.py" -v
 
       - name: POSIX shell syntax parses
         if: runner.os != 'Windows'

@@ -1,0 +1,325 @@
+{
+  "version": 4,
+  "lines": [
+    [
+      {
+        "id": "b582e6cb-ca9b-4e6d-b752-5e0b70556936",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": "Context: "
+      },
+      {
+        "id": "3dac5657-c9b4-4e2e-b71a-e8afc63e2ac6",
+        "type": "context-bar",
+        "color": "yellow",
+        "rawValue": true
+      },
+      {
+        "id": "e0cbfccf-cb24-4e67-9536-81e431d4ba95",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " using "
+      },
+      {
+        "id": "9a560693-1f35-465e-a063-fd26bbc69b0d",
+        "type": "model",
+        "color": "cyan",
+        "rawValue": true
+      },
+      {
+        "id": "7d157cf9-54c9-4089-bfe5-578d2c960c8d",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": ", "
+      },
+      {
+        "id": "7f1c27e5-91b7-4038-be36-b7cdd94163bd",
+        "type": "thinking-effort",
+        "color": "cyan",
+        "rawValue": true
+      },
+      {
+        "id": "89855539-6bc7-4602-a6e7-70cc654bf0a7",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " thinking, "
+      },
+      {
+        "id": "415a2d98-548f-46bb-9305-6cb888c6fd51",
+        "type": "output-style",
+        "color": "cyan",
+        "rawValue": true
+      },
+      {
+        "id": "a2131978-a512-49e7-b93c-25589979912e",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " output"
+      }
+    ],
+    [
+      {
+        "id": "d1c0b02c-7c4c-4c6d-ab26-ce79de5505af",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": "UTokens: "
+      },
+      {
+        "id": "f60c7206-cd7c-49a9-bbf7-ce12add8a5f0",
+        "type": "tokens-total",
+        "color": "yellow",
+        "rawValue": true
+      },
+      {
+        "id": "f8aae25c-592d-487c-8b04-615327b2e3ff",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " ("
+      },
+      {
+        "id": "20a3c70c-c5aa-4e4c-8dff-1d78cfc510c8",
+        "type": "tokens-input",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "e9d904f8-004f-47a5-adb2-694f775a0efb",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " in, "
+      },
+      {
+        "id": "07322821-5cfd-46f5-89a4-360d238b78f6",
+        "type": "tokens-output",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "f326941e-29c4-4603-97a8-85ea23732dfc",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " out, "
+      },
+      {
+        "id": "0b06a604-4353-46fd-b8ca-f8b718558178",
+        "type": "tokens-cached",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "d3657f36-666f-4a94-8b53-02605d17af88",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " cached) | Speed: "
+      },
+      {
+        "id": "cfb86f60-ed5d-4ba2-beb6-731c768aab57",
+        "type": "total-speed",
+        "color": "yellow",
+        "rawValue": true
+      },
+      {
+        "id": "e85116fb-68d5-415f-a1e4-a14b79b66309",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " ("
+      },
+      {
+        "id": "7b1c9008-5014-4f8c-84d1-2c7e7010cc17",
+        "type": "input-speed",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "ff4811ca-2747-44ea-b4fa-1eb96863b5cc",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " in, "
+      },
+      {
+        "id": "12ea5d90-9776-4c37-af30-8aac48514977",
+        "type": "output-speed",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "17ce5c7b-7959-4d0c-8583-877e0757b00d",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " out)"
+      }
+    ],
+    [
+      {
+        "id": "a7102ce7-1cef-4049-a58b-d197b76d5d01",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": "Session: "
+      },
+      {
+        "id": "eab23ef3-a572-43bd-8d12-e280cd3a1162",
+        "type": "session-name",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "27be55dc-066e-4e21-9553-86fbe8f636dc",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " @"
+      },
+      {
+        "id": "a5224b74-c5df-4de2-a2ae-397dd5cbcdcc",
+        "type": "session-clock",
+        "color": "yellow",
+        "rawValue": true
+      },
+      {
+        "id": "8d66e693-9431-45da-97d4-977b8ad7edd4",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": ", "
+      },
+      {
+        "id": "1decc004-9c78-4f94-9cbd-4324179bc544",
+        "type": "session-cost",
+        "color": "cyan",
+        "rawValue": true
+      },
+      {
+        "id": "29ed4d11-b4e4-4b3b-bf5e-7df6f24bab59",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " spent, memory ("
+      },
+      {
+        "id": "2494719f-efce-4a04-acc3-15c434e24157",
+        "type": "free-memory",
+        "rawValue": true
+      },
+      {
+        "id": "d797e72d-5b14-4220-a0d2-beb900054bc6",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": "), with "
+      },
+      {
+        "id": "00262b74-ba54-4562-9d45-76a6ba76b330",
+        "type": "skills",
+        "color": "blue",
+        "rawValue": true
+      }
+    ],
+    [
+      {
+        "id": "4dcce868-d3f5-4139-8f07-187d1aa8019e",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": "Consume: "
+      },
+      {
+        "id": "22f5b090-ca2d-4a9b-b2c8-d0ef9b9b45dc",
+        "type": "session-usage",
+        "color": "yellow",
+        "rawValue": true
+      },
+      {
+        "id": "ffabe3ea-dd2d-4094-b6ab-302794b5e0d7",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": ", reset in "
+      },
+      {
+        "id": "f6897ac5-f1ca-45da-8397-89c05284896f",
+        "type": "reset-timer",
+        "color": "magenta",
+        "rawValue": true
+      },
+      {
+        "id": "edaa7757-fdaf-405a-8a69-f8c5ae29fee8",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " | Weekly: "
+      },
+      {
+        "id": "d2b02223-785f-42b3-a8f8-a72e17dc3e15",
+        "type": "weekly-usage",
+        "color": "cyan",
+        "rawValue": true
+      },
+      {
+        "id": "2dcfab4e-eb43-4e48-bec3-e72ef5487393",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": ", refresh in "
+      },
+      {
+        "id": "42b7613a-d97b-4c28-be99-bff1e0fcf371",
+        "type": "weekly-reset-timer",
+        "color": "magenta",
+        "rawValue": true
+      }
+    ],
+    [
+      {
+        "id": "b52257ee-45ba-47f1-b11f-ac585575e6ae",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": "GitRepo: "
+      },
+      {
+        "id": "1fe786f2-bc5a-4e6d-9d1a-625f25dbcbc2",
+        "type": "git-root-dir"
+      },
+      {
+        "id": "8097e1e5-d025-4c8e-b43e-792d4b769f37",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": " "
+      },
+      {
+        "id": "8ea6e6e1-5c0b-4c81-a025-bc284f467217",
+        "type": "git-branch",
+        "color": "magenta"
+      },
+      {
+        "id": "a2038513-2828-4a40-8c3b-a58593a892b4",
+        "type": "custom-text",
+        "color": "brightBlack",
+        "customText": ", changes "
+      },
+      {
+        "id": "48e5ee71-0dfd-492c-a47f-61bceb5ccd7f",
+        "type": "git-changes"
+      },
+      {
+        "id": "4e1a5ea3-013e-4f42-9308-659f48322ad3",
+        "type": "custom-text",
+        "customText": " at ",
+        "color": "brightBlack"
+      },
+      {
+        "id": "8093496e-a4cd-4d4b-8fd7-700e857ebdac",
+        "type": "git-worktree"
+      }
+    ]
+  ],
+  "flexMode": "full-minus-40",
+  "compactThreshold": 60,
+  "colorLevel": 2,
+  "defaultPadding": "",
+  "inheritSeparatorColors": false,
+  "globalBold": true,
+  "powerline": {
+    "enabled": false,
+    "separators": [
+      ""
+    ],
+    "separatorInvertBackground": [
+      false
+    ],
+    "startCaps": [],
+    "endCaps": [],
+    "autoAlign": false
+  }
+}

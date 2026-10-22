@@ -279,6 +279,10 @@ from one sidebar instead of watching several terminal windows.
    `-` (opens below); open a new tab with `ctrl+b` then `c`; detach with
    `ctrl+b` then `q`; reattach later with `herdr`; see every binding with
    `ctrl+b` then `?`.
+5. Optional: `workstation/` holds a ready Alacritty, Herdr, and Claude
+   Code status line setup, including Shift+Enter for a new line in the
+   prompt. `python workstation/install.py` shows what it would change
+   before anything is written; see `workstation/README.md`.
 
 One pattern that works: pane one runs `/research` on a question, pane two
 drafts the document that answer feeds, pane three runs `/review` on the

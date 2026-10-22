@@ -1,0 +1,86 @@
+# Herdr configuration for running Claude Code, Codex, and OpenCode side by side.
+# Target: %APPDATA%\herdr\config.toml on Windows, ~/.config/herdr/config.toml
+# on macOS and Linux, or the file HERDR_CONFIG_PATH names.
+# Validate with `herdr config check`; apply to a running server with
+# `herdr server reload-config`.
+
+[theme]
+name = "terminal"
+auto_switch = false
+
+# Uncomment to pick the shell and the folder new panes open in.
+# [terminal]
+# default_shell = "pwsh"
+# new_cwd = "<your-projects-folder>"
+
+[keys]
+# Ctrl+Tab and Ctrl+Shift+Tab reach Herdr only through the matching
+# Alacritty bindings in workstation/alacritty/alacritty.toml.
+next_agent = "ctrl+tab"
+previous_agent = "ctrl+shift+tab"
+# The prefix forms work in any terminal; the ctrl+alt forms need Alacritty.
+previous_tab = ["prefix+p", "ctrl+alt+["]
+next_tab = ["prefix+n", "ctrl+alt+]"]
+
+[ui]
+host_cursor = "native"
+agent_panel_sort = "spaces"
+status_indicators = "symbols"
+show_agent_labels_on_pane_borders = true
+
+[ui.sound]
+enabled = false
+
+[ui.sidebar.agents]
+row_gap = 0
+
+# Two rows per agent: tab and workspace, then state icon and agent name.
+# Fallback for any agent without its own entry below.
+rows = [
+  [
+    { token = "tab", bold = true, dim = false },
+    { token = "workspace", fg = "#7F849C", bold = false, dim = false }
+  ],
+  [
+    "state_icon",
+    { token = "agent", fg = "#C6C6C6", bold = false, dim = false }
+  ]
+]
+
+[ui.sidebar.agents.rows_by_agent]
+
+# Claude Code: warm orange
+claude = [
+  [
+    { token = "tab", bold = true, dim = false },
+    { token = "workspace", fg = "#7F849C", bold = false, dim = false }
+  ],
+  [
+    "state_icon",
+    { token = "agent", fg = "#D97757", bold = false, dim = false }
+  ]
+]
+
+# Codex: blue
+codex = [
+  [
+    { token = "tab", bold = true, dim = false },
+    { token = "workspace", fg = "#7F849C", bold = false, dim = false }
+  ],
+  [
+    "state_icon",
+    { token = "agent", fg = "#5EA1FF", bold = false, dim = false }
+  ]
+]
+
+# OpenCode: light grey
+opencode = [
+  [
+    { token = "tab", bold = true, dim = false },
+    { token = "workspace", fg = "#7F849C", bold = false, dim = false }
+  ],
+  [
+    "state_icon",
+    { token = "agent", fg = "#C6C6C6", bold = false, dim = false }
+  ]
+]

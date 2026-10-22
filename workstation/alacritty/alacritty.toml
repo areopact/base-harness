@@ -1,0 +1,33 @@
+# Alacritty configuration for running coding agents under Herdr.
+# Target: %APPDATA%\alacritty\alacritty.toml on Windows,
+# ~/.config/alacritty/alacritty.toml on macOS and Linux.
+# See workstation/README.md for what each binding does and why.
+
+# Uncomment to open new windows in your usual working folder.
+# [general]
+# working_directory = "<your-projects-folder>"
+
+# Uncomment to pick the shell. Alacritty otherwise starts the system
+# default (PowerShell 5 on Windows, your login shell elsewhere).
+# [terminal.shell]
+# program = "pwsh"
+
+[keyboard]
+bindings = [
+  # Agent switching: Alacritty sends Ctrl+Tab and Ctrl+Shift+Tab as a plain
+  # Tab, so Herdr never sees them. These send the CSI u sequences Herdr maps
+  # to next_agent and previous_agent.
+  { key = "Tab", mods = "Control", chars = "\u001b[9;5u" },
+  { key = "Tab", mods = "Control|Shift", chars = "\u001b[9;6u" },
+  # Newline in the agent prompt: Shift+Enter sends a line feed. Under Herdr,
+  # Claude Code reads that byte as ctrl+enter, which the shipped
+  # keybindings.json maps to a newline.
+  { key = "Enter", mods = "Shift", chars = "\u000A" },
+  # Windows: Ctrl+V pastes text (Alacritty's default is Ctrl+Shift+V).
+  # Delete this line on macOS, where Cmd+V already pastes.
+  { key = "V", mods = "Control", action = "Paste" },
+  # Tab switching: Ctrl+Alt+[ and Ctrl+Alt+] as CSI u sequences that Herdr
+  # maps to previous_tab and next_tab.
+  { key = "[", mods = "Control|Alt", chars = "\u001b[91;7u" },
+  { key = "]", mods = "Control|Alt", chars = "\u001b[93;7u" }
+]

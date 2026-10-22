@@ -150,6 +150,8 @@ ALLOWED_FIRST_SEGMENTS = {
     ".agents",
     "tests",
     "examples",
+    # The optional terminal kit; its README and comments name its own files.
+    "workstation",
     # Home dot-directories that credential shapes name (the AWS credentials
     # file, SSH private keys, gcloud ADC); ignore lists, deny lists, and the
     # guard's own tests spell them out and they identify no private source.

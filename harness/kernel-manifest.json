@@ -2907,6 +2907,11 @@
       "source": null
     },
     {
+      "path": "harness/hooks/tests/test_reset_hard_checkout.py",
+      "state": "new",
+      "source": null
+    },
+    {
       "path": "harness/hooks/tests/test_structure_parameterization.py",
       "state": "new",
       "source": null

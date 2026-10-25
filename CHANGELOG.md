@@ -2,6 +2,29 @@
 
 All notable changes to this repository. Format follows Keep a Changelog; versions follow semantic versioning. Dates are ISO 8601.
 
+Each release has an `### Upgrade notes` subsection: what changed for hosts and whether a host has to act. An adopted host's `adopt.py --upgrade` prints the headings from its own kernel version (exclusive) up to the new one (inclusive), so read those notes before applying.
+
+## [0.2.4] - Unreleased
+
+### Added
+
+- `adopt.py --upgrade` compares three versions of every file: the host's copy, the template's copy, and the base (what the host received last time). `harness/registry/adopted-files.json` gains a `hashes` map (path to the sha256 of the CRLF-normalized content), written by a plain adopt for the files it copies and by `--upgrade` for every file it updates, adds, finds identical, or lands as a conflict; `template_version` and `paths` are unchanged and an existing hash is never pruned. The base is the recorded hash, else the template's blob at the tag `v<host kernel version>`, else at the tag `v<template_version>`, else none. Outcomes: `same` (host equals template), `update` (host equals base, the file is overwritten), `kept` (the host edited it and the template did not change: nothing is written and the file is reported), and `conflict` (both changed, or there is no base and the files differ: the host file is never overwritten and the template version lands beside it as `<name>.harness` (the marker after the full name, so no test runner, CI runner, or shell picks it up; a Markdown file keeps `name.harness.md`); an existing sibling is left alone and reported as `conflict (sibling exists)`). The run prints the host and new kernel versions, the `CHANGELOG.md` release headings in between, and per-outcome counts on its last line. CRLF-only differences count as equal.
+- `adopt.py --upgrade --source` accepts a git URL (`scheme://...` or `user@host:path`) and `--ref` selects a tag, branch, or commit (local sources too; a local source without `--ref` reads `HEAD` as before). A URL is bare-cloned into a temporary directory that is removed afterwards; a URL or ref starting with `-`, or a ref that does not resolve to a commit, is refused. Plain adopt does not take either flag.
+
+### Changed
+
+- `dangerous-ops-guard` denies `git reset --hard` with any operand (none, `HEAD`, `HEAD~n`, a SHA, a non-protected ref) when the repository the command runs in has a protected branch checked out, in Bash and PowerShell. Before, only an explicit protected operand such as `origin/main` was denied. The repository is the payload `cwd`, moved by `git -C`, `env -C`, and literal `cd`, `pushd`, `Set-Location`, or `Push-Location` earlier in the same command; a target that may not exist keeps the previous directory as a candidate after `;`, a newline, or `||`. HEAD is read from `.git` or a worktree's `gitdir:` file, at most 64 levels up, without a subprocess, and network paths are never probed. A repository or branch the guard cannot determine (detached HEAD, `--git-dir`, a `GIT_DIR` assignment, an unreadable HEAD) is allowed. `--h`, `--ha`, and `--har` count as `--hard`, and the last mode flag wins. The reason names the alternatives: `git stash push` then `git checkout -B <branch> origin/<branch>`, `git reset --keep`, or `git -C <dir>` for another repository. The rule enters at hard-block, after a replay of 24 real reset commands in which nothing previously denied became allowed. `SECURITY.md` lists the open gaps (`git checkout -- .`, `git restore .`, aliases, `xargs`, an inherited `GIT_DIR`, `iex` bodies).
+
+### Fixed
+
+- A leading `timeout` (with its options and duration) is stripped as a wrapper, so `timeout 10 git push --force origin main` is denied like the unwrapped command.
+
+### Upgrade notes
+
+- A host whose `adopt.py` predates this release has no `--ref` or URL support, so run the upgrade once with a template clone's copy of the script, from the host root: `python <path-to-template-clone>/harness/tools/adopt.py --upgrade . --source https://github.com/areopact/base-harness --ref v0.2.4` (add `--apply` or `-y` after reading the dry run). Later releases can be applied with the host's own copy.
+- A host with no `hashes` map relies on the release tags for its base, so a file you edited since adoption may show as `conflict` on the first run. Nothing is overwritten: merge each sibling by hand, then delete it. The first apply records hashes, so the same upstream change does not conflict again.
+- An agent working directly on a protected branch is now denied `git reset --hard`, including a bare `git reset --hard HEAD`. Agents on topic branches are unaffected. Nothing to configure; the deny reason names the replacement commands.
+
 ## [0.2.3] - 2026-10-22
 
 ### Added

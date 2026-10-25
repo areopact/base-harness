@@ -53,8 +53,9 @@ Tiers, in evaluation order:
                         deletion through :branch, --delete, or -d, a bare
                         force push when the structure's git mode is
                         main-only, --mirror), hard reset to a protected ref,
-                        force-delete of a protected branch, low-level ref
-                        deletion.
+                        any hard reset in a repository whose checked-out
+                        branch is protected, force-delete of a protected
+                        branch, low-level ref deletion.
   git-history-rewrite   git filter-repo and git filter-branch.
   data-destroy          DROP of a table, database, or schema and TRUNCATE
                         only in an execution context: on the same simple
@@ -63,6 +64,32 @@ Tiers, in evaluation order:
                         mention (grep for the words, a commit message, an
                         echo) passes. Also git clean with force and
                         directory flags outside a dry run.
+
+The checked-out-branch rule reads repository state, the one place the guard
+looks past the command text. It carries a set of candidate directories,
+starting at the payload cwd, and denies when any of them is a protected
+checkout. git -C (composed in order) and env -C/--chdir move one command.
+A literal cd, chdir, pushd, popd, Set-Location, sl, Push-Location, or
+Pop-Location whose target exists as a directory succeeds, so it replaces
+the candidates whatever operator follows it. A target that does not exist
+or cannot be resolved (a variable, a substitution, a glob) may fail, so
+after ";", a newline, or "||" the old directory stays a candidate beside
+it; a "&&" chain runs only after a move that succeeded.
+A location command in a background job, a POSIX pipeline element, a POSIX
+"( ... )" subshell (for the commands after the group), or a substitution
+body moves nothing; a substitution body may run at any directory the line
+visited. A string run by bash -c or pwsh -Command starts from the
+directories in effect where it appears. --h, --ha, and --har are --hard, as
+git resolves a unique option prefix. HEAD is read from the .git
+directory or the gitdir file found by walking up at most 64 levels, at most
+4 KiB per file, with no subprocess, no network, and no probe of a path that
+starts with two slashes or two backslashes. An unknown repository allows,
+matching the fail-open stance on unparseable input: an empty or missing cwd,
+a non-literal directory (variables, substitutions, globs, a leading tilde),
+--git-dir or --work-tree, a GIT_DIR or GIT_WORK_TREE assignment (a prefix
+assignment for its own command only; a bare, exported, or $env: assignment
+for the rest of the text), a network path, an unreadable HEAD, and a
+detached HEAD.
 
 Quoted heredocs whose only sink is cat or "git commit -F -" are omitted
 from the scan; interpreter input, unquoted expansion, and pipelines stay
@@ -80,6 +107,7 @@ import collections
 import fnmatch
 import hashlib
 import json
+import os
 import re
 import sys
 
@@ -124,7 +152,12 @@ def strip_safe_contexts(command):
 #          PowerShell parameters, where a backslash is a separator and not an
 #          escape.
 Token = collections.namedtuple("Token", "value windows quoted")
-Segment = collections.namedtuple("Segment", "tokens redirects")
+# before/after: the list or pipeline operator around the segment (";", "\n",
+# "&&", "||", "|", "&", or "" at either end); grouping punctuation is not an
+# operator, so "(a); b" gives b before=";". after is ")" or "(" when a group
+# boundary ends the segment. scope: the ids of the enclosing "( ... )"
+# groups at this lex level, outermost first.
+Segment = collections.namedtuple("Segment", "tokens redirects before after scope", defaults=("", "", ()))
 
 _MAX_LEX_DEPTH = 64
 _MAX_ROUNDS = 5
@@ -182,7 +215,8 @@ def _lex(text, depth=0):
     nested = []
     value = []
     windows = []
-    state = {"started": False, "quoted": False, "pending": None}
+    state = {"started": False, "quoted": False, "pending": None, "before": "", "groups": 0}
+    scopes = []
     quote = None
 
     def flush():
@@ -199,12 +233,24 @@ def _lex(text, depth=0):
             tokens.append(token)
         state["pending"] = None
 
-    def end_segment():
+    def end_segment(after="", operator=True):
         flush()
         if tokens or redirects:
-            segments.append(Segment(tuple(tokens), tuple(redirects)))
+            segments.append(Segment(tuple(tokens), tuple(redirects), state["before"], after, tuple(scopes)))
+        if operator:
+            state["before"] = after
         del tokens[:]
         del redirects[:]
+
+    def open_group():
+        end_segment("(", operator=False)
+        state["groups"] += 1
+        scopes.append(state["groups"])
+
+    def close_group():
+        end_segment(")", operator=False)
+        if scopes:
+            scopes.pop()
 
     def add(posix_text, windows_text=None):
         value.append(posix_text)
@@ -294,8 +340,8 @@ def _lex(text, depth=0):
 
         # Unquoted.
         if char == "#" and not state["started"]:
-            end_segment()
             newline = text.find("\n", index)
+            end_segment("\n" if newline != -1 else "")
             if newline == -1:
                 break
             index = newline + 1
@@ -305,27 +351,40 @@ def _lex(text, depth=0):
             index += 1
             continue
         if char in ";\n":
-            end_segment()
+            end_segment(char)
             index += 1
             continue
         if char == "|":
-            end_segment()
-            index += 2 if text[index:index + 2] == "||" else 1
+            operator = "||" if text[index:index + 2] == "||" else "|"
+            end_segment(operator)
+            index += len(operator)
             continue
         if char == "&" and text[index:index + 2] != "&>":
-            end_segment()
-            index += 2 if text[index:index + 2] == "&&" else 1
+            operator = "&&" if text[index:index + 2] == "&&" else "&"
+            end_segment(operator)
+            index += len(operator)
             continue
-        if char in "()" and not state["started"]:
-            end_segment()
+        if char == "(" and not state["started"]:
+            open_group()
             index += 1
             continue
+        if char == ")" and not state["started"]:
+            close_group()
+            index += 1
+            continue
+        if char == ")" and scopes:
+            word_so_far = "".join(value)
+            if word_so_far.count("(") <= word_so_far.count(")"):
+                # A group closing right after a word: "(cd x && git reset --hard)".
+                close_group()
+                index += 1
+                continue
         if char == "{" and not state["started"] and text[index + 1:index + 2] in ("", " ", "\t", "\n"):
-            end_segment()
+            end_segment("{", operator=False)
             index += 1
             continue
         if char == "}" and not state["started"]:
-            end_segment()
+            end_segment("}", operator=False)
             index += 1
             continue
         if char in "<>" or text[index:index + 2] == "&>":
@@ -401,7 +460,10 @@ _WRAPPERS = {
     "exec": {"-a"},
     "stdbuf": {"-i", "-o", "-e"},
     "builtin": set(),
+    "timeout": {"-s", "-k", "--signal", "--kill-after"},
 }
+# timeout takes a duration before the command it runs: 10, 2.5, 1m, 0.5h.
+_DURATION = re.compile(r"^\d+(?:\.\d+)?[smhd]?$|^\.\d+[smhd]?$")
 # Shell reserved words and control operators never name the command; the word
 # after them does.
 _RESERVED_WORDS = {"if", "then", "elif", "else", "while", "until", "do", "!", "{", "}", "("}
@@ -447,6 +509,8 @@ def _command_word(tokens):
                 index += 2 if (text in options and index + 1 < len(tokens)) else 1
                 continue
             break
+        if word == "timeout" and index < len(tokens) and _DURATION.match(tokens[index].value):
+            index += 1
     return "", len(tokens)
 
 
@@ -1130,7 +1194,7 @@ def _git_local_shape(segments):
         aliases = _BRANCH_ALIASES if subcommand == "branch" else {}
         flags, operands = _parse_options(args, set(), aliases)
         names = [_local_ref_name(token.value) for token in operands]
-        if subcommand == "reset" and _bare(flags, "hard"):
+        if subcommand == "reset" and "hard" in _reset_modes(args):
             if any(_protected_name(name) for name in names):
                 return "reset-hard"
         if subcommand == "branch":
@@ -1159,6 +1223,420 @@ def _dangerous_git_clean(segments):
 
 def dangerous_git_clean(command):
     return _dangerous_git_clean(_analyze(command))
+
+
+# ----- checked-out protected branch -------------------------------------------
+# A hard reset with no protected operand (bare, HEAD~n, a SHA) still discards
+# work when the repository it runs in has a protected branch checked out. The
+# module docstring states how the effective repository is found and why an
+# unknown one allows.
+
+_MAX_GIT_WALK = 64
+_MAX_GIT_FILE_BYTES = 4096
+_CD_WORDS = {"cd", "chdir", "set-location", "sl", "pushd", "push-location"}
+_PUSH_WORDS = {"pushd", "push-location"}
+_POP_WORDS = {"popd", "pop-location"}
+_PS_PATH_PARAMS = {"-path", "-literalpath"}
+_CD_SWITCHES = {"-l", "-p", "-e", "-@", "-passthru"}
+_NON_LITERAL_DIR = re.compile(r"[$`*?\[\]{}%]")
+# git reset's long options. git accepts any unique prefix of one, so --h,
+# --ha, and --har are --hard while --m (mixed or merge) is ambiguous and
+# rejected (checked against git 2.51).
+_RESET_LONG_OPTIONS = (
+    "quiet", "mixed", "soft", "hard", "merge", "keep", "recurse-submodules",
+    "patch", "unified", "inter-hunk-context", "intent-to-add",
+    "pathspec-from-file", "pathspec-file-nul", "refresh", "stdin",
+)
+_RESET_MODES = {"soft", "mixed", "hard", "keep", "merge"}
+_GIT_ENV_OVERRIDE = re.compile(r"(?i)^(?:\$env:GIT_(?:DIR|WORK_TREE)\b|GIT_(?:DIR|WORK_TREE)=)")
+_DRIVE_ABSOLUTE = re.compile(r"^([A-Za-z]):(/.*)$")
+_MSYS_DRIVE = re.compile(r"^/([A-Za-z])(/.*)?$")
+_DRIVE_ANY = re.compile(r"^[A-Za-z]:")
+
+
+def _network_path(text):
+    return text.replace("\\", "/").startswith("//")
+
+
+def _absolute(text):
+    """A literal absolute path as a native local path, or None when unknown."""
+    if _network_path(text):
+        return None
+    if os.name == "nt":
+        text = text.replace("\\", "/")
+        match = _DRIVE_ABSOLUTE.match(text) or _MSYS_DRIVE.match(text)
+        if not match:
+            return None
+        return os.path.normpath(match[1] + ":" + (match[2] or "/"))
+    if text.startswith("/"):
+        return os.path.normpath(text)
+    return None
+
+
+def _resolve_directory(current, raw, powershell):
+    """Resolve a literal directory operand against the current one, or None."""
+    text = raw
+    if not text or text == "-" or text.startswith("~") or _NON_LITERAL_DIR.search(text):
+        return None
+    if powershell or os.name == "nt":
+        text = text.replace("\\", "/")
+    if _network_path(text):
+        return None
+    if text.startswith("/") or _DRIVE_ANY.match(text):
+        return _absolute(text)
+    if current is None:
+        return None
+    return os.path.normpath(os.path.join(current, text))
+
+
+def _directory_operand(token, powershell):
+    text = token.windows if powershell else _effective(token)
+    return _unwrap(text)
+
+
+def _cd_target(tokens, index, current, powershell):
+    """The directory a cd-family command moves to, or None when unknown."""
+    args = tokens[index + 1:]
+    position = 0
+    while position < len(args):
+        token = args[position]
+        text = token.value
+        lowered = text.lower()
+        name, separator, _tail = lowered.partition(":")
+        if separator and name in _PS_PATH_PARAMS:
+            # -Path:'x y' lexes as one quoted token; the value follows the colon.
+            raw = token.windows if powershell else _effective(token)
+            return _resolve_directory(current, _unwrap(raw[len(name) + 1:]), powershell)
+        if token.quoted or not text.startswith("-"):
+            break
+        if text == "--":
+            position += 1
+            break
+        if lowered in _PS_PATH_PARAMS:
+            if position + 1 >= len(args):
+                return None
+            return _resolve_directory(current, _directory_operand(args[position + 1], powershell), powershell)
+        if lowered in _CD_SWITCHES:
+            position += 1
+            continue
+        # "-" (the previous directory) or an option the scan does not model.
+        return None
+    if position >= len(args):
+        # No operand: the home directory, which is not literal here.
+        return None
+    return _resolve_directory(current, _directory_operand(args[position], powershell), powershell)
+
+
+def _env_directory(tokens, index, current, powershell):
+    """Apply env -C/--chdir found among the wrapper tokens before the command word."""
+    directory = current
+    inside_env = False
+    position = 0
+    while position < index:
+        token = tokens[position]
+        text = token.value
+        if _basename(text) == "env" and not token.quoted:
+            inside_env = True
+        elif inside_env and text in ("-C", "--chdir"):
+            if position + 1 >= index:
+                return None
+            directory = _resolve_directory(directory, _directory_operand(tokens[position + 1], powershell), powershell)
+            position += 2
+            continue
+        elif inside_env and (text.startswith("--chdir=") or (text.startswith("-C") and len(text) > 2)):
+            value = _directory_operand(token, powershell)
+            value = value.split("=", 1)[1] if text.startswith("--chdir=") else value[2:]
+            directory = _resolve_directory(directory, value, powershell)
+        position += 1
+    return directory
+
+
+def _git_directory(rest, directory, powershell):
+    """Return (subcommand, arguments, directory) after git's global options."""
+    unknown = False
+    position = 0
+    while position < len(rest):
+        text = rest[position].value
+        if not text.startswith("-") or text == "-":
+            break
+        name = text.split("=", 1)[0]
+        if name in ("--git-dir", "--work-tree"):
+            unknown = True
+        if text == "-C":
+            if position + 1 >= len(rest):
+                return "", [], None
+            directory = _resolve_directory(directory, _directory_operand(rest[position + 1], powershell), powershell)
+            position += 2
+            continue
+        if "=" not in text and text in _GIT_GLOBAL_VALUE_OPTS:
+            position += 2
+        else:
+            position += 1
+    if position >= len(rest):
+        return "", [], None
+    return rest[position].value.lower(), list(rest[position + 1:]), None if unknown else directory
+
+
+def _reset_option(text):
+    """The git reset long option a token names, abbreviation resolved, or ""."""
+    if not text.startswith("--") or len(text) < 3 or "=" in text:
+        return ""
+    name = text[2:]
+    if name in _RESET_LONG_OPTIONS:
+        return name
+    matches = [option for option in _RESET_LONG_OPTIONS if option.startswith(name)]
+    return matches[0] if len(matches) == 1 else ""
+
+
+def _reset_modes(args):
+    """Every reset mode flag before "--", in order."""
+    modes = []
+    for token in args:
+        text = token.value.rstrip(")")
+        if text == "--":
+            break
+        option = _reset_option(text)
+        if option in _RESET_MODES:
+            modes.append(option)
+    return modes
+
+
+def _reset_mode(args):
+    """The mode git applies: the last mode flag wins."""
+    modes = _reset_modes(args)
+    return modes[-1] if modes else ""
+
+
+def _read_prefix(path):
+    with open(path, "rb") as handle:
+        return handle.read(_MAX_GIT_FILE_BYTES).decode("utf-8", "replace")
+
+
+def _gitdir_from_file(dotgit):
+    """The directory a ".git" file points at (worktrees, submodules), or None."""
+    try:
+        first = _read_prefix(dotgit).strip().splitlines()
+    except OSError:
+        return None
+    if not first or not first[0].startswith("gitdir:"):
+        return None
+    target = first[0][len("gitdir:"):].strip()
+    if not target or _network_path(target):
+        return None
+    if target.startswith("/") or target.startswith("\\") or _DRIVE_ANY.match(target):
+        return _absolute(target)
+    return os.path.normpath(os.path.join(os.path.dirname(dotgit), target))
+
+
+def read_head_branch(directory):
+    """Return the branch checked out in the repository that holds directory.
+
+    directory is an absolute local path. The result is the branch name with
+    the heads prefix removed ("main", "feature/x"), or None when it cannot be
+    known: no repository within 64 levels, a ".git" file that does not
+    parse, a detached or unreadable HEAD, or a network path. Read-only, no
+    subprocess, no network. classify() and decide() accept a replacement
+    with the same signature as head_reader.
+    """
+    if not isinstance(directory, str) or not directory or _network_path(directory):
+        return None
+    current = directory
+    for _level in range(_MAX_GIT_WALK):
+        dotgit = os.path.join(current, ".git")
+        gitdir = None
+        if os.path.isdir(dotgit):
+            gitdir = dotgit
+        elif os.path.isfile(dotgit):
+            gitdir = _gitdir_from_file(dotgit)
+            if gitdir is None:
+                return None
+        if gitdir is not None:
+            if _network_path(gitdir):
+                return None
+            try:
+                head = _read_prefix(os.path.join(gitdir, "HEAD")).strip()
+            except OSError:
+                return None
+            if not head.startswith("ref:"):
+                return None
+            ref = head[len("ref:"):].strip()
+            if not ref.startswith(_HEADS_PREFIX):
+                return None
+            return ref[len(_HEADS_PREFIX):] or None
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+    return None
+
+
+def _base_directory(cwd):
+    if not isinstance(cwd, str) or not cwd.strip():
+        return None
+    return _absolute(cwd.strip())
+
+
+def _on_protected_branch(directory, reader):
+    if directory is None:
+        return False
+    try:
+        branch = reader(directory)
+    except Exception:
+        return False
+    return isinstance(branch, str) and _protected_name(branch)
+
+
+# The walk carries a SET of candidate directories (None is an unknown one)
+# and denies when any known candidate is a protected checkout. A move to an
+# existing literal directory replaces the candidates; a move that may fail
+# keeps the old directory a candidate after ";", a newline, "||", or the end
+# of a "&&" chain.
+_LIST_BOUNDARIES = {"", ";", "\n", "&"}
+_PERSISTENT_ASSIGNERS = {"", "export", "declare", "typeset", "readonly", "local"}
+
+
+def _git_env_override(tokens, word, index):
+    """Return (persistent, this command only) for a GIT_DIR or GIT_WORK_TREE override.
+
+    A prefix assignment (GIT_DIR=x git log, env GIT_DIR=x git log) scopes to
+    its own simple command; a bare assignment, export and its relatives, and
+    a PowerShell $env: assignment persist for the rest of the text.
+    """
+    persistent = False
+    local = False
+    for position, token in enumerate(tokens):
+        if not _GIT_ENV_OVERRIDE.match(token.value):
+            continue
+        if token.value.lower().startswith("$env:"):
+            persistent = persistent or position == 0
+        elif word in _PERSISTENT_ASSIGNERS:
+            persistent = True
+        elif position < index:
+            local = True
+    return persistent, local
+
+
+def _scope_state(states, key):
+    """The directory state of one subshell scope, inherited on first entry."""
+    if key not in states:
+        parent = key[:-1]
+        while parent not in states:
+            parent = parent[:-1]
+        states[key] = {
+            "sure": set(states[parent]["sure"]),
+            "later": set(),
+            "stack": list(states[parent]["stack"]),
+        }
+    return states[key]
+
+
+def _apply_location(state, segment, word, tokens, index, powershell, posix):
+    """Apply one cd-family command to a scope state; return the new candidates."""
+    piped = segment.before == "|" or segment.after == "|"
+    if segment.after == "&" or (piped and posix):
+        # A background job or a POSIX pipeline element runs in a child
+        # process; the shell's own directory does not move.
+        return set()
+    before = set(state["sure"])
+    # Pair each candidate with where the command takes it and whether the
+    # move is certain: a literal target that exists as a directory, or a
+    # popd with a recorded stack entry, succeeds; anything else may fail.
+    moves = []
+    if word in _POP_WORDS:
+        if state["stack"]:
+            popped = state["stack"].pop()
+            moves = [(directory, target, True) for directory in before for target in popped]
+        else:
+            moves = [(directory, None, False) for directory in before]
+    else:
+        if word in _PUSH_WORDS:
+            state["stack"].append(before)
+        for directory in before:
+            target = _cd_target(tokens, index, directory, powershell)
+            moves.append((directory, target, target is not None and os.path.isdir(target)))
+    targets = {target for _directory, target, _certain in moves}
+    sure = set()
+    later = set()
+    for directory, target, certain in moves:
+        if certain:
+            sure.add(target)
+        elif segment.after == "&&":
+            # A failed move skips the rest of the chain; the shell is still
+            # in the old directory after it.
+            sure.add(target)
+            later.add(directory)
+        elif segment.after == "||" and not piped:
+            # The "||" command runs only when the move failed.
+            sure.add(directory)
+            later.add(target)
+        else:
+            sure.update((directory, target))
+    # A PowerShell pipeline runs in the same runspace, so it moves like ";".
+    state["sure"] = sure
+    state["later"] |= later
+    return targets
+
+
+def _checkout_walk(text, directories, powershell, posix, check, depth):
+    """True when a hard reset in this text may run on a protected checkout."""
+    top_count = len(_lex(text, _MAX_LEX_DEPTH))
+    segments = _lex(text)
+    states = {(): {"sure": set(directories), "later": set(), "stack": []}}
+    seen = set(directories)
+    overridden = False
+    for position, segment in enumerate(segments):
+        tokens = segment.tokens
+        word, index = _command_word(tokens)
+        persistent, local = _git_env_override(tokens, word, index)
+        overridden = overridden or persistent
+        state = None
+        if position >= top_count:
+            # Substitution bodies are lexed after the whole line, so their
+            # place in it is lost: every directory the line visited is a
+            # candidate, and a location command inside one moves nothing.
+            current = set(seen)
+        else:
+            # A POSIX "( ... )" group is a subshell; PowerShell parentheses
+            # are not.
+            state = _scope_state(states, segment.scope if posix else ())
+            if segment.before in _LIST_BOUNDARIES:
+                state["sure"] |= state["later"]
+                state["later"] = set()
+            current = state["sure"]
+        blind = overridden or local
+        heres = set() if blind else {_env_directory(tokens, index, directory, powershell) for directory in current}
+        if word in _CD_WORDS or word in _POP_WORDS:
+            if state is not None:
+                seen |= _apply_location(state, segment, word, tokens, index, powershell, posix)
+        elif word == "git":
+            for here in heres:
+                subcommand, args, target = _git_directory(list(tokens[index + 1:]), here, powershell)
+                if subcommand == "reset" and _reset_mode(args) == "hard" and check(target):
+                    return True
+        if depth < _MAX_ROUNDS:
+            inner_posix = word in _POSIX_SHELLS or (posix and word not in _SHELL_WORDS)
+            for inner in _nested_command_strings(segment):
+                if _checkout_walk(inner, heres or {None}, powershell, inner_posix, check, depth + 1):
+                    return True
+    return False
+
+
+def _reset_hard_on_protected_checkout(command, cwd, powershell=False, head_reader=None):
+    lowered = command.lower()
+    # "--h" covers every accepted abbreviation of --hard.
+    if "reset" not in lowered or "--h" not in lowered:
+        return False
+    reader = head_reader or read_head_branch
+    cache = {}
+
+    def check(directory):
+        if directory is None:
+            return False
+        if directory not in cache:
+            cache[directory] = _on_protected_branch(directory, reader)
+        return cache[directory]
+
+    return _checkout_walk(command, {_base_directory(cwd)}, powershell, not powershell, check, 0)
 
 
 # ----- data-destroy -----------------------------------------------------------
@@ -1221,7 +1699,9 @@ _SQL_REASONS = {
 _GIT_LOCAL_REASONS = {
     "reset-hard": (
         "git-protected-branch",
-        "git reset --hard against a protected branch discards local work on it; use a feature branch instead",
+        "git reset --hard on a protected branch discards local work on it. Use git stash push "
+        "then git checkout -B <branch> origin/<branch>, or git reset --keep, or work on a task branch. "
+        "To reset another repository, use git -C <dir> reset --hard or cd <dir> && git reset --hard",
     ),
     "branch-delete": (
         "git-protected-branch",
@@ -1348,8 +1828,12 @@ def powershell_normalize(text):
     return "".join(out)
 
 
-def classify(command, structure=None):
-    """Return (block, tier, reason). block is False on allow."""
+def classify(command, structure=None, cwd="", powershell=False, head_reader=None):
+    """Return (block, tier, reason). block is False on allow.
+
+    cwd is the payload's working directory ("" when unknown) and head_reader
+    replaces read_head_branch for the checked-out-branch rule.
+    """
     structure = structure if structure is not None else load_structure()
     segments = _analyze(command)
 
@@ -1376,6 +1860,8 @@ def classify(command, structure=None):
     if _dangerous_git_push(segments, git_mode):
         return True, "git-protected-branch", "force-push to a protected branch. Use --force-with-lease, or push to a feature branch first"
     shape = _git_local_shape(segments)
+    if not shape and _reset_hard_on_protected_checkout(command, cwd, powershell, head_reader):
+        shape = "reset-hard"
     if shape:
         tier, reason = _GIT_LOCAL_REASONS[shape]
         return True, tier, reason
@@ -1389,8 +1875,12 @@ def classify(command, structure=None):
     return False, "", ""
 
 
-def decide(data, structure=None):
-    """Return the deny JSON string for a payload, or None to allow."""
+def decide(data, structure=None, head_reader=None):
+    """Return the deny JSON string for a payload, or None to allow.
+
+    The payload's cwd seeds the checked-out-branch rule; a missing or empty
+    cwd leaves the repository unknown (no fallback to the process directory).
+    """
     if not isinstance(data, dict) or canonical_tool_name(data) not in SHELL_TOOLS:
         return None
     command = shell_command_text(data, tools=SHELL_TOOLS)
@@ -1399,9 +1889,14 @@ def decide(data, structure=None):
     # The digest hashes the payload text as it arrived; classification
     # re-parses it, so it asks for the join that keeps the argv boundary.
     classified = shell_command_text(data, quote=True, tools=SHELL_TOOLS) or command
-    if canonical_tool_name(data) == "PowerShell":
+    powershell = canonical_tool_name(data) == "PowerShell"
+    if powershell:
         classified = powershell_normalize(classified)
-    block, tier, reason = classify(strip_safe_contexts(classified), structure)
+    cwd = data.get("cwd")
+    cwd = cwd if isinstance(cwd, str) else ""
+    block, tier, reason = classify(
+        strip_safe_contexts(classified), structure, cwd, powershell, head_reader
+    )
     if not block:
         return None
     digest = hashlib.sha256(command.encode("utf-8")).hexdigest()

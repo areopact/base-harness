@@ -34,6 +34,7 @@ Wording is deliberate. "Configured" means the files have the shape the runtime d
 2. Adopt copies the kernel (`harness/`, `.githooks/`, contract files) into your repository, never overwrites your README, merges host rules into `harness/rules/` by reserved-name rule, writes `harness/registry/structure.json` with every lane unset so nothing assumes a folder you do not have, and stages the executable bit on the landed scripts and hook so your own commit carries it forward.
 3. Run the bootstrap and a doctor as in the new-repository path.
 4. Commit the result on a branch and review the diff before merging; adopt is additive and reversible by deleting what it added.
+5. Later releases: `python harness/tools/adopt.py --upgrade . --source <template URL or path> --ref v<version>` is a three-way upgrade that keeps your edits and lands conflicts as siblings; see `docs/HOST-SHAPES.md` and the `### Upgrade notes` in `CHANGELOG.md`.
 
 ## Requirements
 

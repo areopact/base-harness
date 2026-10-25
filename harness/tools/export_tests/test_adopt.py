@@ -339,6 +339,11 @@ class TestUpgrade(TempDirCase):
                 "harness/CONTRACT.host.md",
                 "harness/registry/structure.json",
             ],
+            # What the host received at adoption: the base of the three-way compare.
+            "hashes": {
+                "harness/rules/a.md": adopt.content_hash(b"v0\n"),
+                "harness/rules/same.md": adopt.content_hash(b"identical\n"),
+            },
         }, indent=2) + "\n")
         commit_all(target, "seed adopted host at 0.1.0")
         return target
@@ -752,3 +757,507 @@ class TestExecutableBit(TempDirCase):
         target = self.seed_target("execbit-empty")
         staged, warning = adopt.set_executable_bits(target, [])
         assert staged == [] and warning is None
+
+
+# --------------------------------------------------------------------------
+# three-way upgrade and URL sources
+# --------------------------------------------------------------------------
+
+STATUS_RE = re.compile(r"^  (update|new|kept|same|conflict(?: \(sibling exists\))?|skip|gone)\s+(\S+)", re.MULTILINE)
+
+
+def statuses(out: str) -> dict:
+    return {path: status for status, path in STATUS_RE.findall(out)}
+
+
+def H(text) -> str:
+    return adopt.content_hash(text.encode("utf-8") if isinstance(text, str) else text)
+
+
+class ThreeWayBase(TempDirCase):
+    """Synthetic template source with tagged releases and synthetic hosts."""
+
+    def release(self, source: Path, version: str, files: dict, changelog: str | None = None, remove=(), tag: bool = True) -> str:
+        for rel, content in files.items():
+            write(source / rel, content)
+        for rel in remove:
+            (source / rel).unlink()
+        listed = [
+            rel for rel in walk_files(source)
+            if rel not in ("harness/kernel-manifest.json", "CHANGELOG.md")
+        ]
+        write(source / "harness" / "kernel-manifest.json", json.dumps({"version": version, "files": [{"path": p} for p in listed]}, indent=2) + "\n")
+        if changelog is not None:
+            write(source / "CHANGELOG.md", changelog)
+        sha = commit_all(source, f"release {version}")
+        if tag:
+            assert git(source, "tag", f"v{version}").returncode == 0
+        return sha
+
+    def host(self, name: str, files: dict, hashes: dict | None = None, kver: str | None = "0.1.0", tver: str = "0.1.0", owned=(), extra_paths=()) -> Path:
+        target = init_repo(self.tmp / name)
+        for rel, content in files.items():
+            write(target / rel, content)
+        doc = {"template_version": tver, "paths": sorted(set(files) | set(extra_paths))}
+        if hashes is not None:
+            doc["hashes"] = hashes
+        write(target / adopt.ADOPTED_FILES_REL, json.dumps(doc, indent=2) + "\n")
+        if kver is not None:
+            write(target / "harness" / "kernel-manifest.json", json.dumps({"version": kver, "files": []}) + "\n")
+        if owned:
+            write(target / "harness" / "registry" / "structure.json", json.dumps({"host": {"harness_owned": list(owned)}}) + "\n")
+        commit_all(target, "seed host")
+        return target
+
+    def adopted(self, target: Path) -> dict:
+        return json.loads((target / adopt.ADOPTED_FILES_REL).read_text(encoding="utf-8"))
+
+
+class TestThreeWayOutcomes(ThreeWayBase):
+    def setUp(self):
+        super().setUp()
+        self.source = init_repo(self.tmp / "src")
+        r = "harness/rules/"
+        self.release(self.source, "0.1.0", {r + "upd.md": "b\n", r + "kept.md": "b\n", r + "conf.md": "b\n", r + "same.md": "b\n"})
+        self.release(self.source, "0.2.0", {r + "upd.md": "s\n", r + "conf.md": "s\n", r + "same.md": "s\n", r + "nobase.md": "s\n"})
+        self.host_files = {r + "upd.md": "b\n", r + "kept.md": "h\n", r + "conf.md": "h\n", r + "same.md": "s\n", r + "nobase.md": "h\n"}
+        self.hashes = {r + name: H("b\n") for name in ("upd.md", "kept.md", "conf.md", "same.md")}
+
+    def make_host(self, name="h") -> Path:
+        return self.host(name, self.host_files, hashes=dict(self.hashes))
+
+    def test_dry_run_reports_every_outcome_and_writes_nothing(self):
+        target = self.make_host()
+        before = walk_files(target)
+        code, out, err = run(["--upgrade", str(target), "--source", str(self.source)])
+        assert code == 0, out + err
+        r = "harness/rules/"
+        got = statuses(out)
+        assert got[r + "upd.md"] == "update"
+        assert got[r + "kept.md"] == "kept"
+        assert got[r + "conf.md"] == "conflict"
+        assert got[r + "nobase.md"] == "conflict"
+        assert r + "same.md" not in got  # same is counted, not listed
+        assert out.strip().splitlines()[-1].endswith("update 1, new 0, same 1, kept 1, conflict 2, skip 0, gone 0")
+        assert walk_files(target) == before
+        assert git(target, "status", "--porcelain").stdout.strip() == ""
+
+    def test_apply_updates_keeps_and_lands_conflict_siblings(self):
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        r = "harness/rules/"
+        read = lambda rel: (target / rel).read_bytes()  # noqa: E731
+        assert read(r + "upd.md") == b"s\n"
+        assert read(r + "kept.md") == b"h\n"  # host edit preserved
+        assert read(r + "conf.md") == b"h\n"  # never overwritten
+        assert read(r + "nobase.md") == b"h\n"
+        assert read(r + "conf.harness.md") == b"s\n"
+        assert read(r + "nobase.harness.md") == b"s\n"
+        assert not (target / r / "kept.harness.md").exists()
+        assert out.strip().splitlines()[-1].endswith("update 1, new 0, same 1, kept 1, conflict 2, skip 0, gone 0")
+        assert "merge each source sibling" in out
+
+    def test_hashes_written_for_update_same_conflict_and_not_for_kept(self):
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        r = "harness/rules/"
+        doc = self.adopted(target)
+        hashes = doc["hashes"]
+        assert hashes[r + "upd.md"] == H("s\n")
+        assert hashes[r + "same.md"] == H("s\n")
+        assert hashes[r + "conf.md"] == H("s\n")  # same upstream change does not conflict again
+        assert hashes[r + "nobase.md"] == H("s\n")
+        assert hashes[r + "kept.md"] == H("b\n")  # kept: unchanged
+        assert doc["template_version"] == "0.2.0"
+        assert isinstance(doc["paths"], list) and r + "conf.harness.md" in doc["paths"]
+        # second run: nothing left to do for the conflicts' upstream change
+        commit_all(target, "apply upgrade")
+        code, out, err = run(["--upgrade", str(target), "--source", str(self.source)])
+        assert code == 0, out + err
+        got = statuses(out)
+        assert got.get(r + "conf.md") == "kept"
+        assert got.get(r + "upd.md") is None
+
+    def test_hashes_never_pruned_and_host_owned_gets_none(self):
+        r = "harness/rules/"
+        files = dict(self.host_files)
+        files[r + "owned.md"] = "mine\n"
+        hashes = dict(self.hashes)
+        hashes["harness/no-longer-anywhere.md"] = "ab" * 32
+        target = self.host("pruned", files, hashes=hashes, owned=[r + "owned.md"])
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        assert statuses(out)[r + "owned.md"] == "skip"
+        out_hashes = self.adopted(target)["hashes"]
+        assert out_hashes["harness/no-longer-anywhere.md"] == "ab" * 32
+        assert r + "owned.md" not in out_hashes
+        assert "harness/registry/structure.json" not in out_hashes
+
+    def test_legacy_registry_without_hashes_gains_a_hashes_map(self):
+        r = "harness/rules/"
+        target = self.host("legacy", {r + "upd.md": "b\n"}, hashes=None)
+        assert "hashes" not in self.adopted(target)
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        # no recorded hash: base comes from tag v0.1.0 (host kernel version)
+        assert (target / r / "upd.md").read_bytes() == b"s\n"
+        assert self.adopted(target)["hashes"][r + "upd.md"] == H("s\n")
+
+    def test_sibling_exists_is_reported_and_never_overwritten(self):
+        r = "harness/rules/"
+        files = dict(self.host_files)
+        files[r + "conf.harness.md"] = "an older sibling nobody merged\n"
+        target = self.host("sib", files, hashes=dict(self.hashes))
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        assert statuses(out)[r + "conf.md"] == "conflict (sibling exists)"
+        assert (target / r / "conf.harness.md").read_bytes() == b"an older sibling nobody merged\n"
+        assert (target / r / "conf.md").read_bytes() == b"h\n"
+        # nothing was delivered for it, so no hash is recorded for the source version
+        assert self.adopted(target)["hashes"][r + "conf.md"] == H("b\n")
+        assert out.strip().splitlines()[-1].endswith("conflict 2, skip 1, gone 0")  # the pre-existing sibling itself is a skip
+
+    def test_conflict_never_deletes_and_deletion_gate_still_runs(self):
+        target = self.make_host("nodel")
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        assert git(target, "ls-files", "-d").stdout.strip() == ""
+        assert not [l for l in git(target, "diff", "--name-status").stdout.splitlines() if l.startswith("D")]
+
+
+class TestBaseResolution(ThreeWayBase):
+    def setUp(self):
+        super().setUp()
+        self.source = init_repo(self.tmp / "src")
+        r = "harness/rules/"
+        self.release(self.source, "0.1.0", {r + "f1.md": "b\n", r + "f2.md": "b\n"})
+        self.release(self.source, "0.1.5", {r + "f1.md": "m\n"}, remove=[r + "f2.md"])
+        self.release(self.source, "0.2.0", {r + "f1.md": "s\n", r + "f2.md": "s\n"})
+
+    def outcome(self, name, files, hashes=None, kver="0.1.0", tver="0.1.0") -> dict:
+        target = self.host(name, files, hashes=hashes, kver=kver, tver=tver)
+        code, out, err = run(["--upgrade", str(target), "--source", str(self.source)])
+        assert code == 0, out + err
+        return statuses(out)
+
+    def test_recorded_hash_wins_over_any_tag(self):
+        r = "harness/rules/"
+        got = self.outcome("rec", {r + "f1.md": "x\n"}, hashes={r + "f1.md": H("x\n")})
+        assert got[r + "f1.md"] == "update"  # tag content would have made this a conflict
+
+    def test_host_kernel_version_tag_is_tried_first(self):
+        r = "harness/rules/"
+        got = self.outcome("kern", {r + "f1.md": "m\n"}, kver="0.1.5", tver="0.1.0")
+        assert got[r + "f1.md"] == "update"  # base "m" from v0.1.5, not "b" from v0.1.0
+
+    def test_template_version_tag_is_the_fallback(self):
+        r = "harness/rules/"
+        got = self.outcome("tver", {r + "f1.md": "b\n"}, kver="0.9.9", tver="0.1.0")
+        assert got[r + "f1.md"] == "update"
+        got = self.outcome("tver-kept", {r + "f1.md": "h\n"}, kver=None, tver="0.1.0")
+        assert got[r + "f1.md"] == "conflict"  # host edit and the source moved on since v0.1.0
+
+    def test_path_absent_at_first_tag_falls_through_to_next_tag(self):
+        r = "harness/rules/"
+        got = self.outcome("absent", {r + "f2.md": "b\n"}, kver="0.1.5", tver="0.1.0")
+        assert got[r + "f2.md"] == "update"  # f2 is absent at v0.1.5, present at v0.1.0
+
+    def test_no_tag_and_no_hash_means_conflict_when_host_differs(self):
+        r = "harness/rules/"
+        got = self.outcome("notag", {r + "f1.md": "m\n"}, kver="7.7.7", tver="7.7.6")
+        assert got[r + "f1.md"] == "conflict"
+
+    def test_crlf_only_differences_count_as_equal(self):
+        r = "harness/rules/"
+        # host CRLF equals the base: update
+        got = self.outcome("crlf-base", {r + "f1.md": "b\r\n"}, kver="0.1.0")
+        assert got[r + "f1.md"] == "update"
+        # host CRLF equals the source: same (not listed)
+        got = self.outcome("crlf-same", {r + "f1.md": "s\r\n"}, kver="0.1.0")
+        assert r + "f1.md" not in got
+        # host CRLF-edited copy of the base content recorded as a hash of the LF form
+        got = self.outcome("crlf-hash", {r + "f1.md": "x\r\n"}, hashes={r + "f1.md": H("x\n")})
+        assert got[r + "f1.md"] == "update"
+
+
+class TestSiblingNaming(ThreeWayBase):
+    def test_sibling_path_rules(self):
+        assert adopt.conflict_sibling_path("harness/rules/r.md") == "harness/rules/r.harness.md"
+        assert adopt.conflict_sibling_path("harness/tools/run.sh") == "harness/tools/run.sh.harness"
+        assert adopt.conflict_sibling_path("harness/tools/test_a.py") == "harness/tools/test_a.py.harness"
+        assert adopt.conflict_sibling_path("harness/hooks/x.ps1") == "harness/hooks/x.ps1.harness"
+        assert adopt.conflict_sibling_path("harness/hooks/tests/t.mjs") == "harness/hooks/tests/t.mjs.harness"
+        assert adopt.conflict_sibling_path("harness/registry/x.json") == "harness/registry/x.json.harness"
+        assert adopt.conflict_sibling_path(".github/workflows/offline-conformance.yml") == ".github/workflows/offline-conformance.yml.harness"
+        assert adopt.conflict_sibling_path(".github/workflows/ci.yaml") == ".github/workflows/ci.yaml.harness"
+        assert adopt.conflict_sibling_path(".githooks/pre-commit") == ".githooks/pre-commit.harness"
+
+    def test_workflow_conflict_lands_as_dot_harness_after_the_full_name(self):
+        wf = ".github/workflows/offline-conformance.yml"
+        source = init_repo(self.tmp / "src")
+        self.release(source, "0.1.0", {wf: "name: base\n"})
+        self.release(source, "0.2.0", {wf: "name: upstream\n"})
+        target = self.host("wf", {wf: "name: mine\n"}, hashes={wf: H("name: base\n")})
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(source)])
+        assert code == 0, out + err
+        assert (target / wf).read_bytes() == b"name: mine\n"
+        assert (target / (wf + ".harness")).read_bytes() == b"name: upstream\n"
+        assert not (target / ".github/workflows/offline-conformance.harness.yml").exists()
+        assert statuses(out)[wf] == "conflict"
+
+
+class TestSiblingNotCollectable(ThreeWayBase):
+    def test_python_and_extensionless_conflicts_get_inert_names(self):
+        source = init_repo(self.tmp / "src")
+        py, hook = "harness/tools/test_a.py", ".githooks/pre-commit"
+        self.release(source, "0.1.0", {py: "base = 1\n", hook: "#!/bin/sh\nbase\n"})
+        self.release(source, "0.2.0", {py: "base = 2\n", hook: "#!/bin/sh\nnew\n"})
+        target = self.host("py", {py: "base = 9\n", hook: "#!/bin/sh\nmine\n"}, hashes={py: H("base = 1\n"), hook: H("#!/bin/sh\nbase\n")})
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(source)])
+        assert code == 0, out + err
+        assert (target / (py + ".harness")).read_bytes() == b"base = 2\n"
+        assert (target / (hook + ".harness")).read_bytes() == b"#!/bin/sh\nnew\n"
+        assert not (target / "harness/tools/test_a.harness.py").exists()
+        assert not (target / ".githooks/pre-commit.harness.md").exists()
+        # nothing named test_*.py or *.sh was created beside the host files
+        assert [f for f in walk_files(target) if f.endswith(".py") and f != py] == []
+
+
+class TestChangelogAndVersions(ThreeWayBase):
+    def test_prints_old_and_new_version_and_headings_in_range(self):
+        changelog = (
+            "# Changelog\n\n## [0.3.0] - 2026-12-01\n\n### Upgrade notes\n\nlater\n\n"
+            "## [0.2.0] - 2026-11-01\n\n### Upgrade notes\n\nnow\n\n"
+            "## [0.1.5] - 2026-10-20\n\n### Upgrade notes\n\nmid\n\n"
+            "## [0.1.0] - 2026-10-01\n\nold\n"
+        )
+        source = init_repo(self.tmp / "src")
+        self.release(source, "0.1.0", {"harness/rules/a.md": "b\n"})
+        self.release(source, "0.2.0", {"harness/rules/a.md": "s\n"}, changelog=changelog)
+        target = self.host("cl", {"harness/rules/a.md": "b\n"}, hashes={"harness/rules/a.md": H("b\n")})
+        code, out, err = run(["--upgrade", str(target), "--source", str(source)])
+        assert code == 0, out + err
+        assert "host kernel version 0.1.0 -> 0.2.0" in out
+        assert "read these Upgrade notes" in out
+        assert "  ## [0.2.0] - 2026-11-01" in out
+        assert "  ## [0.1.5] - 2026-10-20" in out
+        assert "## [0.1.0]" not in out  # strictly after the old version
+        assert "## [0.3.0]" not in out  # up to and including the new one
+
+    def test_changelog_headings_helper(self):
+        text = "## [0.2.4] - Unreleased\n## [0.2.3] - x\n## [0.2.2] - y\n"
+        assert adopt.changelog_headings(text, "0.2.2", "0.2.4") == ["## [0.2.4] - Unreleased", "## [0.2.3] - x"]
+        assert adopt.changelog_headings(text, "unknown", "0.2.3") == ["## [0.2.3] - x", "## [0.2.2] - y"]
+        assert adopt.changelog_headings(text, "0.2.2", "unknown") == []
+
+
+class TestPlainAdoptHashes(ThreeWayBase):
+    def test_plain_adopt_records_hashes_for_copies_only(self):
+        source = init_repo(self.tmp / "src")
+        write(source / "README.md", "template readme\n")
+        write(source / "harness" / "rules" / "a.md", "rule a\r\n")
+        write(source / "harness" / "kernel-manifest.json", json.dumps({"version": "0.1.0", "files": []}) + "\n")
+        commit_all(source, "template")
+        target = init_repo(self.tmp / "tgt")
+        write(target / "README.md", "host readme\n")
+        commit_all(target, "seed")
+        code, out, err = run([str(target), "-y", "--source", str(source)])
+        assert code == 0, out + err
+        doc = self.adopted(target)
+        assert doc["hashes"]["harness/rules/a.md"] == H("rule a\n")  # CRLF folded
+        assert "README.md" not in doc["hashes"] and "README.harness.md" not in doc["hashes"]
+        assert "harness/registry/structure.json" not in doc["hashes"]
+        assert "README.harness.md" in doc["paths"]
+
+
+# --------------------------------------------------------------------------
+# URL and --ref sources
+# --------------------------------------------------------------------------
+
+
+def adopt_tmp_dirs() -> set:
+    import tempfile
+    return {p.name for p in Path(tempfile.gettempdir()).glob("adopt-src-*")}
+
+
+class TestSourceDetection(unittest.TestCase):
+    def test_urls_are_detected(self):
+        for value in (
+            "https://github.com/org/repo",
+            "http://example.com/x.git",
+            "ssh://github.com/org/repo.git",
+            "file:///C:/some/where/repo",
+            "file:///tmp/repo",
+            "git" + "@github.com:org/repo.git",
+            "user@host:path/to/repo",
+        ):
+            assert adopt.is_url_source(value), value
+
+    def test_local_paths_stay_local_including_drive_forms(self):
+        for value in (
+            "D:/x",
+            "D:\\x",
+            "c:/x/y",
+            "C:\\work\\a\\repo",
+            "C:relative",
+            "./rel",
+            "../rel/x",
+            "rel/dir",
+            "relative",
+            "/abs/path",
+            "//server/share/repo",
+        ):
+            assert not adopt.is_url_source(value), value
+
+    def test_redact_url_works_anywhere_in_text(self):
+        user = "https://user:pw" + "@" + "github.com"
+        token = "ssh://tok" + "@" + "github.com"
+        text = "fatal: unable to access '" + user + "/r/': failed; also " + token + "/x"
+        cleaned = adopt.redact_url(text)
+        assert "pw" not in cleaned and "tok@" not in cleaned and "user:" not in cleaned
+        assert "https://github.com/r/" in cleaned and "ssh://github.com/x" in cleaned
+
+    @unittest.skipIf(os.name == "nt", "POSIX permission bits")
+    def test_clone_directory_is_owner_only_on_posix(self):
+        import stat as stat_mod
+        source = init_repo(Path(__import__("tempfile").mkdtemp(prefix="p4b-cl-")))
+        write(source / "a.txt", "x\n")
+        commit_all(source, "seed")
+        path = adopt.clone_source(source.as_uri())
+        try:
+            assert stat_mod.S_IMODE(os.stat(path).st_mode) == 0o700
+        finally:
+            adopt.cleanup_clone(path)
+            adopt.cleanup_clone(str(source))
+
+    def test_redact_url_drops_credentials(self):
+        assert adopt.redact_url("https://user:tok" + "@" + "github.com") == "https://" + "github.com"
+        assert adopt.redact_url("https://example.com/r.git") == "https://example.com/r.git"
+
+    def test_cleanup_clone_removes_read_only_trees(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp(prefix="p4b-ro-"))
+        pack = root / "objects" / "pack" / "p.pack"
+        write(pack, "x")
+        os.chmod(pack, 0o444)
+        adopt.cleanup_clone(str(root))
+        assert not root.exists()
+
+
+class TestUrlAndRef(ThreeWayBase):
+    def setUp(self):
+        super().setUp()
+        self.source = init_repo(self.tmp / "src")
+        r = "harness/rules/"
+        self.release(self.source, "0.1.0", {r + "a.md": "b\n"})
+        self.release(self.source, "0.2.0", {r + "a.md": "s\n"})
+        self.url = self.source.as_uri()
+        self.r = r
+
+    def make_host(self, name="h") -> Path:
+        return self.host(name, {self.r + "a.md": "b\n"}, hashes={self.r + "a.md": H("b\n")})
+
+    def test_file_url_default_reads_remote_head_and_cleans_up(self):
+        before = adopt_tmp_dirs()
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", self.url])
+        assert code == 0, out + err
+        assert "kernel version 0.2.0" in out
+        assert (target / self.r / "a.md").read_bytes() == b"s\n"
+        assert adopt_tmp_dirs() == before
+
+    def test_file_url_with_ref_reads_that_tag(self):
+        before = adopt_tmp_dirs()
+        target = self.host("old", {self.r + "a.md": "x\n"}, hashes={self.r + "a.md": H("x\n")})
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", self.url, "--ref", "v0.1.0"])
+        assert code == 0, out + err
+        assert "source v0.1.0" in out and "kernel version 0.1.0" in out
+        assert (target / self.r / "a.md").read_bytes() == b"b\n"
+        assert adopt_tmp_dirs() == before
+
+    def test_url_ref_unresolvable_refused_and_cleaned(self):
+        before = adopt_tmp_dirs()
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", self.url, "--ref", "no-such-ref"])
+        assert code == 2 and "does not resolve" in err
+        assert (target / self.r / "a.md").read_bytes() == b"b\n"
+        assert adopt_tmp_dirs() == before
+
+    def test_url_clone_failure_is_a_refusal(self):
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "--source", (self.tmp / "missing").as_uri()])
+        assert code == 2 and "could not clone" in err
+
+    def test_ref_starting_with_dash_is_refused(self):
+        target = self.make_host()
+        for source in (str(self.source), self.url):
+            code, out, err = run(["--upgrade", str(target), "--source", source, "--ref=-x"])
+            assert code == 2 and "invalid ref" in err, err
+
+    def test_source_starting_with_dash_is_refused(self):
+        target = self.make_host()
+        before = adopt_tmp_dirs()
+        code, out, err = run(["--upgrade", str(target), "--source=--upload-pack=touch-x"])
+        assert code == 2 and "must not start with '-'" in err
+        assert adopt_tmp_dirs() == before
+
+    def test_local_source_with_ref_reads_that_ref(self):
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source), "--ref", "v0.1.0"])
+        assert code == 0, out + err
+        assert "source v0.1.0" in out and "kernel version 0.1.0" in out
+        # base == source at v0.1.0, host == base: same
+        assert (target / self.r / "a.md").read_bytes() == b"b\n"
+
+    def test_local_unresolvable_ref_is_refused(self):
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "--source", str(self.source), "--ref", "nope"])
+        assert code == 2 and "does not resolve" in err
+
+    def test_bare_local_source_works_with_ref_and_is_refused_without(self):
+        bare = self.tmp / "bare.git"
+        assert subprocess_run_git("clone", "--bare", "--quiet", str(self.source), str(bare)) == 0
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "--source", str(bare), "--ref", "HEAD"])
+        assert code == 0, out + err
+        code, out, err = run(["--upgrade", str(target), "--source", str(bare)])
+        assert code == 2 and "git rev-parse --is-inside-work-tree failed" in err
+
+    def test_source_that_is_a_host_is_refused_at_the_ref(self):
+        hostsrc = init_repo(self.tmp / "hostsrc")
+        self.release(hostsrc, "0.2.0", {self.r + "a.md": "s\n", adopt.ADOPTED_FILES_REL: "{}\n"})
+        target = self.make_host()
+        code, out, err = run(["--upgrade", str(target), "--source", hostsrc.as_uri()])
+        assert code == 2 and "it is a host, not the template" in err
+
+    def test_local_no_ref_behaves_as_before(self):
+        target = self.make_host()
+        sha = git(self.source, "rev-parse", "--short", "HEAD").stdout.strip()
+        write(self.source / self.r / "a.md", "uncommitted working tree edit\n")
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        assert f"source HEAD {sha}, kernel version 0.2.0" in out
+        assert (target / self.r / "a.md").read_bytes() == b"s\n"  # HEAD, never the working tree
+        plain = self.tmp / "plain"
+        write(plain / "x.txt", "x\n")
+        target2 = self.make_host("h2")
+        code, out, err = run(["--upgrade", str(target2), "--source", str(plain)])
+        assert code == 2
+        assert "adopt --upgrade: refused: source is not a git repository (git rev-parse --is-inside-work-tree failed)" in err
+
+    def test_plain_adopt_refuses_url_and_ref(self):
+        target = init_repo(self.tmp / "fresh")
+        write(target / "README.md", "x\n")
+        commit_all(target, "seed")
+        code, out, err = run([str(target), "--source", self.url])
+        assert code == 2 and "--upgrade only" in err
+        code, out, err = run([str(target), "--ref", "v0.1.0"])
+        assert code == 2 and "--upgrade only" in err
+        assert walk_files(target) == ["README.md"]
+
+
+def subprocess_run_git(*args) -> int:
+    import subprocess
+    return subprocess.run(["git", *args], capture_output=True, check=False).returncode

@@ -4,7 +4,7 @@
 Usage:
     python harness/tools/adopt.py <target-repo> [--dry-run | -y/--apply]
     python harness/tools/adopt.py --upgrade <target-repo> [--dry-run | -y/--apply]
-        [--source SRC] [--skip GLOB ...]
+        [--source SRC_OR_URL] [--ref REF] [--skip GLOB ...]
 
 Default is a dry run that prints every action and writes nothing; -y/--apply
 performs them. The source is the repository this file lives in.
@@ -14,7 +14,13 @@ changes, is this repository, or already carries a harness kernel.
 
 --upgrade refreshes an already-adopted host from a newer copy of the
 template, instead of installing into a fresh target. It reads the source's
-committed HEAD (never its working tree), refuses on a dirty or incompletely
+committed HEAD, or the commit --ref names (never its working tree); a URL
+--source is bare-cloned to a temporary directory and removed afterwards.
+Each file is compared three ways (host, source, and the base the host last
+received, from adopted-files.json `hashes` or the release tag): `update`
+when the host is unmodified, `kept` when only the host changed, `conflict`
+when both did (the source version lands as a sibling, never over the host
+file). It refuses on a dirty or incompletely
 checked-out target, never deletes a file, and never touches a host-owned
 path (structure.json, selection.json, adopted-files.json, CONTRACT.host.md,
 AGENTS.md, CLAUDE.md, any `*.harness` sibling, or any path the target's
@@ -75,9 +81,13 @@ import importlib.util
 import json
 import os
 import re
+import hashlib
+import secrets
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -435,26 +445,40 @@ def kernel_template_version(source: Path) -> str:
     return version if isinstance(version, str) and version else "unknown"
 
 
-def write_adopted_files(target: Path, new_paths: list, template_version: str) -> tuple:
+def content_hash(data: bytes) -> str:
+    """sha256 hex of the bytes with CRLF folded to LF, the form recorded in
+    adopted-files.json `hashes` and compared by --upgrade."""
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+
+
+def write_adopted_files(target: Path, new_paths: list, template_version: str, hashes: dict | None = None) -> tuple:
     """Write or merge harness/registry/adopted-files.json.
 
     A file from an earlier adoption is merged (union of paths, template_version
-    updated to this run's), never overwritten. Returns (merged, total_count,
-    added_count)."""
+    updated to this run's), never overwritten. `hashes` maps a path to the
+    sha256 of its CRLF-normalized source content; entries are merged over any
+    existing ones and an existing entry is never pruned. Returns (merged,
+    total_count, added_count)."""
     dst = target / ADOPTED_FILES_REL
     existing: set = set()
+    existing_hashes: dict = {}
     merged = False
     if dst.is_file():
         try:
             doc = json.loads(dst.read_text(encoding="utf-8-sig"))
             if isinstance(doc, dict):
                 existing = {p for p in (doc.get("paths") or []) if isinstance(p, str)}
+                raw_hashes = doc.get("hashes")
+                if isinstance(raw_hashes, dict):
+                    existing_hashes = {k: v for k, v in raw_hashes.items() if isinstance(k, str) and isinstance(v, str)}
             merged = True
         except (OSError, ValueError):
             existing = set()
     combined = sorted(existing | set(new_paths))
     added = len(set(new_paths) - existing)
-    doc = {"template_version": template_version, "paths": combined}
+    all_hashes = dict(existing_hashes)
+    all_hashes.update(hashes or {})
+    doc = {"template_version": template_version, "paths": combined, "hashes": dict(sorted(all_hashes.items()))}
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8", newline="\n")
     return merged, len(combined), added
@@ -607,48 +631,73 @@ def upgrade_cross_refusal(source: Path, target: Path) -> str:
     return ""
 
 
-def upgrade_source_refusal(source: Path) -> str:
-    code, out, _ = git(source, "rev-parse", "--is-inside-work-tree")
-    if code != 0 or out.strip() != "true":
-        return "source is not a git repository (git rev-parse --is-inside-work-tree failed)"
-    if (source / ADOPTED_FILES_REL).is_file():
-        return f"source has {ADOPTED_FILES_REL} (it is a host, not the template)"
+def upgrade_source_refusal(source: Path, ref: str | None = None) -> str:
+    """ref None is the legacy local-working-tree check (byte-identical to the
+    pre-ref behavior). With a ref (a bare clone or an explicit --ref) the
+    checks run at that ref, so they work on a repository with no work tree."""
+    if ref is None:
+        code, out, _ = git(source, "rev-parse", "--is-inside-work-tree")
+        if code != 0 or out.strip() != "true":
+            return "source is not a git repository (git rev-parse --is-inside-work-tree failed)"
+        if (source / ADOPTED_FILES_REL).is_file():
+            return f"source has {ADOPTED_FILES_REL} (it is a host, not the template)"
+        return ""
+    code, _out, _ = git(source, "rev-parse", "--git-dir")
+    if code != 0:
+        return "source is not a git repository (git rev-parse --git-dir failed)"
+    code, _out, _ = git(source, "cat-file", "-e", f"{ref}:{ADOPTED_FILES_REL}")
+    if code == 0:
+        return f"source has {ADOPTED_FILES_REL} at the ref (it is a host, not the template)"
     return ""
 
 
-def source_head_paths(source: Path) -> set:
-    """Every path git tracks at the source's HEAD, as repo-relative POSIX
-    strings. Raises RuntimeError on git failure so the caller can turn it
-    into a clean refusal.
+def resolve_source_ref(source: Path, ref: str) -> tuple:
+    """(commit_sha, error). Refuses a ref that starts with '-' and one for
+    which `<ref>^{commit}` does not resolve in the source repository."""
+    if not ref or ref.startswith("-"):
+        return "", f"invalid ref {ref!r} (must not be empty or start with '-')"
+    code, out, _ = git(source, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    sha = out.strip()
+    if code != 0 or not sha:
+        return "", f"ref {ref!r} does not resolve to a commit in the source (git rev-parse {ref}^{{commit}} failed)"
+    return sha, ""
 
-    Reads straight from git (ls-tree / show below), never a temp-directory
-    export: mkdtemp's directory is owner-only (0o700) and, since Python 3.13
-    on Windows, an elevated process's "owner" is the Administrators group,
-    which leaves a later medium-integrity process unable to read anything
-    left there. There is no directory to leak permissions from."""
-    proc = subprocess.run(["git", "-C", str(source), "ls-tree", "-r", "--name-only", "-z", "HEAD"], capture_output=True, check=False)
+
+def source_head_paths(source: Path, ref: str = "HEAD") -> set:
+    """Every path git tracks at the source's ref (default HEAD), as
+    repo-relative POSIX strings. Raises RuntimeError on git failure so the
+    caller can turn it into a clean refusal.
+
+    Reads straight from git (ls-tree / show below), never an export into a
+    directory of its own: mkdtemp's directory is owner-only (0o700) and, since
+    Python 3.13 on Windows, an elevated process's "owner" is the
+    Administrators group, which leaves a later medium-integrity process unable
+    to read anything left there. There is no directory to leak permissions
+    from. (A URL source is the one case that needs a directory, for its bare
+    clone; see clone_source.)"""
+    proc = subprocess.run(["git", "-C", str(source), "ls-tree", "-r", "--name-only", "-z", ref], capture_output=True, check=False)
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.decode("utf-8", "replace").strip())
     return {chunk.decode("utf-8") for chunk in proc.stdout.split(b"\x00") if chunk}
 
 
-def read_source_blob(source: Path, rel: str) -> bytes:
-    """The exact bytes of one path at the source's committed HEAD, never its
-    working tree."""
-    proc = subprocess.run(["git", "-C", str(source), "show", f"HEAD:{rel}"], capture_output=True, check=False)
+def read_source_blob(source: Path, rel: str, ref: str = "HEAD") -> bytes:
+    """The exact bytes of one path at the source's committed ref (default
+    HEAD), never its working tree."""
+    proc = subprocess.run(["git", "-C", str(source), "show", f"{ref}:{rel}"], capture_output=True, check=False)
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.decode("utf-8", "replace").strip())
     return proc.stdout
 
 
-def read_kernel_manifest(source: Path, head_paths: set) -> tuple:
-    """(manifest_dict, version) read from the source's committed HEAD.
+def read_kernel_manifest(source: Path, head_paths: set, ref: str = "HEAD") -> tuple:
+    """(manifest_dict, version) read from the source's committed ref.
     version is 'unknown' when the manifest is missing, unreadable, or
     carries no string version, matching kernel_template_version's fallback."""
     if "harness/kernel-manifest.json" not in head_paths:
         return {}, "unknown"
     try:
-        doc = json.loads(read_source_blob(source, "harness/kernel-manifest.json").decode("utf-8-sig"))
+        doc = json.loads(read_source_blob(source, "harness/kernel-manifest.json", ref).decode("utf-8-sig"))
     except (RuntimeError, ValueError, UnicodeDecodeError):
         return {}, "unknown"
     version = doc.get("version") if isinstance(doc, dict) else None
@@ -662,12 +711,38 @@ def kernel_manifest_paths(manifest: dict) -> list:
     return sorted({f["path"] for f in files if isinstance(f, dict) and isinstance(f.get("path"), str)})
 
 
-def load_adopted_paths(target: Path) -> list:
+def load_adopted_doc(target: Path) -> dict:
     try:
         doc = json.loads((target / ADOPTED_FILES_REL).read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
-        return []
-    return [p for p in (doc.get("paths") or []) if isinstance(p, str)]
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def load_adopted_paths(target: Path) -> list:
+    return [p for p in (load_adopted_doc(target).get("paths") or []) if isinstance(p, str)]
+
+
+def load_adopted_hashes(target: Path) -> dict:
+    raw = load_adopted_doc(target).get("hashes")
+    if not isinstance(raw, dict):
+        return {}
+    return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, str)}
+
+
+def load_adopted_template_version(target: Path) -> str:
+    version = load_adopted_doc(target).get("template_version")
+    return version if isinstance(version, str) else ""
+
+
+def host_kernel_version(target: Path) -> str:
+    """The host's own harness/kernel-manifest.json version, or 'unknown'."""
+    try:
+        doc = json.loads((target / "harness" / "kernel-manifest.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return "unknown"
+    version = doc.get("version") if isinstance(doc, dict) else None
+    return version if isinstance(version, str) and version else "unknown"
 
 
 def load_target_harness_owned(target: Path) -> set:
@@ -713,6 +788,54 @@ def build_upgrade_candidates(target: Path, adopted_paths: list, manifest_paths: 
     return sorted(candidates), adopted_set
 
 
+TAG_VERSION_RE = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._+-]*$")
+
+
+class BaseResolver:
+    """Finds the common ancestor ("base") hash of one path for the three-way
+    comparison. Order: the hash recorded in the host's adopted-files.json;
+    else the source repository's blob at tag v<host kernel version>; else at
+    tag v<adopted-files.json template_version>; else None (no base). A path
+    absent at a tag means no base from that tag, and the next one is tried."""
+
+    def __init__(self, source: Path, recorded: dict, versions: list):
+        self.source = source
+        self.recorded = recorded
+        self.tag_shas = []
+        seen = set()
+        for version in versions:
+            if not version or version == "unknown" or version in seen or not TAG_VERSION_RE.match(version):
+                continue
+            seen.add(version)
+            code, out, _ = git(source, "rev-parse", "--verify", "--quiet", f"tags/v{version}^{{commit}}")
+            if code == 0 and out.strip():
+                self.tag_shas.append((f"v{version}", out.strip()))
+
+    def base_hash(self, rel: str) -> tuple:
+        """(hash, origin) or (None, None)."""
+        recorded = self.recorded.get(rel)
+        if isinstance(recorded, str) and recorded:
+            return recorded, "recorded hash"
+        for tag, sha in self.tag_shas:
+            proc = subprocess.run(["git", "-C", str(self.source), "show", f"{sha}:{rel}"], capture_output=True, check=False)
+            if proc.returncode == 0:
+                return content_hash(proc.stdout), f"tag {tag}"
+        return None, None
+
+
+def conflict_sibling_path(rel: str) -> str:
+    """Where a conflicting source version lands. The rule: `.harness` goes
+    after the full name (offline-conformance.yml.harness, test_a.py.harness,
+    run.sh.harness, pre-commit.harness) for everything except Markdown, so
+    the sibling can never be collected by a test runner, run by CI, sourced
+    as a script, or used as a hook. Only a `.md` file keeps the plain adopt
+    form (name.harness.md): it is inert and renders as Markdown. Plain
+    adopt's own naming (harness_name) is unchanged."""
+    if rel.endswith(".md"):
+        return harness_name(rel)
+    return rel + ".harness"
+
+
 def classify_upgrade_path(
     source: Path,
     target: Path,
@@ -722,11 +845,18 @@ def classify_upgrade_path(
     skip_globs: list,
     adopted_set: set,
     target_tracked: set,
+    ref: str = "HEAD",
+    resolver: "BaseResolver | None" = None,
 ) -> tuple:
     """(status, reason, src_bytes) for one candidate path. status is one of
-    update, new, same, skip, gone. reason is None except for skip and gone.
-    src_bytes is the fetched source content for update/new (the caller needs
-    it to write), None otherwise (no need to fetch it twice)."""
+    update, new, same, kept, conflict, skip, gone. reason is None except for
+    skip, gone, kept and conflict. src_bytes is the fetched source content
+    for update, new, or conflict (the caller needs it to write), None otherwise.
+
+    Three-way outcome for a path present on both sides (CRLF-only differences
+    count as equal): host == source -> same; host == base -> update; source ==
+    base -> kept (a host edit, preserved); otherwise conflict. With no base
+    at all, a host that differs from the source is a conflict."""
     if not is_safe_candidate_path(rel):
         return "skip", "unsafe path", None
     if rel in UPGRADE_FIXED_HOST_OWNED:
@@ -753,39 +883,191 @@ def classify_upgrade_path(
     if rel not in head_paths:
         return "gone", "recorded but absent from source HEAD; not deleted", None
 
-    src_bytes = read_source_blob(source, rel)
+    src_bytes = read_source_blob(source, rel, ref)
     if not dst_exists:
         return "new", None, src_bytes
     dst_bytes = dst_path.read_bytes()
-    if _normalize_crlf(src_bytes) == _normalize_crlf(dst_bytes):
+    src_h = content_hash(src_bytes)
+    dst_h = content_hash(dst_bytes)
+    if src_h == dst_h:
         # CRLF-vs-LF alone is not a real difference on an autocrlf checkout;
         # the write path below always writes the source's exact bytes when a
         # genuine difference does trigger `update`.
         return "same", None, None
-    return "update", None, src_bytes
+    base_h, origin = resolver.base_hash(rel) if resolver is not None else (None, None)
+    if base_h is None:
+        return "conflict", "no base to compare against", src_bytes
+    if dst_h == base_h:
+        return "update", None, src_bytes
+    if src_h == base_h:
+        return "kept", "host edit preserved, source unchanged since base", None
+    return "conflict", f"host and source both changed since base ({origin})", src_bytes
 
 
-def upgrade_main(args, source: Path, target: Path) -> int:
-    why = upgrade_target_refusal(target) or upgrade_cross_refusal(source, target) or upgrade_source_refusal(source)
+def changelog_headings(text: str, old: str, new: str) -> list:
+    """`## [x.y.z]` heading lines strictly after `old` and up to and
+    including `new` (semantic-version order), in file order."""
+
+    def vt(value):
+        m = re.match(r"^(\d+)\.(\d+)\.(\d+)", value or "")
+        return tuple(int(g) for g in m.groups()) if m else None
+
+    lo, hi = vt(old), vt(new)
+    if hi is None:
+        return []
+    found = []
+    for line in text.splitlines():
+        m = re.match(r"^## \[(\d+\.\d+\.\d+)[^\]]*\]", line)
+        if not m:
+            continue
+        version = vt(m.group(1))
+        if (lo is None or version > lo) and version <= hi:
+            found.append(line.strip())
+    return found
+
+
+# --------------------------------------------------------------------------
+# source resolution: local path or URL
+# --------------------------------------------------------------------------
+
+URL_SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.-]+://", re.IGNORECASE)
+SCP_LIKE_RE = re.compile(r"^[A-Za-z0-9._~+-]+@[A-Za-z0-9._-]+:\S")
+USERINFO_RE = re.compile(r"([a-z][a-z0-9+.-]*://)[^/@\s]+@", re.IGNORECASE)
+
+
+def is_url_source(value: str) -> bool:
+    """True for scheme://... and user@host:path. A Windows drive path (in
+    either slash form) or any relative or absolute local path stays local: the scheme
+    needs two or more characters, so a single drive letter never matches."""
+    return bool(URL_SCHEME_RE.match(value) or SCP_LIKE_RE.match(value))
+
+
+def redact_url(value: str) -> str:
+    """Drop userinfo (scheme://user:pass@ or scheme://token@) wherever it
+    appears in text printed to the console, including git's error output."""
+    return USERINFO_RE.sub(r"\1", value)
+
+
+def _rmtree_force(path: str) -> None:
+    """Remove a directory tree, clearing the read-only bit that git sets on
+    pack files (shutil.rmtree otherwise fails on Windows)."""
+
+    def handler(func, failed_path, _exc):
+        try:
+            os.chmod(failed_path, stat.S_IWRITE)
+            func(failed_path)
+        except OSError:
+            pass
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=handler)
+    else:
+        shutil.rmtree(path, onerror=handler)
+
+
+def clone_source(url: str) -> str:
+    """Bare-clone a URL source into a fresh directory under the system temp
+    directory and return its path; the caller removes it (cleanup_clone).
+    The directory is made with os.mkdir under a random name rather than
+    mkdtemp: mkdtemp's owner-only ACL is the elevated-Python-3.13 trap the
+    source_head_paths docstring describes, and a plain mkdir inherits the
+    temp directory's normal permissions. On POSIX the directory is owner-only
+    (the clone config holds the URL); on Windows no mode is passed, because
+    Python 3.13 turns a mode into the same owner-only ACL. Raises
+    RuntimeError on failure (the directory is already removed then)."""
+    path = os.path.join(tempfile.gettempdir(), "adopt-src-" + secrets.token_hex(8))
+    os.mkdir(path)
+    if os.name != "nt":
+        os.chmod(path, 0o700)  # before the clone writes its config
+    env = dict(os.environ)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    try:
+        proc = subprocess.run(
+            ["git", "-c", "protocol.ext.allow=never", "clone", "--bare", "--quiet", "--", url, path],
+            capture_output=True,
+            check=False,
+            env=env,
+        )
+    except OSError as exc:
+        cleanup_clone(path)
+        raise RuntimeError(redact_url(str(exc)))
+    if proc.returncode != 0:
+        cleanup_clone(path)
+        raise RuntimeError(redact_url(proc.stderr.decode("utf-8", "replace").strip()))
+    return path
+
+
+def cleanup_clone(path: str) -> None:
+    try:
+        _rmtree_force(path)
+    except OSError:
+        pass
+    if os.path.exists(path):
+        print(f"adopt --upgrade: WARN: could not remove temporary clone {path}; delete it by hand", file=sys.stderr)
+
+
+UPGRADE_OUTCOMES = ("update", "new", "same", "kept", "conflict", "skip", "gone")
+
+
+def upgrade_summary_line(results: dict) -> str:
+    counts = ", ".join(f"{name} {len(results[name])}" for name in UPGRADE_OUTCOMES)
+    return f"adopt --upgrade: summary: {counts}"
+
+
+def upgrade_main(args, source: Path, target: Path, ref: str | None = None, display: str | None = None) -> int:
+    """ref None: the source is a local working tree read at HEAD, exactly as
+    before. A ref (explicit --ref, or any URL source) switches the source
+    checks to the ref so they work on a bare clone."""
+    why = upgrade_target_refusal(target) or upgrade_cross_refusal(source, target)
+    read_ref = "HEAD"
+    if not why and ref is None:
+        why = upgrade_source_refusal(source)
+    elif not why:
+        code, _o, _e = git(source, "rev-parse", "--git-dir")
+        if code != 0:
+            why = "source is not a git repository (git rev-parse --git-dir failed)"
+        else:
+            sha, why = resolve_source_ref(source, ref)
+            if not why:
+                read_ref = sha
+                why = upgrade_source_refusal(source, sha)
     if why:
         print(f"adopt --upgrade: refused: {why}", file=sys.stderr)
         return 2
 
-    code, sha_out, _ = git(source, "rev-parse", "--short", "HEAD")
+    label = ref if ref is not None else "HEAD"
+    code, sha_out, _ = git(source, "rev-parse", "--short", read_ref)
     source_sha = sha_out.strip() if code == 0 else "unknown"
 
     try:
-        head_paths = source_head_paths(source)
+        head_paths = source_head_paths(source, read_ref)
     except RuntimeError as exc:
-        print(f"adopt --upgrade: refused: could not read source HEAD: {exc}", file=sys.stderr)
+        print(f"adopt --upgrade: refused: could not read source {label}: {redact_url(str(exc))}", file=sys.stderr)
         return 2
 
     if "harness/kernel-manifest.json" not in head_paths:
-        print("adopt --upgrade: refused: source has no harness/kernel-manifest.json at HEAD", file=sys.stderr)
+        print(f"adopt --upgrade: refused: source has no harness/kernel-manifest.json at {label}", file=sys.stderr)
         return 2
 
-    manifest, kernel_version = read_kernel_manifest(source, head_paths)
-    print(f"adopt --upgrade: source HEAD {source_sha}, kernel version {kernel_version}")
+    manifest, kernel_version = read_kernel_manifest(source, head_paths, read_ref)
+    print(f"adopt --upgrade: source {label} {source_sha}, kernel version {kernel_version}")
+
+    old_version = host_kernel_version(target)
+    print(f"adopt --upgrade: host kernel version {old_version} -> {kernel_version}")
+    if "CHANGELOG.md" in head_paths:
+        try:
+            changelog_text = read_source_blob(source, "CHANGELOG.md", read_ref).decode("utf-8", "replace")
+        except RuntimeError:
+            changelog_text = ""
+        headings = changelog_headings(changelog_text, old_version, kernel_version)
+        if headings:
+            print("adopt --upgrade: read these Upgrade notes in the source CHANGELOG.md:")
+            for heading in headings:
+                print(f"  {heading}")
+        else:
+            print("adopt --upgrade: no CHANGELOG.md release headings between those versions")
+    else:
+        print("adopt --upgrade: source has no CHANGELOG.md; no Upgrade notes to list")
 
     adopted_paths = load_adopted_paths(target)
     manifest_paths = kernel_manifest_paths(manifest)
@@ -793,37 +1075,52 @@ def upgrade_main(args, source: Path, target: Path) -> int:
     candidates, adopted_set = build_upgrade_candidates(target, adopted_paths, manifest_paths, target_tracked)
     harness_owned = load_target_harness_owned(target)
     skip_globs = args.skip or []
+    resolver = BaseResolver(source, load_adopted_hashes(target), [old_version, load_adopted_template_version(target)])
 
-    results = {"update": [], "new": [], "same": [], "skip": [], "gone": []}
+    results = {name: [] for name in UPGRADE_OUTCOMES}
     content_cache = {}
-    label = "apply" if args.apply else "dry run"
-    print(f"adopt --upgrade ({label}): {source} -> {target}")
+    sibling_writes = {}  # conflicting rel -> sibling path that will be written
+    sibling_blocked = set()  # conflicting rel whose sibling already exists
+    mode_label = "apply" if args.apply else "dry run"
+    print(f"adopt --upgrade ({mode_label}): {display or source} -> {target}")
     for rel in candidates:
         status, reason, src_bytes = classify_upgrade_path(
-            source, target, rel, head_paths, harness_owned, skip_globs, adopted_set, target_tracked
+            source, target, rel, head_paths, harness_owned, skip_globs, adopted_set, target_tracked, read_ref, resolver
         )
         results[status].append(rel)
         if src_bytes is not None:
             content_cache[rel] = src_bytes
         if status == "same":
             continue
-        if status in ("skip", "gone"):
+        if status == "conflict":
+            sibling = conflict_sibling_path(rel)
+            if os.path.lexists(target / sibling) or path_has_link_component(target, sibling):
+                sibling_blocked.add(rel)
+                print(f"  conflict (sibling exists) {rel} -> {sibling} ({reason}); nothing written for it")
+            else:
+                sibling_writes[rel] = sibling
+                print(f"  conflict {rel} -> {sibling} ({reason})")
+        elif status in ("skip", "gone", "kept"):
             print(f"  {status:<6} {rel} ({reason})")
         else:
             print(f"  {status:<6} {rel}")
     print(f"  {len(results['same'])} file(s) unchanged (same)")
 
     write_paths = sorted(results["update"] + results["new"])
+    sibling_paths = sorted(sibling_writes.values())
+    all_written = sorted(write_paths + sibling_paths)
 
     if not args.apply:
-        if write_paths:
-            scripts = [rel for rel in write_paths if is_script_path(rel)]
+        if all_written:
+            scripts = [rel for rel in all_written if is_script_path(rel)]
             extra = f"; would stage the executable bit on {len(scripts)} script(s)" if scripts else ""
-            print(f"adopt --upgrade: dry run would write {len(write_paths)} file(s){extra}; pass -y/--apply to perform these actions")
+            siblings_note = f" (including {len(sibling_paths)} conflict sibling(s))" if sibling_paths else ""
+            print(f"adopt --upgrade: dry run would write {len(all_written)} file(s){siblings_note}{extra}; pass -y/--apply to perform these actions")
         else:
             print("adopt --upgrade: dry run, nothing to write; pass -y/--apply to update adopted-files.json's template_version regardless")
         if results["gone"]:
             print(f"adopt --upgrade: {len(results['gone'])} path(s) recorded but absent from source HEAD; review before deciding")
+        print(upgrade_summary_line(results))
         return 0
 
     written = []
@@ -833,9 +1130,14 @@ def upgrade_main(args, source: Path, target: Path) -> int:
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_bytes(content_cache[rel])
             written.append(rel)
+        for rel, sibling in sorted(sibling_writes.items()):
+            dst = target / sibling
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(content_cache[rel])
+            written.append(sibling)
     except OSError as exc:
         print(
-            f"adopt --upgrade: FATAL: write failed after {len(written)} of {len(write_paths)} file(s); "
+            f"adopt --upgrade: FATAL: write failed after {len(written)} of {len(all_written)} file(s); "
             f"not claiming success: {exc}",
             file=sys.stderr,
         )
@@ -843,14 +1145,28 @@ def upgrade_main(args, source: Path, target: Path) -> int:
             print(f"  written: {rel}", file=sys.stderr)
         return 1
 
-    script_paths = [rel for rel in write_paths if is_script_path(rel)]
+    script_paths = [rel for rel in all_written if is_script_path(rel)]
     staged, warning = set_executable_bits(target, script_paths)
     if warning:
         print(f"adopt --upgrade: WARN: could not stage the executable bit; run manually: {warning}", file=sys.stderr)
     elif staged:
         print(f"adopt --upgrade: staged {len(staged)} script(s) with the executable bit")
 
-    merged, total, added = write_adopted_files(target, write_paths, kernel_version)
+    # Hashes: the source hash for update, new, same and conflict (a conflict
+    # records it so the same upstream change does not conflict again next
+    # release), nothing for kept, skip, gone, or a conflict whose sibling
+    # could not be written (the source version was not delivered).
+    new_hashes = {}
+    for rel in write_paths:
+        new_hashes[rel] = content_hash(content_cache[rel])
+    for rel in sibling_writes:
+        new_hashes[rel] = content_hash(content_cache[rel])
+    for rel in results["same"]:
+        try:
+            new_hashes[rel] = content_hash((target / rel).read_bytes())
+        except OSError:
+            continue
+    merged, total, added = write_adopted_files(target, all_written, kernel_version, new_hashes)
     if merged:
         print(f"adopt --upgrade: harness/registry/adopted-files.json merged ({added} new path(s), {total} total, template_version {kernel_version})")
     else:
@@ -876,8 +1192,34 @@ def upgrade_main(args, source: Path, target: Path) -> int:
 
     if results["gone"]:
         print(f"adopt --upgrade: {len(results['gone'])} path(s) recorded but absent from source HEAD; review before deciding")
+    if results["kept"]:
+        print(f"adopt --upgrade: {len(results['kept'])} host-edited file(s) kept as they are (listed above as kept)")
+    if results["conflict"]:
+        print(f"adopt --upgrade: {len(results['conflict'])} conflict(s): merge each source sibling into its file by hand, then delete the sibling")
     print("adopt --upgrade: applied")
+    print(upgrade_summary_line(results))
     return 0
+
+
+def upgrade_entry(args, target: Path) -> int:
+    """Resolve --source (local path or URL) and --ref, then run the upgrade."""
+    if args.source.startswith("-"):
+        print("adopt --upgrade: refused: --source must not start with '-'", file=sys.stderr)
+        return 2
+    if args.ref is not None and (not args.ref or args.ref.startswith("-")):
+        print(f"adopt --upgrade: refused: invalid ref {args.ref!r} (must not be empty or start with '-')", file=sys.stderr)
+        return 2
+    if is_url_source(args.source):
+        try:
+            clone = clone_source(args.source)
+        except RuntimeError as exc:
+            print(f"adopt --upgrade: refused: could not clone {redact_url(args.source)}: {exc}", file=sys.stderr)
+            return 2
+        try:
+            return upgrade_main(args, Path(clone), target, args.ref or "HEAD", redact_url(args.source))
+        finally:
+            cleanup_clone(clone)
+    return upgrade_main(args, Path(args.source).resolve(), target, args.ref)
 
 
 # --------------------------------------------------------------------------
@@ -941,15 +1283,19 @@ def main(argv=None) -> int:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--dry-run", action="store_true", help="print every action and write nothing (default)")
     group.add_argument("-y", "--apply", action="store_true", help="perform the actions")
-    parser.add_argument("--source", default=str(ROOT), help="harness repository to install from (default: this repository)")
+    parser.add_argument("--source", default=str(ROOT), help="harness repository to install from: a local path, or with --upgrade a git URL (default: this repository)")
+    parser.add_argument("--ref", default=None, metavar="REF", help="--upgrade only: read the source at this tag, branch, or commit instead of HEAD (a URL source defaults to the remote HEAD)")
     parser.add_argument("--skip", action="append", default=[], metavar="GLOB", help="exclude a path from --upgrade (fnmatch glob on the repo-relative POSIX path; repeatable)")
     args = parser.parse_args(argv)
 
-    source = Path(args.source).resolve()
     target = Path(args.target).resolve()
 
     if args.upgrade:
-        return upgrade_main(args, source, target)
+        return upgrade_entry(args, target)
+    if args.ref is not None or is_url_source(args.source):
+        print("adopt: refused: --ref and a URL --source are for --upgrade only", file=sys.stderr)
+        return 2
+    source = Path(args.source).resolve()
 
     why = refusal(source, target)
     if why:
@@ -996,7 +1342,14 @@ def main(argv=None) -> int:
             print(f"adopt: WARN: could not stage the executable bit; run manually: {warning}", file=sys.stderr)
         elif staged:
             print(f"adopt: staged {len(staged)} script(s) with the executable bit; Windows records the bit only through the index")
-        merged, total, added = write_adopted_files(target, new_adopted_paths, template_version)
+        copy_hashes = {}
+        for verb, _src_rel, dst_rel in actions:
+            if verb == "copy":
+                try:
+                    copy_hashes[dst_rel] = content_hash((target / dst_rel).read_bytes())
+                except OSError:
+                    continue
+        merged, total, added = write_adopted_files(target, new_adopted_paths, template_version, copy_hashes)
         if merged:
             print(f"adopt: harness/registry/adopted-files.json merged ({added} new path(s), {total} total)")
         else:

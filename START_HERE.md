@@ -187,6 +187,9 @@ are running more than one agent at a time; see section 6.
    Check: `git status` and `git diff` in the target repository show
    exactly the files adopt described; review the diff and merge or delete
    every `.harness.md` sibling file it created before moving on.
+   To refresh an adopted repository from a later release, see the
+   upgrade path in `docs/HOST-SHAPES.md` (`adopt.py --upgrade`, with the
+   release's `### Upgrade notes` in `CHANGELOG.md`).
 
 2. Run `python harness/tools/init.py --profile team --yes`. On a brand new
    template clone, this sets the whole team preset in one pass: git mode

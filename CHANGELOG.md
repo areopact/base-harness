@@ -4,6 +4,17 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 
 Each release has an `### Upgrade notes` subsection: what changed for hosts and whether a host has to act. An adopted host's `adopt.py --upgrade` prints the headings from its own kernel version (exclusive) up to the new one (inclusive), so read those notes before applying.
 
+## [Unreleased]
+
+### Fixed
+
+- `lint.py` L6 reports an unmerged `.harness` sibling under `.github/`, `.githooks/`, or `harness/` as `unmerged .harness sibling: merge it into <file> by hand, then delete it` instead of `kernel file not listed in harness/kernel-manifest.json`. The level is unchanged (WARN, ERROR under `--strict`): the upgrade is not finished until the sibling is merged.
+- `adopt.py` drops a recorded `.harness` sibling from `adopted-files.json` `paths` once it is no longer on disk (merged and deleted). `--upgrade` lists each one as `merged` and removes it on apply.
+
+### Upgrade notes
+
+- Nothing to act on. The next `--upgrade --apply` removes any sibling you already merged and deleted from `adopted-files.json`.
+
 ## [0.2.4] - 2026-10-25
 
 ### Added

@@ -457,8 +457,9 @@ def write_adopted_files(target: Path, new_paths: list, template_version: str, ha
     A file from an earlier adoption is merged (union of paths, template_version
     updated to this run's), never overwritten. `hashes` maps a path to the
     sha256 of its CRLF-normalized source content; entries are merged over any
-    existing ones and an existing entry is never pruned. Returns (merged,
-    total_count, added_count)."""
+    existing ones and an existing entry is never pruned. A recorded `.harness`
+    sibling that is no longer on disk (merged and deleted) is dropped from
+    `paths`. Returns (merged, total_count, added_count)."""
     dst = target / ADOPTED_FILES_REL
     existing: set = set()
     existing_hashes: dict = {}
@@ -474,6 +475,7 @@ def write_adopted_files(target: Path, new_paths: list, template_version: str, ha
             merged = True
         except (OSError, ValueError):
             existing = set()
+    existing -= stale_sibling_paths(target, existing)
     combined = sorted(existing | set(new_paths))
     added = len(set(new_paths) - existing)
     all_hashes = dict(existing_hashes)
@@ -509,6 +511,15 @@ def is_harness_sibling_path(rel: str) -> bool:
     artifact the checklist asks a human to merge or delete, never something
     --upgrade should recreate or refresh on its own."""
     return bool(HARNESS_SIBLING_SUFFIX_RE.search(Path(rel).name))
+
+
+def stale_sibling_paths(target: Path, paths) -> set:
+    """Recorded `.harness` siblings that no longer exist on disk: the host
+    merged and deleted them, so adopted-files.json stops listing them."""
+    return {
+        rel for rel in paths
+        if is_harness_sibling_path(rel) and is_safe_candidate_path(rel) and not os.path.lexists(target / rel)
+    }
 
 
 def is_safe_candidate_path(rel: str) -> bool:
@@ -1109,6 +1120,9 @@ def upgrade_main(args, source: Path, target: Path, ref: str | None = None, displ
     write_paths = sorted(results["update"] + results["new"])
     sibling_paths = sorted(sibling_writes.values())
     all_written = sorted(write_paths + sibling_paths)
+    stale = sorted(stale_sibling_paths(target, adopted_paths) - set(sibling_paths))
+    for rel in stale:
+        print(f"  merged {rel} (sibling deleted; removed from adopted-files.json paths on apply)")
 
     if not args.apply:
         if all_written:

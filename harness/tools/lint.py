@@ -531,6 +531,29 @@ def is_kernel_file(relative: str) -> bool:
     return True
 
 
+# A `.harness` sibling: adopt.py --upgrade lands a conflicting template file as
+# <name>.harness (name.harness.md for Markdown); plain adopt uses
+# <stem>.harness<suffix> or <name>.harness.md.
+HARNESS_SIBLING_RE = re.compile(r"\.harness(\.[A-Za-z0-9]+)?$")
+
+
+def sibling_original(root: Path, relative: str) -> str | None:
+    """The file a `.harness` sibling sits beside, or None when ``relative`` is
+    not a sibling. Prefers the candidate that exists on disk."""
+    path = Path(relative)
+    match = HARNESS_SIBLING_RE.search(path.name)
+    if not match:
+        return None
+    stem = path.name[: match.start()]
+    if not stem:
+        return None
+    candidates = [stem + (match.group(1) or ""), stem]
+    for name in candidates:
+        if (root / path.with_name(name)).is_file():
+            return path.with_name(name).as_posix()
+    return path.with_name(candidates[0]).as_posix()
+
+
 def check_kernel_manifest(ctx: Context) -> list[Finding]:
     level = ctx.soft("L6")
     manifest_path = ctx.root / "harness" / "kernel-manifest.json"
@@ -591,7 +614,11 @@ def check_kernel_manifest(ctx: Context) -> list[Finding]:
         if relative in harness_owned:
             continue
         if is_kernel_file(relative) and relative not in listed:
-            findings.append(Finding("L6", level, relative, None, "kernel file not listed in harness/kernel-manifest.json"))
+            original = sibling_original(ctx.root, relative)
+            if original is not None:
+                findings.append(Finding("L6", level, relative, None, f"unmerged .harness sibling: merge it into {original} by hand, then delete it"))
+            else:
+                findings.append(Finding("L6", level, relative, None, "kernel file not listed in harness/kernel-manifest.json"))
     return findings
 
 

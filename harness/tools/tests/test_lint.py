@@ -331,6 +331,35 @@ def test_l6_kernel_file_absent_from_manifest_is_soft(tmp_path):
     assert all(item.level == "ERROR" for item in strict)
 
 
+def test_l6_harness_sibling_says_merge_not_unlisted(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "harness/kernel-manifest.json", json.dumps({"version": "0.1.0", "files": [
+        {"path": ".github/workflows/ci.yml", "state": "new", "source": None},
+        {"path": ".gitignore", "state": "new", "source": None},
+        {"path": "harness/rules/r.md", "state": "new", "source": None},
+    ]}))
+    _write(repo, ".github/workflows/ci.yml", "name: mine\n")
+    _write(repo, ".github/workflows/ci.yml.harness", "name: upstream\n")
+    _write(repo, "harness/rules/r.md", "mine\n")
+    _write(repo, "harness/rules/r.harness.md", "upstream\n")
+    _write(repo, "harness/rules/plain.md", "x\n")
+    findings = _only(repo, "L6", strict=True)
+    by_path = {item.path: item for item in findings}
+    wf = by_path[".github/workflows/ci.yml.harness"]
+    assert wf.level == "ERROR"
+    assert wf.message == "unmerged .harness sibling: merge it into .github/workflows/ci.yml by hand, then delete it"
+    assert "merge it into harness/rules/r.md" in by_path["harness/rules/r.harness.md"].message
+    assert by_path["harness/rules/plain.md"].message == "kernel file not listed in harness/kernel-manifest.json"
+
+
+def test_l6_sibling_original_resolves_each_naming_form(tmp_path):
+    _write(tmp_path, ".gitignore", "x\n")
+    assert lint.sibling_original(tmp_path, ".gitignore.harness.md") == ".gitignore"
+    assert lint.sibling_original(tmp_path, ".githooks/pre-commit.harness") == ".githooks/pre-commit"
+    assert lint.sibling_original(tmp_path, "harness/tools/run.harness.py") == "harness/tools/run.py"
+    assert lint.sibling_original(tmp_path, "harness/tools/run.py") is None
+    assert lint.sibling_original(tmp_path, "harness/.harness") is None
+
 def test_l6_adopted_host_owned_harness_files_are_not_unlisted(tmp_path):
     repo = _repo(tmp_path)
     _write(repo, "harness/kernel-manifest.json", json.dumps({"version": "0.1.0", "files": []}))

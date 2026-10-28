@@ -927,6 +927,27 @@ class TestThreeWayOutcomes(ThreeWayBase):
         assert not [l for l in git(target, "diff", "--name-status").stdout.splitlines() if l.startswith("D")]
 
 
+    def test_merged_and_deleted_sibling_leaves_adopted_paths(self):
+        target = self.make_host("pruned-sib")
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        r = "harness/rules/"
+        assert r + "conf.harness.md" in self.adopted(target)["paths"]
+        # the host merges the sibling by hand and deletes it
+        (target / r / "conf.md").write_bytes(b"s\n")
+        (target / r / "conf.harness.md").unlink()
+        commit_all(target, "merge conf sibling")
+        code, out, err = run(["--upgrade", str(target), "--source", str(self.source)])
+        assert code == 0, out + err
+        assert f"merged {r}conf.harness.md" in out
+        assert r + "conf.harness.md" in self.adopted(target)["paths"]  # dry run writes nothing
+        code, out, err = run(["--upgrade", str(target), "-y", "--source", str(self.source)])
+        assert code == 0, out + err
+        paths = self.adopted(target)["paths"]
+        assert r + "conf.harness.md" not in paths
+        assert r + "nobase.harness.md" in paths  # still on disk, still listed
+        assert r + "conf.md" in paths
+
 class TestBaseResolution(ThreeWayBase):
     def setUp(self):
         super().setUp()

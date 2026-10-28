@@ -4,7 +4,7 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 
 Each release has an `### Upgrade notes` subsection: what changed for hosts and whether a host has to act. An adopted host's `adopt.py --upgrade` prints the headings from its own kernel version (exclusive) up to the new one (inclusive), so read those notes before applying.
 
-## [Unreleased]
+## [0.2.5] - 2026-10-29
 
 ### Fixed
 

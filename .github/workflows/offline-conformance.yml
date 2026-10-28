@@ -133,13 +133,18 @@ jobs:
           cp "$RUNNER_TEMP/seed.bak" "$f"
 
       - name: Tests pass under pytest
-        run: python -m pytest harness workstation -q -p no:cacheprovider
+        shell: bash
+        run: |
+          # workstation/ is an optional kit outside the kernel; an adopted host does not carry it
+          paths=harness
+          if [ -d workstation ]; then paths="$paths workstation"; fi
+          python -m pytest $paths -q -p no:cacheprovider
 
       - name: Tests pass under the unittest fallback (Linux proof; pytest may be absent elsewhere)
         if: runner.os == 'Linux'
         run: |
           python -m unittest discover -s harness -p "test_*.py" -v
-          python -m unittest discover -s workstation/tests -p "test_*.py" -v
+          if [ -d workstation/tests ]; then python -m unittest discover -s workstation/tests -p "test_*.py" -v; fi
 
       - name: POSIX shell syntax parses
         if: runner.os != 'Windows'

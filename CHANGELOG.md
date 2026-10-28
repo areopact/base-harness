@@ -4,6 +4,17 @@ All notable changes to this repository. Format follows Keep a Changelog; version
 
 Each release has an `### Upgrade notes` subsection: what changed for hosts and whether a host has to act. An adopted host's `adopt.py --upgrade` prints the headings from its own kernel version (exclusive) up to the new one (inclusive), so read those notes before applying.
 
+## [Unreleased]
+
+### Fixed
+
+- `offline-conformance.yml` passes `workstation` to pytest and to the unittest fallback only when that directory exists. `workstation/` is an optional kit outside the kernel that adopt never installs, so on an adopted host since 0.2.3 the pytest step stopped with exit code 4 (path not found) before running any test. The pytest step now runs under bash on every runner.
+
+### Upgrade notes
+
+- A host on 0.2.3 to 0.2.5 whose CI fails at `Tests pass under pytest` with exit code 4 is fixed by this release. If your team edited `offline-conformance.yml`, it lands as a conflict sibling: merge the two `workstation` guards by hand.
+- After any upgrade, run the bootstrap (or its `--check`) and commit what it regenerates: a kernel that changes the Claude hook registrations (0.2.2 added `PowerShell` to the dangerous-ops matcher) changes `.claude/settings.json`, and the fresh-clone CI job fails on the drift.
+
 ## [0.2.5] - 2026-10-29
 
 ### Fixed
